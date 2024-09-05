@@ -1,6 +1,6 @@
 ﻿#include "OAM.h"
 
-#include "Bitwise.h"
+#include "../Utility/Bitwise.h"
 
 uint8_t OAM::fetch8(uint16_t address) {
 	return RAM[address - 0xFE00];

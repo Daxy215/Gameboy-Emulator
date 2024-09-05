@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-#include "Bitwise.h"
+#include "../Utility/Bitwise.h"
 
 uint8_t Serial::fetch8(uint16_t address) {
     return transferData;

@@ -4,16 +4,16 @@
 #include <iostream>
 
 #include "HRAM.h"
-#include "VRAM.h"
+#include "../Pipeline/VRAM.h"
 #include "WRAM.h"
 #include "ExternalRAM.h"
 
-#include "InterrupHandler.h"
-#include "LCDC.h"
-#include "Serial.h"
+#include "../CPU/InterrupHandler.h"
+#include "../Pipeline/LCDC.h"
+#include "../CPU/Serial.h"
 
-#include "OAM.h"
-#include "PPU.h"
+#include "../Pipeline/OAM.h"
+#include "../Pipeline/PPU.h"
 
 uint8_t MMU::fetch8(uint16_t address) {
     /**

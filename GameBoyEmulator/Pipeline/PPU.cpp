@@ -10,7 +10,7 @@
 #include "SDL.h"
 #include "VRAM.h"
 
-#include "MMU.h"
+#include "../Memory/MMU.h"
 
 void PPU::tick(const int& cycles) {
 	this->cycle += cycles;

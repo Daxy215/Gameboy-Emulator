@@ -4,7 +4,7 @@
 
 #include "InterrupHandler.h"
 
-#include "MMU.h"
+#include "../Memory/MMU.h"
 
 CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
     : interruptHandler(interruptHandler), mmu(mmu) {

@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "Bitwise.h"
+#include "../Utility/Bitwise.h"
 
 uint8_t LCDC::fetch8(uint16_t address) {
 	if(address == 0xFF40) {
