@@ -109,10 +109,14 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>..\libs\glew-2.2.0\src;..\libs\glew-2.2.0\include;..\libs\SDL2-2.30.3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>..\libs\SDL2-2.30.3\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -154,18 +158,36 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AddressBus.cpp" />
+    <ClCompile Include="..\libs\glew-2.2.0\src\glew.c" />
+    <ClCompile Include="Cartridge.cpp" />
+    <ClCompile Include="ExternalRAM.cpp" />
+    <ClCompile Include="InterruptHandler.cpp" />
+    <ClCompile Include="LCDC.cpp" />
+    <ClCompile Include="MMU.cpp" />
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="GameBoyEmulator.cpp" />
     <ClCompile Include="HRAM.cpp" />
+    <ClCompile Include="OAM.cpp" />
+    <ClCompile Include="PPU.cpp" />
     <ClCompile Include="RAM.cpp" />
+    <ClCompile Include="Serial.cpp" />
+    <ClCompile Include="VRAM.cpp" />
     <ClCompile Include="WRAM.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AddressBus.h" />
+    <ClInclude Include="Cartridge.h" />
+    <ClInclude Include="ExternalRAM.h" />
+    <ClInclude Include="InterrupHandler.h" />
+    <ClInclude Include="LCDC.h" />
+    <ClInclude Include="MMU.h" />
+    <ClInclude Include="Bitwise.h" />
     <ClInclude Include="CPU.h" />
     <ClInclude Include="HRAM.h" />
+    <ClInclude Include="OAM.h" />
+    <ClInclude Include="PPU.h" />
     <ClInclude Include="RAM.h" />
+    <ClInclude Include="Serial.h" />
+    <ClInclude Include="VRAM.h" />
     <ClInclude Include="WRAM.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

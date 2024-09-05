@@ -1,9 +1,33 @@
 ﻿#pragma once
+
 #include <cstdint>
 #include <iostream>
 
+class InterruptHandler;
+
+class MMU;
+
 class CPU {
 public:
+    CPU(InterruptHandler& interruptHandler, MMU& mmu);
+    
+    uint16_t fetchOpCode();
+    int decodeInstruction(uint16_t opcode);
+    
+    void rst(uint16_t pc);
+    void adc(uint8_t& a, uint8_t& reg, bool carry);
+    
+    void pushToStack(uint16_t value);
+    
+    void reset();
+    
+    void testCases();
+
+public:
+    InterruptHandler& interruptHandler;
+    
+    MMU& mmu;
+    
     /**
      * According to https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
      * CPU contains 8 registers; every register seems to be a u8,
@@ -23,33 +47,92 @@ public:
      * 
      * To achieve such a behaviour in C++, I will be using union.
      */
-
-    union Registers {
+    
+    //union Registers {
         struct AF {
             uint8_t A; // Flags register
             uint8_t F; // Accumulator register
             
-            inline bool getCarry() {
+            inline bool getCarry() const {
                 // Extracts the carry from the F register flag
-                return F & 0x10f;
+                return F & Flags::C;
+            }
+
+            inline void setCarry(bool flag) {
+                if (flag) F |= Flags::C;
+                else F &= ~Flags::C;
+            }
+            
+            inline bool getZero() const {
+                return F & Flags::Z;
+            }
+            
+            inline void setZero(bool flag) {
+                if (flag) F |= Flags::Z;
+                else F &= ~Flags::Z;
+            }
+            
+            inline bool getHalfCarry() const {
+                return F & Flags::H;
+            }
+            
+            inline void setHalfCarry(bool flag) {
+                if (flag) F |= Flags::H;
+                else F &= ~Flags::H;
+            }
+            
+            inline bool getSubtract() const {
+                return F & Flags::N;
+            }
+            
+            inline void setSubtract(bool flag) {
+                if (flag) F |= Flags::N;
+                else F &= ~Flags::N;
+            }
+
+            uint16_t get() {
+                return static_cast<uint16_t>((A << 8) | F);
             }
         } AF;
-
+        
         struct BC {
             uint8_t B;
             uint8_t C;
             
             BC& operator=(uint16_t value) {
-                B = static_cast<uint8_t>(((value >> 8) & 0xFF));
+                B = static_cast<uint8_t>((value >> 8) & 0xFF);
                 C = static_cast<uint8_t>(value & 0xFF);
                 
                 return *this;
             }
+            
+            BC& operator+=(uint16_t value) {
+                uint16_t combined = (static_cast<uint16_t>((B << 8) | C));
+                combined += value;
+                
+                *this = combined;
+                return *this;
+            }
+            
+            uint16_t get() const {
+                return (static_cast<uint16_t>((B << 8) | C));
+            }
         } BC;
-
+        
         struct DE {
             uint8_t D;
             uint8_t E;
+            
+            DE& operator=(uint16_t value) {
+                D = static_cast<uint8_t>(((value >> 8) & 0xFF));
+                E = static_cast<uint8_t>(value & 0xFF);
+                
+                return *this;
+            }
+            
+            uint16_t get() {
+                return static_cast<uint16_t>((D << 8) | E);
+            }
         } DE;
         
         struct HL {
@@ -64,54 +147,46 @@ public:
             }
             
             HL& operator+=(uint16_t value) {
-                H += static_cast<uint8_t>(((value >> 8) & 0xFF));
-                L += static_cast<uint8_t>(value & 0xFF);
+                // Add the lower byte of the value to L
+                uint16_t newL = L + (value & 0xFF);
+                
+                // Calculate the new high byte of HL considering overflow from L
+                H += (value >> 8) + (newL >> 8);
+                
+                // Update L with the lower 8 bits of the result
+                L = newL & 0xFF;
                 
                 return *this;
             }
             
             uint16_t operator+(uint16_t value) const {
-                uint16_t results = H + static_cast<uint8_t>(((value >> 8) & 0xFF));
-                results += L + static_cast<uint8_t>((value & 0xFF));
-                
-                return results;
+                return static_cast<uint16_t>(H << 8 | L) + value;
+            }
+            
+            uint16_t get() const {
+                uint16_t f = static_cast<uint16_t>((H << 8) | L);
+                return static_cast<uint16_t>((H << 8) | L);
             }
         } HL;
         
         uint8_t& getRegister(uint16_t reg) {
             switch (reg) {
-                case 0: {
-                    return BC.B;
-                }
-                case 1: {
-                    return BC.C;
-                }
-                case 2: {
-                    return DE.D;
-                }
-                case 3: {
-                    return DE.E;
-                }
-                case 4: {
-                    return HL.H;
-                }
-                case 5: {
-                    return HL.L;
-                }
-                case 6: {
-                    return AF.A;
-                }
-                case 7: {
-                    return AF.F;
-                }
+            case 0: return BC.B;
+            case 1: return BC.C;
+            case 2: return DE.D;
+            case 3: return DE.E;
+            case 4: return HL.H;
+            case 5: return HL.L;
+            case 6: return AF.F;
+            case 7: return AF.A;
             default:
                 std::cerr << "[CPU-getRegister] Unknown register; " << reg << "\n";
-                
+                   
                 break;
             }
         }
-    };
-
+    //};
+    
     /**
      * Flag Register (lower 8 bits of AF register) - https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
      * 
@@ -161,28 +236,26 @@ public:
     };*/
     
     struct Flags {
-        uint8_t Z = 1 << 7; // Zero Flag
-        uint8_t N = 1 << 6; // Subtract Flag
-        uint8_t H = 1 << 5; // Half Carry Flag
-        uint8_t C = 1 << 4; // Carry Flag
+        static const uint8_t Z = 1 << 7; // Zero Flag
+        static const uint8_t N = 1 << 6; // Subtract Flag
+        static const uint8_t H = 1 << 5; // Half Carry Flag
+        static const uint8_t C = 1 << 4; // Carry Flag
     };
     
 public:
-    void reset();
     
-public:
-    Registers registers;
-
+    //Registers registers;
+    
     /**
      * Flags in order;
      *
      * Z N H C
      */
-    Flags flags;
+    //Flags flags;
     
     // Program Counter/Pointer
     uint16_t PC = 0x0100;
     
     // Stack Pointer
-    uint16_t SP = 0x0;
+    uint16_t SP = 0xFFFE;
 };

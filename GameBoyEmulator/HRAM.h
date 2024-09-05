@@ -6,9 +6,9 @@
 class HRAM {
 public:
     
-    uint8_t fetchData(uint16_t address);
-    void writeData(uint16_t address, uint8_t data);
+    uint8_t fetch8(uint16_t address);
+    void write8(uint16_t address, uint8_t data);
     
 private:
-    uint8_t RAM[0x80] = { 0 };
+    uint8_t RAM[127] = { 0 }; // 127 bytes
 };
