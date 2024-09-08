@@ -8,22 +8,22 @@
 #include <thread>
 #include <vector>
 
-#include "Cartridge.h"
-#include "CPU.h"
+#include "Memory/Cartridge.h"
+#include "CPU/CPU.h"
 
-#include "InterrupHandler.h"
+#include "CPU/InterrupHandler.h"
 
-#include "HRAM.h"
-#include "VRAM.h"
-#include "WRAM.h"
-#include "ExternalRAM.h"
+#include "Memory/HRAM.h"
+#include "Pipeline//VRAM.h"
+#include "Memory/WRAM.h"
+#include "Memory/ExternalRAM.h"
 
-#include "LCDC.h"
-#include "Serial.h"
+#include "Pipeline/LCDC.h"
+#include "CPU/Serial.h"
 
-#include "MMU.h"
-#include "OAM.h"
-#include "PPU.h"
+#include "Memory/MMU.h"
+#include "Pipeline/OAM.h"
+#include "Pipeline/PPU.h"
 
 /*
  * GOOD GUIDES;
@@ -47,17 +47,17 @@ std::string formatCPUState(const CPU &cpu) {
     std::ostringstream oss;
     
     // Format the registers and SP, PC in hex with leading zeros
-    oss << std::hex << std::setfill('0');
-    oss << "A:" << std::setw(2) << static_cast<int>(cpu.AF.A) << ' ';
-    oss << "F:" << std::setw(2) << static_cast<int>(cpu.AF.F) << ' ';
-    oss << "B:" << std::setw(2) << static_cast<int>(cpu.BC.B) << ' ';
-    oss << "C:" << std::setw(2) << static_cast<int>(cpu.BC.C) << ' ';
-    oss << "D:" << std::setw(2) << static_cast<int>(cpu.DE.D) << ' ';
-    oss << "E:" << std::setw(2) << static_cast<int>(cpu.DE.E) << ' ';
-    oss << "H:" << std::setw(2) << static_cast<int>(cpu.HL.H) << ' ';
-    oss << "L:" << std::setw(2) << static_cast<int>(cpu.HL.L) << ' ';
-    oss << "SP:" << std::setw(4) << static_cast<int>(cpu.SP) << ' ';
-    oss << "PC:" << std::setw(4) << static_cast<int>(cpu.PC) << ' ';
+    oss << std::hex << std::uppercase << std::setfill('0');
+    oss << "A: " << std::setw(2) << static_cast<int>(cpu.AF.A) << ' ';
+    oss << "F: " << std::setw(2) << static_cast<int>(cpu.AF.F) << ' ';
+    oss << "B: " << std::setw(2) << static_cast<int>(cpu.BC.B) << ' ';
+    oss << "C: " << std::setw(2) << static_cast<int>(cpu.BC.C) << ' ';
+    oss << "D: " << std::setw(2) << static_cast<int>(cpu.DE.D) << ' ';
+    oss << "E: " << std::setw(2) << static_cast<int>(cpu.DE.E) << ' ';
+    oss << "H: " << std::setw(2) << static_cast<int>(cpu.HL.H) << ' ';
+    oss << "L: " << std::setw(2) << static_cast<int>(cpu.HL.L) << ' ';
+    oss << "SP: " << std::setw(4) << static_cast<int>(cpu.SP) << ' ';
+    oss << "PC: 00:" << std::setw(4) << static_cast<int>(cpu.PC) << ' ';
     
     // Fetch the memory around the PC
     uint16_t pc = cpu.PC;
@@ -67,11 +67,18 @@ std::string formatCPUState(const CPU &cpu) {
         mem[i] = cpu.mmu.fetch8(pc + i);
     }
     
-    oss << "PCMEM:" << std::hex;
+    /*oss << "PCMEM:" << std::hex;
     for (int i = 0; i < 4; i++) {
         oss << std::setw(2) << static_cast<int>(mem[i]);
         if (i < 3) oss << ',';
+    }*/
+    
+    oss << "(" << std::hex;
+    for (int i = 0; i < 4; i++) {
+        oss << std::setw(2) << static_cast<int>(mem[i]);
+        if (i < 3) oss << ' ';
     }
+    oss << ")" << std::hex;
     
     return oss.str();
 }
@@ -83,28 +90,59 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
         throw std::runtime_error("Unable to open log file.");
     }
     
+    // Load the expected CPU states from Blargg9.txt
+    std::ifstream blarggFile("Roms/Blargg9.txt");
+    if (!blarggFile.is_open()) {
+        throw std::runtime_error("Unable to open Blargg9.txt.");
+    }
+    
+    std::vector<std::string> blarggStates;
+    std::string line;
+    while (std::getline(blarggFile, line)/* && blarggStates.size() < 64000*/) {
+        blarggStates.push_back(line);
+    }
+    
     // Log the current CPU state
-    logFile << formatCPUState(cpu) << '\n';
+    //logFile << formatCPUState(cpu) << '\n';
     
     uint64_t x = 0;
     
     while (true) {
+        if(x == 16518) {
+            printf("");
+        }
+        
+        // A:01 F:B0 B:00 C:13 D:00 E:D8 H:01 L:4D SP:FFFE PC:0100 PCMEM:00,C3,13,02
+        
+        // Format and log the current CPU state
+        std::string formattedState = formatCPUState(cpu);
+        logFile << formattedState << '\n';
+        //std::cerr << formattedState << " - " << x << "\n";
+        
+        // Compare with the expected state from Blargg9.txt
+        if (x < blarggStates.size()) {
+            const std::string &expectedState = blarggStates[x];
+            if (formattedState != expectedState) {
+                //std::cerr << "Mismatch at iteration " << x << ":\n";
+                //std::cerr << "Expected: " << expectedState << "\n";
+                //std::cerr << "Actual  : " << formattedState << "\n";
+                
+                //break;
+            }
+        } else {
+            std::cerr << "No more expected states to compare.\n";
+            break;
+        }
+        
         uint16_t opcode = cpu.fetchOpCode();
         int cycles = cpu.decodeInstruction(opcode);
         
-        // Log the current CPU state
-        logFile << formatCPUState(cpu) << '\n';
-        
-        /*if(x == 16441) {
-            printf("s");
-        }*/
-        
         x++;
         
-        //printf("X; " + x);
-        //std::cerr << "";
-        
-        //ppu.tick(cycles);
+        // Write of C3
+        if(x == 7) {
+            //printf(";9");
+        }
     }
 }
 
@@ -129,7 +167,7 @@ int main(int argc, char* argv[]) {
     auto fileSize = stream.tellg();
     stream.seekg(0, ios::beg);
     
-    std::vector<uint8_t> memory(fileSize);
+    std::vector<uint8_t> memory(/*fileSize*/ 2 * 1024 * 1024);
     
     if (!stream.read(reinterpret_cast<char*>(memory.data()), fileSize)) {
         std::cerr << "Error reading file!" << '\n';
@@ -175,9 +213,9 @@ int main(int argc, char* argv[]) {
     // Gather cartridge information
     cartridge.decode(memory);
     
-    runEmulation(cpu, *ppu);
+    //runEmulation(cpu, *ppu);
     
-    /*std::thread emulationThread(runEmulation, std::ref(cpu), std::ref(*ppu));
+    std::thread emulationThread(runEmulation, std::ref(cpu), std::ref(*ppu));
     
     bool running = true;
     const int targetFPS = 60;
@@ -214,7 +252,7 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    emulationThread.join();*/
+    emulationThread.join();
     
     // Cleanup code
     SDL_DestroyWindow(ppu->window);

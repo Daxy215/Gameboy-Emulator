@@ -43,6 +43,16 @@ public:
     void clear();
     
 private:
+    //TODO; Move to RAM
+    bool m_MBC1 = true;
+    bool m_MBC2 = false;
+    bool m_EnableRAM = false;
+    bool m_ROMBanking = true;
+    uint8_t m_CurrentROMBank = 1;
+    uint8_t m_CurrentRAMBank = 0;
+    uint8_t wramBank         = 1;
+    //uint8_t m_RAMBanks[0x8000] = { 0 };
+    
     InterruptHandler& interruptHandler;
     
     // Memories

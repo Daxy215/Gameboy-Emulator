@@ -68,11 +68,35 @@ int CPU::decodeInstruction(uint16_t opcode) {
             /**
              * INC BC
              * 1, 8
+             * - - - -
              */
             
             BC += 1;
             
             return 8;
+        }
+		
+		case 0x04: {
+	        /**
+	         * INC B
+	         * 1, 4
+	         */
+			
+        	inc(BC.B);
+        	
+        	return 4;
+        }
+		
+		case 0x05: {
+			/**
+			 * DEC B
+			 * 1, 4
+			 * Z 1 H -
+			 */
+			
+        	dec(BC.B);
+        	
+        	return 4;
         }
         
         case 0x06: {
@@ -87,6 +111,25 @@ int CPU::decodeInstruction(uint16_t opcode) {
             return 8;
         }
 		
+		case 0x08: {
+			/**
+			 * LD (u16), SP
+			 * 3, 20
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(PC);
+        	
+        	// TODO; Maybe use push to stack??
+        	mmu.write8(u16, SP & 0xFF);
+        	mmu.write8(u16 + 1, (SP >> 8) & 0xFF);
+			
+			
+        	PC += 2;
+        	
+        	return 20;
+        }
+    	
 		case 0x0D: {
 			/**
 			 * DEC C
@@ -94,11 +137,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 * Z 1 H -
 			 */
 			
-        	BC.C -= 1;
-        	
-        	AF.setZero(BC.C == 0);
-        	AF.setSubtract(true);
-        	AF.setHalfCarry(((BC.C + 1) & 0x0F) == 0x00);
+        	dec(BC.C);
 			
         	return 4;
         }
@@ -134,19 +173,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
              * Z 0 H -
              */
             
-            uint8_t result = AF.A + 1;
-            
-            // Set the Zero flag if the result is zero
-            AF.setZero((result == 0));
-            
-            // Reset the Subtract Flag (N)
-            AF.setSubtract(false);
-            
-            // Set the Half Carry flag (H) if there was a carry from bit 3 to bit 4
-            AF.setHalfCarry(((AF.A & 0x0F) + 1) > 0x0F);
-            
-            // Store the results into the A register
-            AF.A = result;
+            inc(AF.A);
             
             return 4;
         }
@@ -156,10 +183,23 @@ int CPU::decodeInstruction(uint16_t opcode) {
              * LD (DE), A
              * 1, 8
              */
-            
-            mmu.write8(mmu.fetch16(DE.get()), AF.A);
+        	
+        	//uint16_t address = mmu.fetch16(DE.get());
+            mmu.write8(DE.get(), AF.A);
             
             return 8;
+        }
+
+		case 0x13: {
+			/**
+			 * INC DE
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	DE = DE.get() + 1;
+        	
+        	return 8;
         }
 		
 		case 0x14: {
@@ -169,11 +209,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 * Z 0 H -
 			 */
 			
-        	DE.D += 1;
-        	
-        	AF.setZero(DE.D == 0);
-        	AF.setSubtract(false);
-        	AF.setHalfCarry(((DE.D - 1) & 0x0F) == 0x0F);
+        	inc(DE.D);
 			
         	return 4;
         }
@@ -190,6 +226,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 12;
         }
+
+		case 0x1A: {
+			/**
+			 * LD A, (DE)
+			 * 1, 8
+			 * - - - - 
+			 */
+			
+        	AF.A = mmu.fetch8(DE.get());
+        	
+        	return 8;
+        }
         
         case 0x1C: {
             /**
@@ -198,16 +246,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
              * Z N H -
              */
 			
-        	DE.E += 1;
-        	
-            // Set the Zero flag if the result is zero
-            AF.setZero(DE.E == 0);
-            
-            // Reset the Subtract Flag (N)
-            AF.setSubtract(false);
-            
-            // Set the Half Carry flag (H) if there was a carry from bit 3 to bit 4
-            AF.setHalfCarry(((DE.E - 1) & 0x0F) == 0x0F);
+			inc(DE.E);
         	
             return 4;
         }
@@ -248,6 +287,19 @@ int CPU::decodeInstruction(uint16_t opcode) {
             return 12;
         }
 
+		case 0x22: {
+			/**
+			 * LD (HL+), A
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	mmu.write8(HL.get(), AF.A);
+        	HL = HL.get() + 1;
+			
+        	break;
+        }
+
         case 0x23: {
             /**
              * INC HL
@@ -258,7 +310,38 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 8;
         }
-		
+
+		case 0x24: {
+			/**
+			 * INC H
+			 * 1, 4
+			 * Z 0 H -
+			 */
+			
+        	inc(HL.H);
+        	
+        	return 4;
+        }
+
+		case 0x28: {
+			/**
+			 * JR Z, i8
+			 * 2, 8 (12 with branch)
+			 */
+			
+        	if(AF.getCarry()) {
+        		int8_t i8 = static_cast<int8_t>(mmu.fetch8(PC));
+				
+        		PC += i8;
+				
+        		return 12;
+        	}
+			
+        	PC++;
+        	
+        	return 8;
+        }
+    	
     	case 0x2A: {
             /**
              * LD A, (HL+)
@@ -277,6 +360,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 8;
         }
+
+		case 0x2D: {
+			/**
+			 * DEC L
+			 * 1, 4
+			 * Z 1 H -
+			 */
+			
+        	dec(HL.L);
+        	
+        	return 4;
+        }
         
         case 0x31: {
             /*
@@ -292,14 +387,28 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 12;
         }
-
+		
+		case 0x32: {
+			/**
+			 * LD (HL-), A
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	uint16_t address = HL.get();
+        	AF.A = mmu.fetch8(address);
+        	HL = HL.get() - 1;
+        	
+        	return 8;
+        }
+		
         case 0x34: {
             /**
              * INC (HL)
              * 1, 12
              * Z 0 H -
              */
-
+			
         	uint16_t address = HL.get();
             uint8_t val = mmu.fetch8(address);
             uint8_t result = val + 1;
@@ -346,6 +455,56 @@ int CPU::decodeInstruction(uint16_t opcode) {
             AF.A = mmu.fetch8(PC++);
             
             return 8;
+        }
+		
+		case 0x46: {
+	        /**
+	         * LD B, (HL)
+	         * 1, 8
+	         * - - - -
+	         */
+			
+        	BC.B = mmu.fetch8(HL.get());
+        	
+        	return 8;
+        }
+
+		case 0x4E: {
+			/**
+			 * LD C, (HL)
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	BC.C = mmu.fetch8(HL.get());
+			
+        	return 8;
+        }
+		
+		case 0x56: {
+			/**
+			 * LD D, (HL)
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	DE.D = mmu.fetch8(HL.get());
+        	
+        	return 8;
+        }
+		
+		case 0x77: {
+			/**
+			 * LD (HL), A
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	mmu.write8(mmu.fetch16(HL.get()), AF.A);
+
+        	PC += 2;
+        	
+        	return 8;
         }
         
         case 0x9F: {
@@ -946,7 +1105,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 8;
         }
-            
+		
         case 0xC1: {
             /**
              * POP BC
@@ -958,10 +1117,10 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 12;
         }
-            
+		
         case 0xC3: {
             /**
-             * JP a16
+             * JP u16
              * 3, 16
              */
             
@@ -969,10 +1128,60 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             // Jump to 'address' unconditionally
             PC = address;
-            
+        	
             return 16;
         }
-            
+		
+		case 0xC4: {
+			/**
+			 * CALL NZ, u16
+			 * 3, 12 (24 with branch)
+			 * - - - -
+			 */
+			
+        	if(!AF.getCarry()) {
+				pushToStack(PC + 2);
+        		
+        		uint16_t u16 = mmu.fetch16(PC);
+        		PC = u16;
+        		
+        		return 24;
+        	}
+			
+        	PC += 2;
+        	
+        	return 12;
+        }
+		
+		case 0xC5: {
+			/**
+			 * PUSH BC
+			 * 1, 16
+			 * - - - -
+			 */
+			
+        	pushToStack(BC.get());
+			
+        	return 16;
+        }
+		
+		case 0xC6: {
+			/**
+			 * OR A, (HL)
+			 * 1, 8
+			 * Z 0 0 0
+			 */
+			
+        	AF.A |= mmu.fetch8(HL.get());
+			
+        	AF.setZero(AF.A == 0);
+        	AF.setSubtract(false);
+        	AF.setHalfCarry(false);
+        	AF.setCarry(false);
+        	
+        	return 8;
+        }
+		
         case 0xC9: {
             /*
              * RET
@@ -980,7 +1189,9 @@ int CPU::decodeInstruction(uint16_t opcode) {
              */
             
             uint16_t d16 = mmu.fetch16(SP);
-            
+            /*printf("fg %x - %x", d16, SP);
+        	std::cerr << "";*/
+        	
             PC = d16;
             SP += 2;
             
@@ -993,9 +1204,9 @@ int CPU::decodeInstruction(uint16_t opcode) {
              * 3, 24
              */
             
-            pushToStack(PC++);
+            pushToStack(PC + 2);
             
-            uint16_t u16 = mmu.fetch16(PC++);
+            uint16_t u16 = mmu.fetch16(PC);
             PC = u16;
             
             return 24;
@@ -1018,6 +1229,57 @@ int CPU::decodeInstruction(uint16_t opcode) {
         		return 20;
         	}
         	
+        	return 8;
+        }
+		
+		case 0xD5: {
+			/**
+			 * PUSH DE
+			 * 1, 16
+			 * - - - -
+			 */
+        	
+        	pushToStack(DE.get());
+        	
+        	return 16;
+        }
+		
+		case 0xD6: {
+			/**
+			 * SUB A, u8
+			 * 2, 8
+			 * Z 1 H C
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(PC++);
+        	uint8_t result = AF.A - u8;
+			
+        	AF.setZero(result == 0);
+        	AF.setSubtract(true);
+        	AF.setHalfCarry((AF.A & 0xF) < (u8 < 0xF));
+        	AF.setCarry(AF.A < u8);
+			
+        	AF.A = result;
+        	
+        	return 8;
+        }
+
+		case 0xD8: {
+			/**
+			 * RET C
+			 * 1, 8 (20 with branch)
+			 * - - - -
+			 */
+			
+        	if(!AF.getCarry()) {
+        		PC = mmu.fetch16(SP);
+        		SP += 2;
+				
+        		return 20;
+        	}
+			
+        	PC++;
+			
         	return 8;
         }
         
@@ -1075,6 +1337,23 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 16;
         }
+
+		case 0xE6: {
+			/**
+			 * AND A, 8u
+			 * 2, 8
+			 * Z 0 1 0
+			 */
+			
+        	AF.A &= mmu.fetch8(PC++);
+        	
+        	AF.setZero(AF.A == 0);
+        	AF.setSubtract(false);
+        	AF.setHalfCarry(true);
+        	AF.setCarry(false);
+        	
+        	return 8;
+        }
 		
         case 0xE9: {
             /**
@@ -1098,6 +1377,19 @@ int CPU::decodeInstruction(uint16_t opcode) {
             PC += 2;
             
             return 16;
+        }
+
+		case 0xF0: {
+			/**
+			 * LD A,(FF00 + u8)
+			 * 2, 12
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(PC++);
+        	uint16_t address = 0xFF00 + u8;
+        	AF.A = mmu.fetch8(address);
+        	
+        	return 12;
         }
         
         case 0xF1: {
@@ -1123,7 +1415,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 4;
         }
-
+		
         case 0xF5: {
             /**
              * PUSH AF
@@ -1134,7 +1426,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 16;
         }
-
+		
         case 0xFA: {
             /**
              * LD A, (u16)
@@ -1159,7 +1451,29 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 4;
         }
-        
+		
+		case 0xFE: {
+			/**
+			 * CP A, u8
+			 * 2, 8
+			 *
+			 * Z 1 H C
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(PC++);
+			uint8_t A = AF.A;
+			uint8_t result = A - u8;
+        	
+			//AF.A = A;
+			
+        	AF.setZero(result == 0);
+        	AF.setSubtract(true);
+        	AF.setHalfCarry((A & 0xF) < (u8 & 0xF));
+        	AF.setCarry(A < u8);
+			
+        	return 8;
+        }
+    	
         // ld reg, reg
         case 0x40:
         case 0x41:
@@ -1257,14 +1571,17 @@ int CPU::decodeInstruction(uint16_t opcode) {
             std::bitset<8> x(opcode);
             std::cout << x << '\n';
             */
-             
+
+        	if(opcode == 0xFC)
+        		return 4;
+        	
             printf("Unknown instruction; %x\n", opcode);
             std::cerr << "";
             
             return 4;
         }
     }
-}
+ }
 
 void CPU::rst(uint16_t pc) {
     uint8_t high = (PC >> 8) & 0xFF;
@@ -1296,20 +1613,34 @@ void CPU::adc(uint8_t& regA, uint8_t& value, bool carry) {
     regA = result & 0xFF;
 }
 
+void CPU::inc(uint8_t& reg) {
+	uint8_t result = reg + 1;
+	
+	AF.setZero((result == 0));
+	AF.setSubtract(false);
+	AF.setHalfCarry(((reg & 0x0F) + 1) > 0x0F);
+	
+	reg = result;
+}
+
+void CPU::dec(uint8_t& reg) {
+	reg -= 1;
+	
+	AF.setZero(reg == 0);
+	AF.setSubtract(true);
+	AF.setHalfCarry(((reg + 1) & 0x0F) == 0x00);
+}
+
 void CPU::pushToStack(uint16_t value) {
-    mmu.write8(--SP, (value >> 8) & 0xFF);
-    mmu.write8(--SP, value & 0xFF);
+	/*mmu.write8(--SP, value & 0xFF);
+    mmu.write8(--SP, (value >> 8) /*should I & 0xFF?#1#);
+    */
+	
+	SP -= 2;
+    mmu.write16(SP, value);
 }
 
 void CPU::reset() {
-    // Initialize registers and memory
-    /*A = F = B = C = D = E = H = L = 0;
-    SP = 0xFFFE;
-    PC = 0x0100;
-    
-    // Clear memory
-    std::fill(std::begin(memory), std::end(memory), 0);*/
-    
     AF.A = 0x01;
     AF.F = 0xB0;
     BC.B = 0x00;
@@ -1326,7 +1657,7 @@ void CPU::reset() {
 }
 
 void CPU::testCases() {
-     /*// Helper to reset CPU state
+     // Helper to reset CPU state
     auto resetCPU = [&]() {
         reset();
         PC = 0x1000; // Set the initial program counter to a test address
@@ -1345,129 +1676,6 @@ void CPU::testCases() {
         assert(HL.L == expectedL);
         assert(SP == expectedSP);
     };
-
-    // Test for 0x39: ADD HL, SP
-    resetCPU();
-    HL = 0x1000;
-    SP = 0x1000;
-    decodeInstruction(0x39); // Opcode for ADD HL, SP
-    assert(HL.get() == 0x2000);
-    assert(SP == 0x1000); // SP should not be affected by this instruction
-
-    // Test for 0x2A: LD A, (HL+)
-    resetCPU();
-    HL = 0x2000;
-    mmu.write8(0x2000, 0xAB); // Write a test value to memory
-    decodeInstruction(0x2A); // Opcode for LD A, (HL+)
-    uint16_t f = HL.get();
-    assert(AF.A == 0xAB);
-    assert(HL.get() == 0x2001); // HL should increment
-
-    // Test for 0xF3: DI
-    resetCPU();
-    decodeInstruction(0xF3); // Opcode for DI
-    assert(interruptHandler.IME == false);
-    
-    // Test for 0x3C: INC A
-    resetCPU();
-    AF.A = 0x01;
-    decodeInstruction(0x3C); // Opcode for INC A
-    assert(AF.A == 0x02);
-
-    // Test for 0xC9: RET
-    resetCPU();
-    SP = 0xC000;
-    mmu.write8(SP, 0x34); // Set return address low byte
-    mmu.write8(SP + 1, 0x12); // Set return address high byte
-    decodeInstruction(0xC9); // Opcode for RET
-    assert(PC == 0x1234);
-    assert(SP == 0xC002); // Stack pointer should be restored
-
-    // Test for 0xEA: LD (u16), A
-    resetCPU();
-    AF.A = 0x56;
-    PC = 0x1000;
-    mmu.write8(PC, 0x00); // Low byte of address
-    mmu.write8(PC + 1, 0xC0); // High byte of address
-    decodeInstruction(0xEA); // Opcode for LD (u16), A
-    assert(mmu.fetch8(0xC000) == 0x56);
-
-    // Test for 0x21: LD HL, u16
-    resetCPU();
-    PC = 0x1000;
-    mmu.write8(PC, 0x34); // Low byte of address
-    mmu.write8(PC + 1, 0x12); // High byte of address
-    decodeInstruction(0x21); // Opcode for LD HL, u16
-    assert(HL.get() == 0x1234);
-
-    // Test for 0x20: JR NZ, i8
-    resetCPU();
-    PC = 0x1000;
-    AF.setZero(false); // Zero flag not set
-    mmu.write8(PC, 0xFE); // Offset for jump (relative)
-    decodeInstruction(0x20); // Opcode for JR NZ, i8
-    assert(PC == 0x1000 + 0xFE + 2); // PC should jump back to 0x1000
-    
-    // Test for 0xE5: PUSH HL
-    resetCPU();
-    HL = 0x1234;
-    SP = 0xFFFE;
-    decodeInstruction(0xE5); // Opcode for PUSH HL
-    assert(mmu.fetch8(0xFFFE) == 0x12);
-    assert(mmu.fetch8(0xFFFF) == 0x34);
-    assert(SP == 0xFFFC);
-
-    // Test for 0xF5: PUSH AF
-    resetCPU();
-    AF.A = 0x56;
-    AF.F = 0x78;
-    SP = 0xFFFE;
-    decodeInstruction(0xF5); // Opcode for PUSH AF
-    assert(mmu.fetch8(0xFFFE) == 0x56);
-    assert(mmu.fetch8(0xFFFF) == 0x78);
-    assert(SP == 0xFFFC);
-
-    // Test for 0xC1: POP BC
-    resetCPU();
-    SP = 0xFFFE;
-    mmu.write8(0xFFFE, 0x12); // Low byte of BC
-    mmu.write8(0xFFFF, 0x34); // High byte of BC
-    decodeInstruction(0xC1); // Opcode for POP BC
-    assert(BC.C == 0x12);
-    assert(BC.B == 0x34);
-    assert(SP == 0x1000); // SP should be restored
-
-    // Test for 0xF1: POP AF
-    resetCPU();
-    SP = 0xFFFE;
-    mmu.write8(0xFFFE, 0x78); // Low byte of AF (F)
-    mmu.write8(0xFFFF, 0x56); // High byte of AF (A)
-    decodeInstruction(0xF1); // Opcode for POP AF
-    assert(AF.F == 0x78);
-    assert(AF.A == 0x56);
-    assert(SP == 0x1000); // SP should be restored
-
-    // Test for 0xFA: LD A, (u16)
-    resetCPU();
-    AF.A = 0x00;
-    PC = 0x1000;
-    mmu.write8(PC, 0x00); // Low byte of address
-    mmu.write8(PC + 1, 0xC0); // High byte of address
-    mmu.write8(0xC000, 0xAB); // Value at address
-    decodeInstruction(0xFA); // Opcode for LD A, (u16)
-    assert(AF.A == 0xAB);
-    assert(PC == 0x1003); // PC should move past the instruction
-
-    // Test for 0x23: INC HL
-    resetCPU();
-    HL = 0x1234;
-    decodeInstruction(0x23); // Opcode for INC HL
-    assert(HL.get() == 0x1235);
-
-    // Test for 0x18: JR r8
-    resetCPU();
-    PC = 0x1000;
-    mmu.write8(PC, 0xFE); // Offset for jump (relative)
-    decodeInstruction(0x18); // Opcode for JR r8
-    assert(PC == 0x1000 + 0xFE + 2); // PC should jump back to 0x1000*/
+	
+	
 }

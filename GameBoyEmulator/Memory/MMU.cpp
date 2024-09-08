@@ -21,14 +21,30 @@ uint8_t MMU::fetch8(uint16_t address) {
      * https://gbdev.io/pandocs/Memory_Map.html
      */
     
-    if(address <= 0x7FFF) {
+    if(address <= 0x3FFF) { // bank 0 (fixed)
         return memory[address];
-    } else if(address >= 0x8000 && address <= 0x9FFF) {
-        return vram.fetch8(address);
-    } else if(address >= 0xA000 && address <= 0xBFFF) {
-        return externalRam.read(address - 0xA000);
-    } else if(address >= 0xC000 && address <= 0xDFFF) { // 0xCFFF
+    } else if(address >= 0x4000 && address <= 0x7FFF) {
+        // Switchable ROM bank
+        uint16_t newAddress = address - 0x4000;
+        
+        // bank 0 isn't allowed in this region
+        uint8_t bank = (m_CurrentROMBank == 0) ? 1 : m_CurrentROMBank;
+        return memory[newAddress + (bank * 0x4000)];
+    } else if (address >= 0xA000 && address <= 0xBFFF) {
+        // Switchable RAM bank
+        if (m_EnableRAM) {
+            uint16_t newAddress = address - 0xA000;
+            uint8_t bank = (m_CurrentROMBank == 0) ? 1 : m_CurrentROMBank;
+            
+            //return m_RAMBanks[newAddress + (bank * 0x2000)];
+            return externalRam.read(newAddress + (bank * 0x2000));
+        }
+        
+        return 0xFF; // If RAM isn't enabled, return open bus (0xFF)
+    } else if(address >= 0xC000 && address <= 0xCFFF) {
         return wram.fetch8(address - 0xC000);
+    } else if(address >= 0xD000 && address <= 0xFDFF) {
+        return wram.fetch8((address - 0xD000) | (wramBank * 0x1000));
     } else if(address >= 0xFE00 && address <= 0xFE9F) {
         return oam.fetch8(address);
     } else if(address >= 0xFF00 && address <= 0xFF7F) {
@@ -38,7 +54,7 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address == 0xFFFF) {
         return interruptHandler.fetch8(address);
     } else {
-        std::cerr << "Unknown fetch address\n";
+        //std::cerr << "Unknown fetch address\n";
     }
     
     return 0xFF;
@@ -61,16 +77,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
         
         if(address >= 0xFF40 && address <= 0xFF45) {
             return lcdc.fetch8(address);
-        }/* else if(address == 0xFF46) {
-            //  $FF46	DMA	OAM DMA source address & start
-            
-        } else if(address == 0xFF47) {
-            // https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
-            ppu.write8(address, data);
-        } else if(address == 0xFF48 || address == 0xFF49) {
-            // https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
-            ppu.write8(address, data);
-        }*/
+        }
     } else if(address == 0xFF4F) {
         std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
@@ -81,7 +88,8 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address >= 0xFF68 && address <= 0xFF6B) {
         std::cerr << "CGB BG / OBJ Pallets\n";
     } else if(address == 0xFF70) {
-        std::cerr << "CGB WRAM Bank Select\n";
+        //std::cerr << "CGB WRAM Bank Select\n";
+        return wramBank;
     } else {
         printf("IO Fetch Address; %x\n", address);
         std::cerr << "";
@@ -91,42 +99,103 @@ uint8_t MMU::fetchIO(uint16_t address) {
 }
 
 uint16_t MMU::fetch16(uint16_t address) {
-    uint16_t val = fetch8(address);
-    val |= fetch8(address + 1) << 8;
+    /*uint16_t f = static_cast<uint16_t>(fetch8(address));
+    uint16_t g = (static_cast<uint16_t>(fetch8(address + 1) << 8));
+    printf("F; %x - %x = %x\n", f, g, address);
+    std::cerr << "";*/
     
-    return val;
+    return static_cast<uint16_t>(fetch8(address)) | (static_cast<uint16_t>(fetch8(address + 1) << 8));
 }
 
-/*uint32_t MMU::fetch32(uint16_t address) {
-    return static_cast<uint32_t>(memory[address]) | 
-       (static_cast<uint32_t>(memory[address + 1]) << 8) |
-       (static_cast<uint32_t>(memory[address + 2]) << 16) |
-       (static_cast<uint32_t>(memory[address + 3]) << 24);
-}*/
-
 void MMU::write8(uint16_t address, uint8_t data) {
-    /*if(address > 0x7FFF)
+    /*if(address > 0x8000) {
         printf("S");
-        */
+    }*/
     
-    if(address <= 0x7FFF) {
-        memory[address] = data;
-    } else if(address >= 0x8000 && address <= 0x9FFF) {
-        vram.write8(address - 0x8000, data);
-    } else if(address >= 0xA000 && address <= 0xBFFF) {
-        externalRam.write(address - 0xA000, data);
-    } else if(address >= 0xC000 && address <= 0xDFFF) { //  0xCFFF
+    // Handle ROM and RAM bank switching for MBC1/MBC2
+    if (address < 0x8000) {
+        // RAM enabling (0x0000 - 0x1FFF)
+        if (address < 0x2000) {
+            if (m_MBC1 || m_MBC2) {
+                if (m_MBC2 && (address & 0x10)) return; // MBC2 checks bit 4 of address
+                
+                /**
+                 * According to;
+                 * https://gbdev.io/pandocs/MBC1.html
+                 *
+                 * Before external RAM can be read or written, it must be enabled by writing $A to anywhere in this address space.
+                 * Any value with $A in the lower 4 bits enables the RAM attached to the MBC, and any other value disables the RAM.
+                 * It is unknown why $A is the value used to enable RAM.
+                 */
+                
+                uint8_t testData = data & 0xF;
+                m_EnableRAM = (testData == 0xA);
+            }
+        }
+        // ROM bank switching (0x2000 - 0x3FFF)
+        else if (address >= 0x2000 && address < 0x4000) {
+            if (m_MBC1 || m_MBC2) {
+                if (m_MBC2) {
+                    // MBC2: set ROM bank (lower 4 bits)
+                    m_CurrentROMBank = data & 0xF;
+                    
+                    if (m_CurrentROMBank == 0) m_CurrentROMBank++;  // Avoid ROM bank 0
+                } else {
+                    // MBC1: set the lower 5 bits of ROM bank
+                    uint8_t lower5 = data & 0x1F;
+                    m_CurrentROMBank &= 0xE0; // Clear lower 5 bits
+                    m_CurrentROMBank |= lower5; // Set new lower 5 bits
+                    
+                    if (m_CurrentROMBank == 0) m_CurrentROMBank++;  // Avoid ROM bank 0
+                }
+            }
+        }
+        // ROM or RAM bank switching (0x4000 - 0x5FFF)
+        else if (address >= 0x4000 && address < 0x6000) {
+            if (m_MBC1) {
+                if (m_ROMBanking) {
+                    // ROM bank switching (high bits)
+                    m_CurrentROMBank &= 0x1F; // Clear upper bits
+                    m_CurrentROMBank |= (data & 0xE0); // Set new upper bits (5 and 6)
+                    if (m_CurrentROMBank == 0) m_CurrentROMBank++;  // Avoid ROM bank 0
+                } else {
+                    // RAM bank switching
+                    m_CurrentRAMBank = data & 0x3; // Set lower 2 bits for RAM bank
+                }
+            }
+        }
+        // ROM/RAM mode selection (0x6000 - 0x7FFF)
+        else if (address >= 0x6000 && address < 0x8000) {
+            if (m_MBC1) {
+                m_ROMBanking = (data & 0x1) == 0;  // Set ROM banking mode
+                if (m_ROMBanking) {
+                    m_CurrentRAMBank = 0;  // RAM banking disabled, default to RAM bank 0
+                }
+            }
+        }
+    }
+    // Handle RAM bank writes (0xA000 - 0xBFFF)
+    else if (address >= 0xA000 && address < 0xC000) {
+        if (m_EnableRAM) {
+            uint16_t newAddress = address - 0xA000;
+            //m_RAMBanks[newAddress + (m_CurrentRAMBank * 0x2000)] = data;
+            externalRam.write(newAddress + (m_CurrentRAMBank * 0x2000), data);
+        }
+    } else if(address >= 0xC000 && address <= 0xCFFF) {
         wram.write8(address - 0xC000, data);
-    } else if(address >= 0xFE00 && address <= 0xFE9F) {
+    } else if(address >= 0xD000 && address <= 0xFDFF) {
+        wram.write8((address - 0xD000) + (wramBank * 0x1000), data);
+    } else if (address >= 0xFE00 && address <= 0xFE9F) {
         oam.write8(address - 0xFE00, data);
-    } else if(address >= 0xFF00 && address <= 0xFF7F) {
+    } else if (address >= 0xFF00 && address <= 0xFF7F) {
         writeIO(address, data);
-    } else if(address >= 0xFF80 && address <= 0xFFFE) {
+    } else if (address >= 0xFF80 && address <= 0xFFFE) {
         hram.write8(address - 0xFF80, data);
-    } else if(address == 0xFFFF) {
+    } else if (address == 0xFFFF) {
         interruptHandler.write8(address, data);
     } else {
-        std::cerr << "Unknown write address\n";
+        printf("Unknown write address %x - %x\n", address, data);
+        std::cerr << "";
     }
 }
 
@@ -168,16 +237,17 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address >= 0xFF68 && address <= 0xFF6B) {
         std::cerr << "CGB BG / OBJ Pallets\n";
     } else if(address == 0xFF70) {
-        std::cerr << "CGB WRAM Bank Select\n";
+        //std::cerr << "CGB WRAM Bank Select\n";
+        wramBank = (data & 0x7) == 0 ? 1 : static_cast<size_t>(data & 0x7);
     } else {
-        printf("IO Write Address; %x = %x\n", address, data);
-        std::cerr << "";
+        //printf("IO Write Address; %x = %x\n", address, data);
+        //std::cerr << "";
     }
 }
 
 void MMU::write16(uint16_t address, uint16_t data) {
     write8(address, data & 0xFF);
-    write8(address + 1, (data >> 8) & 0xFF);
+    write8(address + 1, (data >> 8) /*should I & 0xFF?*/);
 }
 
 void MMU::clear() {

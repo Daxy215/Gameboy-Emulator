@@ -16,6 +16,9 @@ public:
     
     void rst(uint16_t pc);
     void adc(uint8_t& a, uint8_t& reg, bool carry);
+
+    void inc(uint8_t& reg);
+    void dec(uint8_t& reg);
     
     void pushToStack(uint16_t value);
     
@@ -130,6 +133,10 @@ public:
                 return *this;
             }
             
+            uint16_t operator+(uint16_t value) const {
+                return static_cast<uint16_t>(D << 8 | E) + value;
+            }
+            
             uint16_t get() {
                 return static_cast<uint16_t>((D << 8) | E);
             }
@@ -147,13 +154,9 @@ public:
             }
             
             HL& operator+=(uint16_t value) {
-                // Add the lower byte of the value to L
                 uint16_t newL = L + (value & 0xFF);
                 
-                // Calculate the new high byte of HL considering overflow from L
                 H += (value >> 8) + (newL >> 8);
-                
-                // Update L with the lower 8 bits of the result
                 L = newL & 0xFF;
                 
                 return *this;
@@ -227,6 +230,11 @@ public:
      *
      * Please note most of this information is copied from; https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
      * as this website will be used as a guide to complete this project.
+     *
+     * FLAG_Z: If after the addition the result is 0
+     * FLAG_N: Set to 0
+     * FLAG_C: If the result will be greater than max byte (255)
+     * FLAG_H: If there will be a carry from the lower nibble to the upper nibble
      */
     /*enum FlagRegister {
         Z = 1 << 7, // Zero Flag
