@@ -13,14 +13,24 @@ public:
     
     uint16_t fetchOpCode();
     int decodeInstruction(uint16_t opcode);
+    int decodePrefix(uint16_t opcode);
+    
+    //void orReg(uint16_t& reg, uint8_t& regA);
     
     void rst(uint16_t pc);
-    void adc(uint8_t& a, uint8_t& reg, bool carry);
-
+    void adc(uint8_t& a, const uint8_t& reg, bool carry);
+    
     void inc(uint8_t& reg);
     void dec(uint8_t& reg);
     
+    // Prefix instructions
+    void checkBit(uint8_t bit, uint16_t& reg);
+    void clearBit(uint8_t bit, uint16_t& reg);
+    void setBit(uint8_t bit, uint16_t& reg);
+    void setBit(uint8_t bit, uint8_t& reg);
+    
     void pushToStack(uint16_t value);
+    uint16_t popStack();
     
     void reset();
     
@@ -167,7 +177,6 @@ public:
             }
             
             uint16_t get() const {
-                uint16_t f = static_cast<uint16_t>((H << 8) | L);
                 return static_cast<uint16_t>((H << 8) | L);
             }
         } HL;

@@ -9,3 +9,4 @@ x64/
 gameboy-doctor-master/
 .vs/
 .idea/
+GameBoyEmulator/cpu_state_log.txt

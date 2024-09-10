@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include <cstdint>
 
 // This class is taken from; https://github.com/jgilchrist/gbemu/blob/master/src/util/bitwise.h
 
@@ -16,6 +15,9 @@ inline auto compose_bytes(const uint8_t high, const uint8_t low) -> uint16_t {
 }
 
 inline auto check_bit(const uint8_t value, const uint8_t bit) -> bool { return (value & (1 << bit)) != 0; }
+/*inline auto check_bit(const uint16_t value, const uint8_t bit) -> bool {
+    return (value & (1 << bit)) != 0;
+}*/
 
 inline auto bit_value(const uint8_t value, const uint8_t bit) -> uint8_t { return (value >> bit) & 1; }
 

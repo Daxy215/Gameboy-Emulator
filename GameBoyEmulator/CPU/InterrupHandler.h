@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include <cstdint>
 
 // https://gbdev.io/pandocs/Interrupts.html
 

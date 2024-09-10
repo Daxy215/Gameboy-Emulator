@@ -1,4 +1,6 @@
-﻿#include "InterrupHandler.h"
+﻿#include <cstdint>
+
+#include "InterrupHandler.h"
 
 uint8_t InterruptHandler::fetch8(uint16_t address) {
 	if(address == 0xFFFF) {

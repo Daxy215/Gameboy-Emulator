@@ -5,11 +5,12 @@
 #include "InterrupHandler.h"
 
 #include "../Memory/MMU.h"
+#include "../Utility/Bitwise.h"
 
 CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
     : interruptHandler(interruptHandler), mmu(mmu) {
     // https://gbdev.io/pandocs/Power_Up_Sequence.html#cpu-registers
-    
+	
     AF.A = 0x01;
     AF.F = 0xB0;
     BC.B = 0x00;
@@ -110,6 +111,28 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 8;
         }
+
+		case 0x07: {
+	        /**
+	         * RLCA
+	         * 1, 4
+	         * 0 0 0 C
+	         */
+			
+        	uint8_t value = AF.A;
+        	
+        	uint8_t bit7 = (value >> 7) & 1;
+        	value = (value << 1) | bit7;
+			
+        	AF.A = value;
+			
+        	AF.setZero(false);
+        	AF.setSubtract(false);
+        	AF.setHalfCarry(false);
+        	AF.setCarry(bit7 == 1);
+
+        	return 4;
+        }
 		
 		case 0x08: {
 			/**
@@ -124,10 +147,27 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	mmu.write8(u16, SP & 0xFF);
         	mmu.write8(u16 + 1, (SP >> 8) & 0xFF);
 			
-			
         	PC += 2;
         	
         	return 20;
+        }
+		
+		/*case 0x09: {
+			/**
+			 * 
+			 #1#
+		}*/
+		
+		case 0x0B: {
+			/**
+			 * DEC BC
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	BC = BC.get() - 1;
+			
+        	return 8;
         }
     	
 		case 0x0D: {
@@ -262,7 +302,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
              */
             
             if (!AF.getZero()) {
-                int8_t offset = mmu.fetch8(PC++);
+                int8_t offset = static_cast<int8_t>(mmu.fetch8(PC++));
                 
                 PC += offset;
                 
@@ -297,7 +337,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	mmu.write8(HL.get(), AF.A);
         	HL = HL.get() + 1;
 			
-        	break;
+        	return 8;
         }
 
         case 0x23: {
@@ -360,7 +400,19 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 8;
         }
-
+		
+		case 0x2E: {
+	        /**
+	         * LD L, u8
+	         * 2, 8
+	         * - - - -
+	         */
+			
+        	HL.L = mmu.fetch8(PC++);
+        	
+        	return 8;
+        }
+		
 		case 0x2D: {
 			/**
 			 * DEC L
@@ -429,15 +481,13 @@ int CPU::decodeInstruction(uint16_t opcode) {
              * - 0 H C
              */
             
-        	// Extract HL and SP values as 16-bit integers
-        	uint16_t HL_value = HL.get(); // Assuming HL.get() returns the 16-bit value
+        	uint16_t HL_value = HL.get();
         	uint16_t SP_value = SP;
 			
         	// Perform the addition
         	uint32_t result = HL_value + SP_value;
-			
-        	// Store the result back in the HL register pair
-        	HL = result; // Assuming HL is directly assignable
+        	
+        	HL = static_cast<uint16_t>(result); 
 			
         	AF.setSubtract(false);
         	AF.setHalfCarry(((HL_value & 0x0FFF) + (SP_value & 0x0FFF)) > 0x0FFF);
@@ -1067,7 +1117,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	AF.setSubtract(true);
         	AF.setHalfCarry((AF.A & 0xF) < (val & 0xF));
         	AF.setCarry(AF.A < val);
-            
+        	
         	return 8;
         }
 		
@@ -1078,7 +1128,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 * Z 1 H C
 			 */
 			
-        	uint8_t result = AF.A - AF.A;
+        	//uint8_t result = AF.A - AF.A;
         	
         	AF.setZero(true);
         	AF.setSubtract(true);
@@ -1156,8 +1206,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
 		case 0xC5: {
 			/**
 			 * PUSH BC
-			 * 1, 16
-			 * - - - -
+			 * 1, 16			 * - - - -
 			 */
 			
         	pushToStack(BC.get());
@@ -1182,6 +1231,22 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	return 8;
         }
 		
+		case 0xC8: {
+			/**
+			 * RET Z
+			 * 1, 8 (20 with branch)
+			 * - - - -
+			 */
+			
+        	if(AF.getZero()) {
+        		uint16_t address = popStack();
+				
+        		PC = address;
+        	}
+        	
+        	return 8;
+        }
+    	
         case 0xC9: {
             /*
              * RET
@@ -1189,13 +1254,22 @@ int CPU::decodeInstruction(uint16_t opcode) {
              */
             
             uint16_t d16 = mmu.fetch16(SP);
-            /*printf("fg %x - %x", d16, SP);
-        	std::cerr << "";*/
         	
             PC = d16;
             SP += 2;
             
             return 16;
+        }
+		
+		case 0xCB: {
+			/**
+			 * PREFIX CB
+			 * 1, 4
+			 */
+			
+			return decodePrefix(fetchOpCode());
+        	
+        	return 4;
         }
 
         case 0xCD: {
@@ -1220,7 +1294,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	if(!AF.getCarry()) {
-				uint16_t address = (mmu.fetch8(SP + 1) << 8) | mmu.fetch8(SP);
+				uint16_t address = static_cast<uint16_t>(mmu.fetch8(SP + 1) << 8) | static_cast<uint16_t>(mmu.fetch8(SP));
 				
         		PC = address;
         		
@@ -1488,7 +1562,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         case 0x4b:
         case 0x4c:
         case 0x4d:
-        case 0x4f: // ld c,reg
+        case 0x4f: // ld,reg
         case 0x50:
         case 0x51:
         case 0x52:
@@ -1550,7 +1624,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         case 0x83:
         case 0x84:
         case 0x85:
-        case 0x87: // add a,reg
+        case 0x87: // add a reg
         case 0x88:
         case 0x89:
         case 0x8a:
@@ -1567,14 +1641,6 @@ int CPU::decodeInstruction(uint16_t opcode) {
         }
         
         default: {
-            /*
-            std::bitset<8> x(opcode);
-            std::cout << x << '\n';
-            */
-
-        	if(opcode == 0xFC)
-        		return 4;
-        	
             printf("Unknown instruction; %x\n", opcode);
             std::cerr << "";
             
@@ -1582,6 +1648,104 @@ int CPU::decodeInstruction(uint16_t opcode) {
         }
     }
  }
+
+int CPU::decodePrefix(uint16_t opcode) {
+	switch (opcode) {
+		case 0x7E: {
+			/**
+			 * BIT 7, (HL)
+			 * 2, 12
+			 * Z 0 1 -
+			 */
+			
+			uint16_t v = HL.get();
+			checkBit(7, v);
+			
+			PC++;
+			
+			return 12;
+		}
+		
+		case 0xBE: {
+			/**
+			 * REST 7, (HL)
+			 * 2, 16
+			 * - - - -
+			 */
+			
+			uint16_t hl = HL.get();
+			clearBit(7, hl);
+			
+			PC++;
+			
+			return 16;
+		}
+		
+		case 0xCE: {
+			/**
+			 * SET 1, (HL)
+			 * 2, 16
+			 * - - - -
+			 */
+			
+			uint16_t hl = HL.get();
+			setBit(1, hl);
+			
+			return 16;
+		}
+		
+		case 0xE6: {
+			/**
+			 * SET 4, (HL)
+			 * 2, 16
+			 * - - - -
+			 */
+			
+			uint16_t hl = HL.get();
+			setBit(2, hl);
+			
+			return 16;
+		}
+		
+		case 0xE9: {
+			/**
+			 * SET 5, C
+			 * 2, 8
+			 * - - - -
+			 */
+			
+			setBit(5, BC.C);
+			
+			return 8;
+		}
+		
+		case 0xF6: {
+			/**
+			 * SET 6, (HL)
+			 * 2, 16
+			 * - - - -
+			 */
+			
+			uint16_t hl = HL.get();
+			setBit(6, hl);
+			
+			return 16;
+		}
+		
+		default: {
+			printf("Unknown instruction; %x\n", opcode);
+			std::cerr << "";
+            
+			return 4;
+		}
+	}
+}
+
+/*void CPU::orReg(uint16_t& reg) {
+	uint8_t val = mmu.fetch8(reg);
+
+	
+}*/
 
 void CPU::rst(uint16_t pc) {
     uint8_t high = (PC >> 8) & 0xFF;
@@ -1593,15 +1757,11 @@ void CPU::rst(uint16_t pc) {
     SP--;
     mmu.write8(SP, low);
     
-    // Jump to the address 0x0038
     PC = pc;
 }
 
-void CPU::adc(uint8_t& regA, uint8_t& value, bool carry) {
-    // Get the carry value (1 if carry is true, otherwise 0)
+void CPU::adc(uint8_t& regA, const uint8_t& value, bool carry) {
     uint8_t carryValue = carry ? 1 : 0;
-    
-    // Perform the addition with carry
     uint16_t result = regA + value + carryValue;
     
     AF.setZero((result & 0xFF) == 0);
@@ -1609,7 +1769,6 @@ void CPU::adc(uint8_t& regA, uint8_t& value, bool carry) {
     AF.setHalfCarry(((regA & 0xF) + (value & 0xF) + carryValue) > 0xF);
     AF.setCarry(result > 0xFF);
     
-    // Store the lower 8 bits of the result back in regA
     regA = result & 0xFF;
 }
 
@@ -1631,6 +1790,37 @@ void CPU::dec(uint8_t& reg) {
 	AF.setHalfCarry(((reg + 1) & 0x0F) == 0x00);
 }
 
+void CPU::checkBit(uint8_t bit, uint16_t& reg) {
+	uint8_t value = mmu.fetch8(reg);
+	
+	bool isBit = check_bit(value, bit);
+	
+	AF.setZero(!isBit);
+	AF.setSubtract(false);
+	AF.setHalfCarry(true);
+}
+
+void CPU::clearBit(uint8_t bit, uint16_t& reg) {
+	uint8_t value = mmu.fetch8(reg);
+
+	// To clear the bit
+	value &= ~(1 << bit);
+	
+	mmu.write8(reg, value);
+}
+
+void CPU::setBit(uint8_t bit, uint16_t& reg) {
+	uint8_t value = mmu.fetch8(reg);
+	
+	value |= (1 << bit);
+	
+	mmu.write8(reg, value);
+}
+
+void CPU::setBit(uint8_t bit, uint8_t& reg) {
+	reg |= (1 << bit);
+}
+
 void CPU::pushToStack(uint16_t value) {
 	/*mmu.write8(--SP, value & 0xFF);
     mmu.write8(--SP, (value >> 8) /*should I & 0xFF?#1#);
@@ -1638,6 +1828,13 @@ void CPU::pushToStack(uint16_t value) {
 	
 	SP -= 2;
     mmu.write16(SP, value);
+}
+
+uint16_t CPU::popStack() {
+	uint8_t low = mmu.fetch8(SP++);
+	uint8_t high = mmu.fetch8(SP++);
+	
+	return static_cast<uint8_t>(high << 8) | low;
 }
 
 void CPU::reset() {

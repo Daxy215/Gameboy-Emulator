@@ -45,9 +45,9 @@ void PPU::tick(const int& cycles) {
 			}
 			
 			// Draw background, window and sprites
-			fetchBackground();
-			//fetchSprites();
-			//pushPixelsToLCDC();
+			//fetchBackground();
+			fetchSprites();
+			pushPixelsToLCDC();
 			
 			// Increment LY
 			mmu.write8(0xFF44, LY + 1);
@@ -169,8 +169,8 @@ void PPU::fetchBackground() {
         	
             for (int row = 0; row < 8; row++) {
                 for (int col = 0; col < 8; col++) {
-                    int pixelX = (x * 8 + col - backgroundTileXOffset);
-                    int pixelY = (y * 8 + row - backgroundTileOffset);
+                    uint8_t pixelX = (x * 8 + col - backgroundTileXOffset);
+                    uint8_t pixelY = (y * 8 + row - backgroundTileOffset);
                 	
                     //if (pixelX >= 0 && pixelX < 160 && pixelY >= 0 && pixelY < 144) { // Screen bounds check
                         uint8_t pixelData = curTile.data[row][col];
@@ -454,13 +454,13 @@ void PPU::updatePixel(SDL_Texture* texture, uint8_t x, uint8_t y, Uint32 color) 
 
 std::tuple<unsigned char, unsigned char, unsigned char> PPU::GetRGB(unsigned char color) {
 	switch (color) {
-	case 0:
-		return std::make_tuple(255, 255, 255);  // White
-	case 1:
-		return std::make_tuple(192, 192, 192);  // Light Gray
-	case 2:
-		return std::make_tuple(96, 96, 96);    // Dark Gray
 	case 3:
+		return std::make_tuple(255, 255, 255);  // White
+	case 2:
+		return std::make_tuple(192, 192, 192);  // Light Gray
+	case 1:
+		return std::make_tuple(96, 96, 96);    // Dark Gray
+	case 0:
 		return std::make_tuple(0, 0, 0);       // Black
 	default:
 		return std::make_tuple(0, 0, 0);       // Default to black in case of an invalid value

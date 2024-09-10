@@ -1,12 +1,8 @@
-#include <bitset>
-#include <iostream>
 #include <filesystem>
 #include <fstream>
 #include <SDL.h>
-#include <SDL_events.h>
 #include <sstream>
 #include <thread>
-#include <vector>
 
 #include "Memory/Cartridge.h"
 #include "CPU/CPU.h"
@@ -91,27 +87,20 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
     }
     
     // Load the expected CPU states from Blargg9.txt
-    std::ifstream blarggFile("Roms/Blargg9.txt");
+    std::ifstream blarggFile("Roms/cpu_state.txt");
     if (!blarggFile.is_open()) {
-        throw std::runtime_error("Unable to open Blargg9.txt.");
+        throw std::runtime_error("Unable to open cpu_state.txt.");
     }
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line)/* && blarggStates.size() < 64000*/) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 60000) {
         blarggStates.push_back(line);
     }
-    
-    // Log the current CPU state
-    //logFile << formatCPUState(cpu) << '\n';
     
     uint64_t x = 0;
     
     while (true) {
-        if(x == 16518) {
-            printf("");
-        }
-        
         // A:01 F:B0 B:00 C:13 D:00 E:D8 H:01 L:4D SP:FFFE PC:0100 PCMEM:00,C3,13,02
         
         // Format and log the current CPU state
@@ -120,29 +109,25 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
         //std::cerr << formattedState << " - " << x << "\n";
         
         // Compare with the expected state from Blargg9.txt
-        if (x < blarggStates.size()) {
+        /*if (x < blarggStates.size()) {
             const std::string &expectedState = blarggStates[x];
             if (formattedState != expectedState) {
-                //std::cerr << "Mismatch at iteration " << x << ":\n";
-                //std::cerr << "Expected: " << expectedState << "\n";
-                //std::cerr << "Actual  : " << formattedState << "\n";
+                std::cerr << "Mismatch at iteration " << x << ":\n";
+                std::cerr << "Expected: " << expectedState << "\n";
+                std::cerr << "Actual  : " << formattedState << "\n";
                 
                 //break;
             }
-        } else {
+        } else if(x > blarggStates.size()) {
             std::cerr << "No more expected states to compare.\n";
             break;
-        }
+        }*/
         
         uint16_t opcode = cpu.fetchOpCode();
         int cycles = cpu.decodeInstruction(opcode);
+        ppu.tick(cycles);
         
         x++;
-        
-        // Write of C3
-        if(x == 7) {
-            //printf(";9");
-        }
     }
 }
 
@@ -151,11 +136,11 @@ int main(int argc, char* argv[]) {
     using std::ios;
     
     //std::string filename = "Roms/Tennis (World).gb";
-    //std::string filename = "Roms/dmg-acid2.gb";
+    std::string filename = "Roms/dmg-acid2.gb";
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb";
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb";
     //std::string filename = "Roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb";
-    std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb";
+    //std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb";
     //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb";
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
