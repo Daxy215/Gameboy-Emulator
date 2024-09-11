@@ -2257,6 +2257,330 @@ int CPU::decodeInstruction(uint16_t opcode) {
 
 int CPU::decodePrefix(uint16_t opcode) {
 	switch (opcode) {
+		case 0x00: {
+			/**
+			 * RLC B
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rlc(BC.B);
+			
+			return 8;
+		}
+		
+		case 0x01: {
+			/**
+			 * RLC C
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rlc(BC.C);
+			
+			return 8;
+		}
+		
+		case 0x02: {
+			/**
+			 * RLC D
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rlc(DE.D);
+			
+			return 8;
+		}
+		
+		case 0x03: {
+			/**
+			 * RLC E
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rlc(DE.E);
+			
+			return 8;
+		}
+		
+		case 0x04: {
+			/**
+			 * RLC H
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rlc(HL.H);
+			
+			return 8;
+		}
+		
+		case 0x05: {
+			/**
+			 * RLC H
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rlc(HL.L);
+			
+			return 8;
+		}
+		
+		case 0x06: {
+			/**
+			 * RLC (HL)
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			uint8_t u8 = mmu.fetch8(HL.get());
+			rlc(u8);
+			
+			return 8;
+		}
+		
+		case 0x07: {
+			/**
+			 * RLC A
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rlc(AF.A);
+			
+			return 8;
+		}
+
+		case 0x08: {
+			/**
+			 * RCC B
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rrc(BC.B);
+			
+			return 8;
+		}
+		
+		case 0x09: {
+			/**
+			 * RCC C
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rrc(BC.C);
+			
+			return 8;
+		}
+		
+		case 0x0A: {
+			/**
+			 * RCC D
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rrc(DE.D);
+			
+			return 8;
+		}
+		
+		case 0x0B: {
+			/**
+			 * RCC E
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rrc(DE.E);
+			
+			return 8;
+		}
+		
+		case 0x0C: {
+			/**
+			 * RCC H
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rrc(HL.H);
+			
+			return 8;
+		}
+		
+		case 0x0D: {
+			/**
+			 * RCC l
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rrc(HL.L);
+			
+			return 8;
+		}
+		
+		case 0x0E: {
+			/**
+			 * RCC (HL)
+			 * 2, 16
+			 * Z 0 0 C
+			 */
+
+			uint8_t u8 = mmu.fetch8(HL.get());
+			
+			// Save the least significant bit (bit 0)
+			uint8_t bit0 = u8 & 0x01;
+			
+			// Rotate the value right
+			u8 = (u8 >> 1) | (bit0 << 7);
+			
+			mmu.write8(HL.get(), u8);
+			
+			AF.setZero(u8 == 0);
+			AF.setSubtract(false);
+			AF.setHalfCarry(false);
+			AF.setCarry(bit0 == 1);
+			
+			return 16;
+		}
+		
+		case 0x0F: {
+			/**
+			 * RCC A
+			 * 2, 16
+			 * Z 0 0 C
+			 */
+			
+			rrc(AF.A);
+			
+			return 8;
+		}
+		
+		case 0x10: {
+			/**
+			 * RL B
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rl(BC.B);
+			
+			return 8;
+		}
+		
+		case 0x11: {
+			/**
+			 * RL C
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rl(BC.C);
+			
+			return 8;
+		}
+		
+		case 0x12: {
+			/**
+			 * RL D
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rl(DE.D);
+			
+			return 8;
+		}
+		
+		case 0x13: {
+			/**
+			 * RL E
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rl(DE.E);
+			
+			return 8;
+		}
+		
+		case 0x14: {
+			/**
+			 * RL H
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rl(HL.H);
+			
+			return 8;
+		}
+		
+		case 0x15: {
+			/**
+			 * RL L
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rl(HL.L);
+			
+			return 8;
+		}
+		
+		case 0x16: {
+			/**
+			 * RL (HL)
+			 * 2, 16
+			 * Z 0 0 C
+			 */
+			
+			uint8_t value = mmu.fetch8(HL.get());
+			uint8_t bit7 = (value >> 7) & 0x01;
+			
+			value = (value << 1) | (AF.getCarry() ? 1 : 0);
+			
+			mmu.write8(HL.get(), value);
+			
+			AF.setZero(value == 0);
+			AF.setSubtract(false);
+			AF.setHalfCarry(false);
+			AF.setCarry(bit7 == 1);
+			
+			return 16;
+		}
+		
+		case 0x17: {
+			/**
+			 * RL A
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rl(AF.A);
+			
+			return 8;
+		}
+		
+		case 0x18: {
+			/**
+			 * RR B
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rr(BC.B);
+			
+			return 8;
+		}
+		
 		case 0x19: {
 			/**
 			 * RR C
@@ -2280,7 +2604,7 @@ int CPU::decodePrefix(uint16_t opcode) {
 			
 			return 8;
 		}
-
+		
 		case 0x1B: {
 			/**
 			 * RR E
@@ -2293,6 +2617,52 @@ int CPU::decodePrefix(uint16_t opcode) {
 			return 8;
 		}
 
+		case 0x1C: {
+			/**
+			 * RR H
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rr(HL.H);
+			
+			return 8;
+		}
+
+		case 0x1D: {
+			/**
+			 * RR L
+			 * 2, 8
+			 * Z 0 0 C
+			 */
+			
+			rr(HL.L);
+			
+			return 8;
+		}
+		
+		case 0x1E: {
+			/**
+			 * RR (HL)
+			 * 2, 16
+			 * Z 0 0 C
+			 */
+			
+			uint8_t value = mmu.fetch8(HL.get());
+			uint8_t bit0 = value & 0x01;
+			
+			value = (value >> 1) | (AF.getCarry() ? 0x80 : 0x00);
+			
+			mmu.write8(HL.get(), value);
+			
+			AF.setZero(value == 0);
+			AF.setSubtract(false);
+			AF.setHalfCarry(false);
+			AF.setCarry(bit0 == 1);
+			
+			return 16;
+		}
+		
 		case 0x1F: {
 			/**
 			 * RR A
@@ -2304,7 +2674,7 @@ int CPU::decodePrefix(uint16_t opcode) {
 			
 			return 8;
 		}
-
+		
 		case 0x37: {
 			/**
 			 * SWAP A
@@ -2623,6 +2993,45 @@ void CPU::swap(uint8_t& reg) noexcept {
 	reg = (orig << 4) | (orig >> 4);
 	
 	AF.setZero(reg == 0);
+}
+
+void CPU::rlc(uint8_t& reg) {
+	// Save the most significant bit (bit 7)
+	uint8_t bit7 = (reg & 0x80) >> 7;
+	
+	// Rotate the register left
+	reg = (reg << 1) | bit7;
+	
+	AF.setZero(reg == 0);
+	AF.setSubtract(false);
+	AF.setHalfCarry(false);
+	AF.setCarry(bit7 == 1);
+}
+
+void CPU::rl(uint8_t& reg) {
+	// Save the most significant bit (bit 7)
+	uint8_t bit7 = (reg >> 7) & 0x01;
+	
+	// Shift the register left by one, and add the carry flag into bit 0
+	reg = (reg << 1) | (AF.getCarry() ? 1 : 0);
+	
+	AF.setZero(reg == 0);
+	AF.setSubtract(false);
+	AF.setHalfCarry(false);
+	AF.setCarry(bit7 == 1);
+}
+
+void CPU::rrc(uint8_t& reg) {
+	// Save the least significant bit (bit 0)
+	uint8_t bit0 = reg & 0x01;
+	
+	// Rotate the register right
+	reg = (reg >> 1) | (bit0 << 7);
+	
+	AF.setZero(reg == 0);
+	AF.setSubtract(false);
+	AF.setHalfCarry(false);
+	AF.setCarry(bit0 == 1);
 }
 
 void CPU::rr(uint8_t& reg) {
