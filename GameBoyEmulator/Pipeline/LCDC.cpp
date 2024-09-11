@@ -18,8 +18,8 @@ uint8_t LCDC::fetch8(uint16_t address) {
 		return SCX;
 	} else if(address == 0xFF44) {
 		// https://gbdev.io/pandocs/STAT.html#ff44--ly-lcd-y-coordinate-read-only
-		return LY;
-		//return 0x90;
+		//return LY;
+		return 0x90;
 	} else if(address == 0xFF45) {
 		// https://gbdev.io/pandocs/STAT.html#ff45--lyc-ly-compare
 		return LYC;

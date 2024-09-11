@@ -50,7 +50,7 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address >= 0xFF00 && address <= 0xFF7F) {
         return fetchIO(address);
     } else if(address >= 0xFF80 && address <= 0xFFFE) {
-        return hram.fetch8(address - 0XFF80);
+        return hram.fetch8(address & 0x007F);
     } else if(address == 0xFFFF) {
         return interruptHandler.fetch8(address);
     } else {
@@ -78,15 +78,17 @@ uint8_t MMU::fetchIO(uint16_t address) {
         if(address >= 0xFF40 && address <= 0xFF45) {
             return lcdc.fetch8(address);
         }
+    } else if(address == 0xFF4D) {
+        // Prepare speed switch	
     } else if(address == 0xFF4F) {
-        std::cerr << "CGB VRAM Bank Select\n";
+        //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
         std::cerr << "Set to non-zero to disable boot ROM\n";
         return 1;
     } else if(address >= 0xFF51 && address <= 0xFF55) {
-        std::cerr << "CGB VRAM DMA\n";
+        //std::cerr << "CGB VRAM DMA\n";
     } else if(address >= 0xFF68 && address <= 0xFF6B) {
-        std::cerr << "CGB BG / OBJ Pallets\n";
+        //std::cerr << "CGB BG / OBJ Pallets\n";
     } else if(address == 0xFF70) {
         //std::cerr << "CGB WRAM Bank Select\n";
         return wramBank;
@@ -108,8 +110,8 @@ uint16_t MMU::fetch16(uint16_t address) {
 }
 
 void MMU::write8(uint16_t address, uint8_t data) {
-    /*if(address > 0x8000) {
-        printf("S");
+    /*if(address == 65411) {
+        printf("");
     }*/
     
     // Handle ROM and RAM bank switching for MBC1/MBC2
@@ -190,12 +192,12 @@ void MMU::write8(uint16_t address, uint8_t data) {
     } else if (address >= 0xFF00 && address <= 0xFF7F) {
         writeIO(address, data);
     } else if (address >= 0xFF80 && address <= 0xFFFE) {
-        hram.write8(address - 0xFF80, data);
+        hram.write8(address & 0x007F, data);
     } else if (address == 0xFFFF) {
         interruptHandler.write8(address, data);
     } else {
-        printf("Unknown write address %x - %x\n", address, data);
-        std::cerr << "";
+        //printf("Unknown write address %x - %x\n", address, data);
+        //std::cerr << "";
     }
 }
 
@@ -247,7 +249,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
 
 void MMU::write16(uint16_t address, uint16_t data) {
     write8(address, data & 0xFF);
-    write8(address + 1, (data >> 8) /*should I & 0xFF?*/);
+    write8(address + 1, (data >> 8) & 0xFF);
 }
 
 void MMU::clear() {

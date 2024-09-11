@@ -94,22 +94,18 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 60000) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 80000) {
         blarggStates.push_back(line);
     }
     
     uint64_t x = 0;
     
     while (true) {
-        // A:01 F:B0 B:00 C:13 D:00 E:D8 H:01 L:4D SP:FFFE PC:0100 PCMEM:00,C3,13,02
-        
-        // Format and log the current CPU state
         std::string formattedState = formatCPUState(cpu);
         logFile << formattedState << '\n';
         //std::cerr << formattedState << " - " << x << "\n";
         
-        // Compare with the expected state from Blargg9.txt
-        /*if (x < blarggStates.size()) {
+        if (x < blarggStates.size()) {
             const std::string &expectedState = blarggStates[x];
             if (formattedState != expectedState) {
                 std::cerr << "Mismatch at iteration " << x << ":\n";
@@ -119,9 +115,13 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
                 //break;
             }
         } else if(x > blarggStates.size()) {
-            std::cerr << "No more expected states to compare.\n";
-            break;
-        }*/
+            //std::cerr << "No more expected states to compare.\n";
+            //break;
+        }
+        
+        if(x == 53455) {
+            printf("");
+        }
         
         uint16_t opcode = cpu.fetchOpCode();
         int cycles = cpu.decodeInstruction(opcode);
@@ -131,16 +131,21 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
     }
 }
 
+std::optional<uint8_t> stdoutprinter(uint8_t value) {
+    std::cerr << static_cast<char>(value);
+    return std::nullopt;
+}
+
 int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
     //std::string filename = "Roms/Tennis (World).gb";
-    std::string filename = "Roms/dmg-acid2.gb";
+    //std::string filename = "Roms/dmg-acid2.gb";
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb";
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb";
     //std::string filename = "Roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb";
-    //std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb";
+    std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb";
     //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb";
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
@@ -183,6 +188,8 @@ int main(int argc, char* argv[]) {
     Cartridge cartridge;
     
     CPU cpu(interruptHandler, mmu);
+    
+    serial.set_callback(stdoutprinter);
     
     // NO bios
     /*mmu.write8(0xFF40, 0x91);

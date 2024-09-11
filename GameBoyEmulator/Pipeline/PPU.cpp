@@ -28,12 +28,14 @@ void PPU::tick(const int& cycles) {
 			mode = 1; // Transfer
 			cycle -= CyclesOam;
 		}
+		
 		break;
 	case 1:
 		if(cycle >= CyclesTransfer) {
 			mode = 2; // HBlank
 			cycle -= CyclesTransfer;
 		}
+		
 		break;
 	case 2: //HBlank
 		if(cycle >= CyclesHBlank) {
@@ -46,14 +48,15 @@ void PPU::tick(const int& cycles) {
 			
 			// Draw background, window and sprites
 			//fetchBackground();
-			fetchSprites();
-			pushPixelsToLCDC();
+			//fetchSprites();
+			//pushPixelsToLCDC();
 			
 			// Increment LY
 			mmu.write8(0xFF44, LY + 1);
 			
 			cycle -= CyclesHBlank;
 		}
+		
 		break;
 	case 3:
 		if(cycle >= CyclesVBlank) {
@@ -70,6 +73,7 @@ void PPU::tick(const int& cycles) {
 			
 			cycle -= CyclesVBlank;
 		}
+		
 		break;
 	}
 	
@@ -273,6 +277,59 @@ void PPU::fetchBackground() {
 
 void PPU::fetchSprites() {
 	uint8_t LCDControl = mmu.fetch8(0xFF40);
+    uint8_t LY = mmu.fetch8(0xFF44);
+    
+    // Sprite Attributes Table (OAM) address
+    uint16_t oamAddress = 0xFE00;
+    
+    // Fetch sprites from OAM
+    for (uint16_t i = 0; i < 40; i++) {
+        uint16_t oamOffset = i * 4;
+        uint8_t y = mmu.fetch8(oamAddress + oamOffset) - 16; // Sprite Y position
+        uint8_t x = mmu.fetch8(oamAddress + oamOffset + 1) - 8; // Sprite X position
+        uint8_t tileIndex = mmu.fetch8(oamAddress + oamOffset + 2); // Tile index
+        uint8_t attributes = mmu.fetch8(oamAddress + oamOffset + 3); // Attributes
+        
+        bool yFlip = attributes & 0x40;
+        bool xFlip = attributes & 0x20;
+        bool priority = attributes & 0x80;
+		
+        // Skip sprites that are not on the current scanline
+        //if (LY < y || LY >= (y + 8)) continue;
+		
+        // Fetch tile data
+        uint16_t tileDataAddress = (LCDControl & 0x10) ? 0x8000 : 0x8800;
+        TileData tile;
+        uint16_t tileMemoryStart = tileDataAddress + (tileIndex * 16);
+        
+        for (int row = 0; row < 8; row++) {
+            uint8_t lineData1 = mmu.fetch8(tileMemoryStart + (row * 2));
+            uint8_t lineData2 = mmu.fetch8(tileMemoryStart + (row * 2) + 1);
+            
+            for (int col = 0; col < 8; col++) {
+                uint8_t lowBit = (lineData1 >> (7 - col)) & 0x1;
+                uint8_t highBit = (lineData2 >> (7 - col)) & 0x1;
+                tile.data[row][col] = (highBit << 1) | lowBit;
+            }
+        }
+        
+        // Draw sprite
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                int spriteRow = yFlip ? (7 - row) : row;
+                int spriteCol = xFlip ? (7 - col) : col;
+                uint8_t pixelData = tile.data[spriteRow][spriteCol];
+                
+                //if (pixelData == 0) continue; // Skip transparent pixels
+                
+                //uint8_t color = BGPalette[pixelData];
+                auto [r, g, b] = GetRGB(pixelData);
+                updatePixel(mainTexture, x + col, LY - y + row, RGBToUint32(r, g, b));
+            }
+        }
+    }
+	
+	/*uint8_t LCDControl = mmu.fetch8(0xFF40);
 	uint8_t LY = mmu.fetch8(0xFF44);
 	
 	int spriteHeight = (LCDControl & 0x04) ? 16 : 8;
@@ -308,7 +365,7 @@ void PPU::fetchSprites() {
 				spriteFifo[spriteIndex++] = pixel;
 			}
 		}
-	}
+	}*/
 }
 
 void PPU::pushPixelsToLCDC() {

@@ -14,20 +14,43 @@ public:
     uint16_t fetchOpCode();
     int decodeInstruction(uint16_t opcode);
     int decodePrefix(uint16_t opcode);
+
+    void popReg(uint8_t& reg);
+    void popReg(uint8_t& high, uint8_t& low);
     
-    //void orReg(uint16_t& reg, uint8_t& regA);
+    void jr(int8_t& offset);
     
+    int jrc(int8_t& offset);
+    int jrnc(int8_t& offset);
+    
+    int jrz(int8_t& offset);
+    int jrnz(int8_t& offset);
+    
+    void ld(uint8_t& regA, uint8_t& regB);
+    
+    void rra();
     void rst(uint16_t pc);
+    
     void adc(uint8_t& a, const uint8_t& reg, bool carry);
+    void add(uint8_t& regA, uint8_t& regB);
+
+    void sbc(uint8_t& regA, const uint8_t& regB, bool carry);
+    void sub(uint8_t& regA, uint8_t& regB);
     
     void inc(uint8_t& reg);
     void dec(uint8_t& reg);
+    
+    void xor8(uint8_t& regA, uint8_t& regB);
     
     // Prefix instructions
     void checkBit(uint8_t bit, uint16_t& reg);
     void clearBit(uint8_t bit, uint16_t& reg);
     void setBit(uint8_t bit, uint16_t& reg);
     void setBit(uint8_t bit, uint8_t& reg);
+    
+    void swap(uint8_t& reg) noexcept;
+    void rr(uint8_t& reg);
+    void srl(uint8_t& reg);
     
     void pushToStack(uint16_t value);
     uint16_t popStack();
