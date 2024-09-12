@@ -68,6 +68,8 @@ public:
     void swap(uint8_t& reg) noexcept;
     
     void rlc(uint8_t& reg);
+    void rlc(uint16_t& reg);
+    
     void rl(uint8_t& reg);
     void rrc(uint8_t& reg);
     void rr(uint8_t& reg);

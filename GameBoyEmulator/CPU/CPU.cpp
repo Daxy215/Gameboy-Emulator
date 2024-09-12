@@ -112,8 +112,9 @@ int CPU::decodeInstruction(uint16_t opcode) {
         
         case 0x06: {
             /**
-             * LD B, D8
+             * LD B, u8
              * 2, 8
+             * - - - -
              */
             
             uint8_t d8 = mmu.fetch8(PC++);
@@ -179,6 +180,17 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	
         	return 8;
 		}
+
+		case 0x0A: {
+			/**
+			 * LD A, (BC)
+			 * 1, 8
+			 */
+			
+        	AF.A = mmu.fetch8(BC.get());
+        	
+        	return 8;
+        }
 		
 		case 0x0B: {
 			/**
@@ -809,14 +821,13 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 * Z 1 H -
 			 */
 			
-        	uint8_t val = mmu.fetch8(HL.get());
-        	uint8_t res = val - 1;
+        	uint8_t val = mmu.fetch8(HL.get()) - 1;
 			
-        	mmu.write8(HL.get(), res);
+        	mmu.write8(HL.get(), val);
 			
-        	AF.setZero(res == 0);
+        	AF.setZero(val == 0);
         	AF.setSubtract(true);
-        	AF.setHalfCarry((res & 0x0F) == 0x00);
+        	AF.setHalfCarry((val & 0x0F) == 0x0F);
         	
         	return 12;
         }
@@ -880,6 +891,20 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	AF.setCarry(result > 0xFFFF);
             
             return 8;
+        }
+
+		case 0x3A: {
+			/**
+			 * LD A, (HL-)
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	uint16_t address = HL.get();
+        	AF.A = mmu.fetch8(address);
+        	HL = HL.get() - 1;
+        	
+        	return 8;
         }
 		
 		case 0x3B: {
@@ -1115,6 +1140,32 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	AF.A = mmu.fetch8(HL.get());
+        	
+        	return 8;
+        }
+		
+		case 0x86: {
+			/**
+			 * ADD A, (HL)
+			 * 1, 8
+			 * Z 0 C H
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(HL.get());
+        	add(AF.A, u8);
+        	
+        	return 8;
+        }
+		
+    	case 0x8E: {
+			/**
+			 * ADC A, (HL)
+			 * 1, 8
+			 * Z 0 C H
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(HL.get());
+        	adc(AF.A, u8, AF.getCarry());
         	
         	return 8;
         }
@@ -2803,14 +2854,14 @@ int CPU::decodePrefix(uint16_t opcode) {
 		case 0x06: {
 			/**
 			 * RLC (HL)
-			 * 2, 8
+			 * 2, 12
 			 * Z 0 0 C
 			 */
 			
-			uint8_t u8 = mmu.fetch8(HL.get());
-			rlc(u8);
+			uint16_t hl = HL.get();
+			rlc(hl);
 			
-			return 8;
+			return 12;
 		}
 		
 		case 0x07: {
@@ -3237,6 +3288,8 @@ int CPU::decodePrefix(uint16_t opcode) {
 			AF.setSubtract(false);
 			AF.setHalfCarry(false);
 			AF.setCarry(carryOut);
+			
+			mmu.write8(HL.get(), result);
 			
 			return 16;
 		}
@@ -6257,6 +6310,22 @@ void CPU::rlc(uint8_t& reg) {
 	AF.setSubtract(false);
 	AF.setHalfCarry(false);
 	AF.setCarry(bit7 == 1);
+}
+
+void CPU::rlc(uint16_t& reg) {
+	uint16_t address = reg;
+	uint8_t value = mmu.fetch8(address);
+	
+	// Calculate the new value and carry flag
+	bool carryOut = (value & 0x80) != 0;  // Check if the MSB is set
+	uint8_t newValue = (value << 1) | (carryOut ? 1 : 0);
+	
+	mmu.write8(address, newValue);
+	
+	AF.setZero(newValue == 0);
+	AF.setSubtract(false);
+	AF.setHalfCarry(false);
+	AF.setCarry(carryOut);
 }
 
 void CPU::rl(uint8_t& reg) {
