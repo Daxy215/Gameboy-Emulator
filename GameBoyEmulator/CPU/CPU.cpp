@@ -1947,7 +1947,10 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 * - - - -
 			 */
 			
-        	if(!AF.getZero()) {
+        	uint16_t u16 = mmu.fetch16(PC);
+        	return callnz(u16);
+			
+        	/*if(!AF.getZero()) {
 				pushToStack(PC + 2);
         		
         		uint16_t u16 = mmu.fetch16(PC);
@@ -1958,7 +1961,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			
         	PC += 2;
         	
-        	return 12;
+        	return 12;*/
         }
 		
 		case 0xC5: {
@@ -1993,6 +1996,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	AF.setCarry(result > 0xFF);*/
         	
         	return 8;
+        }
+
+		case 0xC7: {
+			/**
+			 * RST 00H
+			 * 1, 16
+			 * - - - -
+			 */
+			
+        	rst(0x0);
+        	
+        	return 16;
         }
 		
 		case 0xC8: {
@@ -2048,6 +2063,17 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			return decodePrefix(fetchOpCode());
         }
 		
+		case 0xCC: {
+			/**
+			 * CALL Z, u16
+			 * 3, 12 (24 with branch)
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(PC);
+        	return callz(u16);
+        }
+		
         case 0xCD: {
             /**
              * CALL u16
@@ -2074,6 +2100,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	adc(AF.A, u8, AF.getCarry());
         	
         	return 8;
+        }
+
+		case 0xCF: {
+			/**
+			 * RST 08h
+			 * 1, 16
+			 * - - - -
+			 */
+			
+        	rst(0x08);
+			
+        	return 16;
         }
 		
 		case 0xD0: {
@@ -2107,7 +2145,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	
         	return 12;
         }
-
+		
 		case 0xD2: {
 			/**
 			 * JP NC, u16
@@ -2116,7 +2154,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	uint16_t u16 = mmu.fetch16(PC);
-        	return jpnz(u16);
+        	return jpnc(u16);
+        }
+		
+		case 0xD4: {
+			/**
+			 * CALL NC, u16
+			 * 3, 12 (24 with branch)
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(PC);
+        	return callnc(u16);
         }
     	
 		case 0xD5: {
@@ -2153,6 +2202,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	return 8;
         }
 		
+		case 0xD7: {
+			/**
+			 * RST 10h
+			 * 1, 16
+			 * - - - -
+			 */
+			
+			rst(0x10);
+        	
+        	return 16;
+        }
+    	
 		case 0xD8: {
 			/**
 			 * RET C
@@ -2170,6 +2231,24 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	return 8;
         }
 		
+		case 0xD9: {
+			/**
+			 * RETI
+			 * 1, 16
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(SP);
+        	SP += 2;
+        	
+        	PC = u16;
+			
+        	// TODO;
+        	interruptHandler.IME = true;
+        	
+        	return 16;
+        }
+		
 		case 0xDA: {
 			/**
 			 * JP C, u16
@@ -2179,6 +2258,17 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			
         	uint16_t u16 = mmu.fetch16(PC);
         	return jpc(u16);
+        }
+		
+		case 0xDC: {
+			/**
+			 * CALL C, u16
+			 * 3, 12 (24 with branch)
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(PC);
+        	return callc(u16);
         }
 		
 		case 0xDE: {
@@ -2261,6 +2351,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	return 8;
         }
 		
+		case 0xE7: {
+	        /**
+	         * RST 20h
+	         * 1, 16
+	         * - - - -
+	         */
+			
+        	rst(0x20);
+        	
+        	return 16;
+        }
+		
 		case 0xE8: {
 			/**
 			 * ADD SP, i8
@@ -2316,6 +2418,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	xor8(AF.A, u8);
         	
         	return 8;
+        }
+		
+		case 0xEF: {
+        	/**
+			 * RST 28h
+			 * 1, 16
+			 * - - - -
+			 */
+			
+        	rst(0x28);
+        	
+        	return 16;
         }
 		
 		case 0xF0: {
@@ -2392,7 +2506,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 * - - - -
 			 */
 			
-        	rst(30);
+        	rst(0x30);
         	
         	return 16;
 		}
@@ -3580,6 +3694,36 @@ int CPU::jpnc(uint16_t& address) {
 	return 12;
 }
 
+int CPU::callc(uint16_t& address) {
+	if(AF.getCarry()) {
+		pushToStack(PC + 2);
+		
+		uint16_t u16 = mmu.fetch16(PC);
+		PC = u16;
+		
+		return 24;
+	}
+	
+	PC += 2;
+	
+	return 12;
+}
+
+int CPU::callnc(uint16_t& address) {
+	if(!AF.getCarry()) {
+		pushToStack(PC + 2);
+		
+		uint16_t u16 = mmu.fetch16(PC);
+		PC = u16;
+		
+		return 24;
+	}
+	
+	PC += 2;
+	
+	return 12;
+}
+
 int CPU::jrz(int8_t& offset) {
 	if (AF.getZero()) {
 		PC += offset + 1; // For the byte
@@ -3620,6 +3764,36 @@ int CPU::jpnz(uint16_t& address) {
 		PC = address;
 		
 		return 16;
+	}
+	
+	PC += 2;
+	
+	return 12;
+}
+
+int CPU::callz(uint16_t& address) {
+	if(AF.getZero()) {
+		pushToStack(PC + 2);
+		
+		uint16_t u16 = mmu.fetch16(PC);
+		PC = u16;
+		
+		return 24;
+	}
+	
+	PC += 2;
+	
+	return 12;
+}
+
+int CPU::callnz(uint16_t& address) {
+	if(!AF.getZero()) {
+		pushToStack(PC + 2);
+		
+		uint16_t u16 = mmu.fetch16(PC);
+		PC = u16;
+		
+		return 24;
 	}
 	
 	PC += 2;
