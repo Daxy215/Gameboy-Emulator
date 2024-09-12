@@ -50,32 +50,30 @@ public:
 	void fetchBackground();
 	void fetchSprites();
 	
-	void pushPixelsToLCDC();
-	
 	void write8(uint16_t address, uint8_t data);
 	
 	void createWindow();
 	
-	uint8_t getPixelColor(const TileData& data, int row, int col) const;
-	void updatePixel(SDL_Texture* texture, uint8_t x, uint8_t y, Uint32 color);
+	void updatePixel(uint8_t x, uint8_t y, Uint32 color);
 	
-	std::tuple<unsigned char, unsigned char, unsigned char> GetRGB(unsigned char color);
+	// TODO;
 	
-	Uint32 RGBToUint32(uint8_t r, uint8_t g, uint8_t b) {
-		return (0xFF << 24) | (r << 16) | (g << 8) | b;
+	const uint32_t COLOR_WHITE = 0xFFFFFF;  // White
+	const uint32_t COLOR_LIGHT_GRAY = 0xC0C0C0;  // Light Gray
+	const uint32_t COLOR_DARK_GRAY = 0x404040;  // Dark Gray
+	const uint32_t COLOR_BLACK = 0x000000;  // Black
+	
+	uint32_t paletteIndexToColor(uint8_t index) {
+		switch (index) {
+		case 0: return COLOR_WHITE;
+		case 1: return COLOR_LIGHT_GRAY;
+		case 2: return COLOR_DARK_GRAY;
+		case 3: return COLOR_BLACK;
+		default: return COLOR_WHITE;
+		}
 	}
 	
 	SDL_Texture* createTexture(uint8_t width, uint8_t height);
-
-	template<typename T, size_t N>
-	void pop_front(std::array<T, N>& arr) {
-		// Shift all elements to the left
-		for(size_t i = 1; i < N; i++) {
-			arr[i - 1] = arr[i];
-		}
-
-		arr[N - 1] = T(); // Default initialize the last element
-	}
 	
 private:
 	VRAM& vram;
@@ -103,6 +101,7 @@ public:
 	SDL_Window* window;
 	SDL_GLContext sdl_context;
 	SDL_Renderer* renderer;
+	SDL_Surface* surface;
 	
 	SDL_Texture* mainTexture;
 };

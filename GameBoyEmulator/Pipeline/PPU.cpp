@@ -12,7 +12,7 @@
 
 #include "../Memory/MMU.h"
 
-void PPU::tick(const int& cycles) {
+void PPU::tick(const int& cycles = 4) {
 	this->cycle += cycles;
 	
 	const uint16_t CyclesHBlank = 204;     // Mode 0 (H-Blank) 204 cycles per Scanline
@@ -47,9 +47,11 @@ void PPU::tick(const int& cycles) {
 			}
 			
 			// Draw background, window and sprites
-			//fetchBackground();
+			fetchBackground();
 			//fetchSprites();
 			//pushPixelsToLCDC();
+
+			SDL_RenderPresent(renderer);
 			
 			// Increment LY
 			mmu.write8(0xFF44, LY + 1);
@@ -76,318 +78,22 @@ void PPU::tick(const int& cycles) {
 		
 		break;
 	}
-	
-	/*switch (mode) {
-	case 0: // H-Blank
-		if(this->cycle >= 456) {
-			mode = 1; // V-Blank
-			this->cycle -= 456;
-		}
-		
-		break;
-	case 1: // V-Blank
-		if(lcdc.LY < 153 && this->cycle >= 456) {
-			mode = 2; // OAM Scan
-			this->cycle -= 456;
-			lcdc.LY = 0;
-		} else if(this->cycle >= 456) {
-			lcdc.LY++;
-			this->cycle -= 456;
-		}
-		
-		break;
-	case 2: // OAM Scan
-		if(this->cycle >= 80) {
-			mode = 3; // Drawing
-			this->cycle -= 80;
-		}
-		
-		break;
-	case 3:
-		if(this->cycle >= 456) {
-			// Push pixels to LCD
-			pushPixelsToLCDC();
-			
-			mode = 0;
-			this->cycle -= 456;
-			lcdc.LY++;
-		} else if(this->cycle >= 172) {
-			fetchBackground();
-			fetchSprites();
-		}
-		
-		break;
-	}*/
 }
 
 void PPU::fetchBackground() {
 	uint8_t LCDControl = mmu.fetch8(0xFF40);
-    uint8_t LY = mmu.fetch8(0xFF44);
-    uint8_t SCY = mmu.fetch8(0xFF42);
-    uint8_t SCX = mmu.fetch8(0xFF43);
-	
-    // Calculate starting tile coordinates and offsets
-    uint8_t startBackgroundTileY = (SCY + LY) / 8;
-    uint8_t backgroundTileOffset = (SCY + LY) % 8;
-    uint8_t startBackgroundTileX = SCX / 8;
-    uint8_t backgroundTileXOffset = SCX % 8;
-	
-    uint16_t tileMapAddress = (LCDControl & 0x08) ? 0x9C00 : 0x9800;
-	
-    // Fetch the tile map
-    uint8_t tileMap[32][32];
-    for (uint16_t i = 0; i < 32 * 32; i++) {
-        tileMap[i / 32][i % 32] = mmu.fetch8(tileMapAddress + i);
-    }
-	
-    uint16_t tileDataAddress = (LCDControl & 0x10) ? 0x8000 : 0x8800;
-	
-    // Fetch tile data
-    TileData tileData[256];
-    for (int i = 0; i < 256; i++) {
-        TileData tile;
-        tile.nr = i;
-        uint16_t tileMemoryStart = tileDataAddress + (i * 16);
-		
-        for (int row = 0; row < 8; row++) {
-            uint8_t lineData1 = mmu.fetch8(tileMemoryStart + (row * 2));
-            uint8_t lineData2 = mmu.fetch8(tileMemoryStart + (row * 2) + 1);
-			
-            for (int col = 0; col < 8; col++) {
-                uint8_t lowBit = (lineData1 >> (7 - col)) & 0x1;
-                uint8_t highBit = (lineData2 >> (7 - col)) & 0x1;
-                tile.data[row][col] = (highBit << 1) | lowBit;
-            }
-        }
-		
-        tileData[i] = tile;
-    }
-	
-    // Draw background
-    for (uint8_t x = 0; x < 21; x++) { // 21 tiles wide
-        for (uint8_t y = 0; y < 18; y++) { // 18 tiles high
-            uint8_t tileNrX = (startBackgroundTileX + x) % 32;
-            uint8_t tileNrY = (startBackgroundTileY + y) % 32;
-            uint8_t tileNr = tileMap[tileNrY][tileNrX];
-            TileData curTile = tileData[tileNr];
-        	
-            for (int row = 0; row < 8; row++) {
-                for (int col = 0; col < 8; col++) {
-                    uint8_t pixelX = (x * 8 + col - backgroundTileXOffset);
-                    uint8_t pixelY = (y * 8 + row - backgroundTileOffset);
-                	
-                    //if (pixelX >= 0 && pixelX < 160 && pixelY >= 0 && pixelY < 144) { // Screen bounds check
-                        uint8_t pixelData = curTile.data[row][col];
-                        uint8_t color = BGPalette[pixelData];
-                        auto [r, g, b] = GetRGB(color);
-                        updatePixel(mainTexture, pixelX, pixelY, RGBToUint32(r, g, b));
-                    //}
-                }
-            }
-        }
-    }
-	
-	/*uint8_t LCDControl = mmu.fetch8(0xFF40);
 	uint8_t LY = mmu.fetch8(0xFF44);
 	uint8_t SCY = mmu.fetch8(0xFF42);
 	uint8_t SCX = mmu.fetch8(0xFF43);
 	
-	uint8_t startBackgroundTileY  = (SCY + LY) / 8 >= 32
-				? (SCY + LY) / 8 % 32
-				: (SCY + LY) / 8;
 	
-	uint8_t backgroundTileOffset = (SCY + LY) % 8;
-	
-	uint8_t startBackgroundTileX  = SCX / 8;
-	uint8_t backgroundTileXOffset = SCX % 8;
-	
-	uint16_t tileMapAddress = (LCDControl & 0x08) ? 0x9C00 : 0x9800;
-	TileMap tileMap;
-	
-	for(uint16_t i = 0; i < 32 * 32; i++) {
-		tileMap.data[i/32][i%32] = mmu.fetch8(tileMapAddress + i);
-	}
-	
-	uint16_t tileDataAddress = (LCDControl & 0x10) ? 0x8000 : 0x8800;
-	
-	TileData tileData[256];
-	for(int i = 0; i < 256; i++) {
-		TileData tile;
-		tile.nr = i;
-		
-		// Each title is 16 bytes long
-		uint16_t tileMemoryStart = (uint16_t)tileDataAddress + (i * 16);
-		
-		for(int i = 0; i < 8; i++) {
-			uint8_t lineData1 = mmu.fetch8(tileMemoryStart + (i * 2));
-			uint8_t lineData2 = mmu.fetch8(tileMemoryStart + (i * 2) + 1);
-			
-			for(int j = 7; j >= 0; j--) {
-				uint8_t lowBit = (lineData1 >> j) & 0x1;
-				uint8_t highBit = (lineData2 >> j) & 0x1;
-				tile.data[i][std::abs(j - 7)] = (highBit << 1) | lowBit;
-			}
-		}
-		
-		tileData[i] = tile;
-	}
-	
-	for(uint8_t i = 0; i < 21; i++) {
-		// Wrap around window X
-		uint8_t tileNrX = startBackgroundTileX + i >= 32
-				? (startBackgroundTileX + i) % 32
-				: startBackgroundTileX + i;
-		
-		uint8_t curTileNr = tileMap.data[startBackgroundTileY][tileNrX];
-		TileData curTile = tileData[curTileNr];
-		
-		for(int j = 0; j < 8; j++) {
-			/*if(i == 0 && j < backgroundTileXOffset) continue;
-			if(i == 20 && j >= backgroundTileXOffset) continue;
-			#1#
-			
-			uint8_t pixelData = curTile.data[backgroundTileOffset][j];
-			uint8_t color =  BGPalette[pixelData];
-			
-			auto [r, g, b] = GetRGB(color);
-			updatePixel(mainTexture, LY, (i * 8) + j - backgroundTileXOffset, RGBToUint32(r, g, b));
-		}
-	}*/
-	
-	/*
-	int tileX = (SCX + cycle) / 8;
-	int tileY = (SCY + LY) / 8;
-	
-	uint16_t tileNumber = vram.fetch8(tileMapAddress + (tileY * 32) + tileX);
-	uint16_t tileAddress = tileDataAddress + (tileNumber * 16);
-	
-	uint8_t line = (SCY + LY) % 8;
-	uint8_t tileLineLow = vram.fetch8(tileAddress + (line * 2));
-	uint8_t tileLineHigh = vram.fetch8(tileAddress + ((line * 2) + 1));
-	
-	for(int i = 0; i < 8; i++) {
-		int bitPos = 7 - ((SCX + cycle) % 8);
-		
-		bgFifo[i].color = ((tileLineLow >> bitPos) & 1) | (((tileLineHigh >> bitPos) & 1) << 1);
-		bgFifo[i].palette = 0; // Background palette
-		bgFifo[i].spritePriority = false;
-		bgFifo[i].bgPriority = true;
-	}*/
 }
 
 void PPU::fetchSprites() {
 	uint8_t LCDControl = mmu.fetch8(0xFF40);
     uint8_t LY = mmu.fetch8(0xFF44);
-    
-    // Sprite Attributes Table (OAM) address
-    uint16_t oamAddress = 0xFE00;
-    
-    // Fetch sprites from OAM
-    for (uint16_t i = 0; i < 40; i++) {
-        uint16_t oamOffset = i * 4;
-        uint8_t y = mmu.fetch8(oamAddress + oamOffset) - 16; // Sprite Y position
-        uint8_t x = mmu.fetch8(oamAddress + oamOffset + 1) - 8; // Sprite X position
-        uint8_t tileIndex = mmu.fetch8(oamAddress + oamOffset + 2); // Tile index
-        uint8_t attributes = mmu.fetch8(oamAddress + oamOffset + 3); // Attributes
-        
-        bool yFlip = attributes & 0x40;
-        bool xFlip = attributes & 0x20;
-        bool priority = attributes & 0x80;
-		
-        // Skip sprites that are not on the current scanline
-        //if (LY < y || LY >= (y + 8)) continue;
-		
-        // Fetch tile data
-        uint16_t tileDataAddress = (LCDControl & 0x10) ? 0x8000 : 0x8800;
-        TileData tile;
-        uint16_t tileMemoryStart = tileDataAddress + (tileIndex * 16);
-        
-        for (int row = 0; row < 8; row++) {
-            uint8_t lineData1 = mmu.fetch8(tileMemoryStart + (row * 2));
-            uint8_t lineData2 = mmu.fetch8(tileMemoryStart + (row * 2) + 1);
-            
-            for (int col = 0; col < 8; col++) {
-                uint8_t lowBit = (lineData1 >> (7 - col)) & 0x1;
-                uint8_t highBit = (lineData2 >> (7 - col)) & 0x1;
-                tile.data[row][col] = (highBit << 1) | lowBit;
-            }
-        }
-        
-        // Draw sprite
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int spriteRow = yFlip ? (7 - row) : row;
-                int spriteCol = xFlip ? (7 - col) : col;
-                uint8_t pixelData = tile.data[spriteRow][spriteCol];
-                
-                //if (pixelData == 0) continue; // Skip transparent pixels
-                
-                //uint8_t color = BGPalette[pixelData];
-                auto [r, g, b] = GetRGB(pixelData);
-                updatePixel(mainTexture, x + col, LY - y + row, RGBToUint32(r, g, b));
-            }
-        }
-    }
 	
-	/*uint8_t LCDControl = mmu.fetch8(0xFF40);
-	uint8_t LY = mmu.fetch8(0xFF44);
 	
-	int spriteHeight = (LCDControl & 0x04) ? 16 : 8;
-	
-	int spriteIndex = 0;
-	
-	for(int i = 0; i < 40 && spriteIndex < 8; i++) {
-		uint16_t spriteAddress = 0xFE00 + (i * 4);
-		
-		int spriteY = LY - oam.fetch8(spriteAddress);
-		if(spriteY >= 0 && spriteY <= spriteHeight) {
-			uint16_t tileNumber = oam.fetch8(spriteAddress + 2);
-			
-			int tileLine = spriteY % 8;
-			uint16_t tileDataAddress = (LCDControl & 0x10) ? 0x8000 : 0x8800;
-			uint16_t tileAddress = tileDataAddress + (tileNumber * 16);
-			
-			uint8_t tileLineLow = vram.fetch8(tileAddress + (tileLine * 2));
-			uint8_t tileLineHigh = vram.fetch8(tileAddress + (tileLine * 2) + 1);
-			
-			bool xFlip = (oam.fetch8(spriteAddress + 3) & 0x20) != 0;
-			bool yFlip = (oam.fetch8(spriteAddress + 3) & 0x40) != 0;
-			
-			for(int j = 0; j < 8; j++) {
-				int bitPos = xFlip ? j : 7 - j;
-				
-				Pixel pixel;
-                pixel.color = ((tileLineLow >> bitPos) & 1) | (((tileLineHigh >> bitPos) & 1) << 1);
-				pixel.palette = (oam.fetch8(spriteAddress + 3) & 0x10) ? 1 : 0;
-				pixel.spritePriority = true;
-				pixel.bgPriority = !(oam.fetch8(spriteAddress + 3) & 0x80);
-				
-				spriteFifo[spriteIndex++] = pixel;
-			}
-		}
-	}*/
-}
-
-void PPU::pushPixelsToLCDC() {
-	uint8_t LY = mmu.fetch8(0xFF44);
-	
-    int spriteIndex = 0;
-    
-    for (uint8_t i = 0; i < 160; ++i) {
-        Pixel bgPixel = bgFifo[i % 8];
-        Pixel spritePixel = (spriteIndex < 8) ? spriteFifo[spriteIndex++] : Pixel{0, 0, false, false};
-        
-        Pixel pixel;
-        if (spritePixel.spritePriority && (!bgPixel.bgPriority || spritePixel.color != 0)) {
-            pixel = spritePixel;
-        } else {
-            pixel = bgPixel;
-        }
-        
-        auto [r, g, b] = GetRGB(pixel.color);
-        
-        updatePixel(mainTexture, i, LY, RGBToUint32(r, g, b));
-    }
 }
 
 void PPU::write8(uint16_t address, uint8_t data) {
@@ -445,10 +151,11 @@ void PPU::createWindow() {
         return;
     }
     
-    SDL_Surface* screenSurface = SDL_GetWindowSurface(window);
-    SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF));
-    SDL_UpdateWindowSurface(window);
-    
+	surface = SDL_GetWindowSurface(window);
+	if (!surface) {
+		std::cerr << "SDL_CreateRGBSurface Error: " << SDL_GetError() << '\n';
+	}
+	
     GLenum ersr = glGetError();
     if (ersr!= GL_NO_ERROR) {
         std::cerr << "OpenGL Error con: " << ersr << '\n';
@@ -457,71 +164,28 @@ void PPU::createWindow() {
 	// Create main display texture
 	mainTexture = createTexture(160, 144);
 	
-	/*for(uint8_t x = 0; x < 160; x++) {
+	for(uint8_t x = 0; x < 160; x++) {
 		for(uint8_t y = 0; y < 144; y++) {
-			updatePixel(mainTexture, x, y, 0xFFFF0000);
+			updatePixel(x, y, 0xFFFF0000);
 		}
-	}*/
-}
-
-uint8_t PPU::getPixelColor(const TileData& data, int row, int col) const {
-	/*int byte1 = row * 2;
-	int byte2 = byte1 + 1;
-	
-	uint8_t bit1 = (data.data[byte1] >> (7 - col)) & 1;
-	uint8_t bit2 = (data.data[byte2] >> (7 - col)) & 1;
-	
-	return static_cast<uint8_t>((bit2 << 1) | bit1);*/
-	return 0;
-}
-
-void PPU::updatePixel(SDL_Texture* texture, uint8_t x, uint8_t y, Uint32 color) {
-	// Lock the texture to gain direct access to its pixels
-	void* pixels = nullptr;
-	int pitch = 0;
-	if (SDL_LockTexture(texture, nullptr, &pixels, &pitch) != 0) {
-		// SDL_LockTexture failed, handle the error
-		printf("SDL_LockTexture Error: %s\n", SDL_GetError());
-		return;
 	}
-    
-	// Convert the pixels pointer to a 32-bit integer pointer for pixel manipulation
-	Uint32* pixel_ptr = static_cast<Uint32*>(pixels);
-    
-	// Calculate the width based on the pitch
-	int texture_width = pitch / 4;
-    
-	// Ensure we're within the texture bounds before modifying
-	if (x < texture_width && y < 144) {
-		pixel_ptr[(y * texture_width) + x] = color;
-	} else {
-		//printf("Attempting to access out-of-bounds pixel: (%d, %d)\n", x, y);
-	}
-    
-	// Unlock the texture after modifying it
-	SDL_UnlockTexture(texture);
 	
-	// Define a destination rectangle that matches the texture's size
-	SDL_Rect destRect = {0, 0, 160 * 4, 144 * 4};
-    
-	// Update the texture on the screen
-	SDL_RenderCopy(renderer, texture, nullptr, &destRect);
 	SDL_RenderPresent(renderer);
 }
 
-std::tuple<unsigned char, unsigned char, unsigned char> PPU::GetRGB(unsigned char color) {
-	switch (color) {
-	case 3:
-		return std::make_tuple(255, 255, 255);  // White
-	case 2:
-		return std::make_tuple(192, 192, 192);  // Light Gray
-	case 1:
-		return std::make_tuple(96, 96, 96);    // Dark Gray
-	case 0:
-		return std::make_tuple(0, 0, 0);       // Black
-	default:
-		return std::make_tuple(0, 0, 0);       // Default to black in case of an invalid value
+void PPU::updatePixel(uint8_t x, uint8_t y, Uint32 color) {
+	if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) {
+		return; // Out of bounds
 	}
+	
+	Uint32* pixels = (Uint32*)surface->pixels;
+	pixels[(y * surface->w) + x] = color;
+	
+	SDL_Rect destRect = { x, y, 1, 1 };
+	SDL_RenderCopy(renderer, mainTexture, nullptr, &destRect);
+	
+	SDL_DestroyTexture(mainTexture);
+	SDL_FreeSurface(surface);
 }
 
 SDL_Texture* PPU::createTexture(uint8_t width, uint8_t height) {

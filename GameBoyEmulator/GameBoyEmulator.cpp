@@ -99,7 +99,9 @@ void runEmulation(CPU &cpu, PPU &ppu) {
     
     uint64_t x = 0;
     
-    while (true) {
+    bool running = true;
+    
+    while (running) {
         if(x == 1453268) {
             printf("");
         }
@@ -139,7 +141,7 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    //std::string filename = "Roms/Tennis (World).gb";
+    std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/dmg-acid2.gb";
     
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // TODO;
@@ -153,7 +155,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/cpu_instrs/individual/08-misc instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb"; // Passed
-    std::string filename = "Roms/cpu_instrs/individual/11-op a,(hl).gb"; // TODO;
+    //std::string filename = "Roms/cpu_instrs/individual/11-op a,(hl).gb"; // Passed
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
     
@@ -207,7 +209,7 @@ int main(int argc, char* argv[]) {
     // TODO; Test
     //cpu.testCases();
     
-    //ppu->createWindow();
+    ppu->createWindow();
     
     // Gather cartridge information
     cartridge.decode(memory);
