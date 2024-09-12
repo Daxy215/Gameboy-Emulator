@@ -152,8 +152,8 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/08-misc instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb"; // Passed
-    std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb"; // TODO;
-    //std::string filename = "Roms/cpu_instrs/individual/11-op a,(hl).gb"; // TODO;
+    //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb"; // Passed
+    std::string filename = "Roms/cpu_instrs/individual/11-op a,(hl).gb"; // TODO;
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
     
