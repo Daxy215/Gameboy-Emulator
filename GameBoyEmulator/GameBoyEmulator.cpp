@@ -79,14 +79,13 @@ std::string formatCPUState(const CPU &cpu) {
     return oss.str();
 }
 
-void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-noreturn)
+void runEmulation(CPU &cpu, PPU &ppu) {
     std::ofstream logFile("cpu_state_log.txt");
     
     if (!logFile.is_open()) {
         throw std::runtime_error("Unable to open log file.");
     }
     
-    // Load the expected CPU states from Blargg9.txt
     std::ifstream blarggFile("Roms/cpu_state.txt");
     if (!blarggFile.is_open()) {
         throw std::runtime_error("Unable to open cpu_state.txt.");
@@ -94,13 +93,17 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 80000) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 550000) {
         blarggStates.push_back(line);
     }
     
     uint64_t x = 0;
     
     while (true) {
+        if(x == 3989487) {
+            printf("");
+        }
+        
         std::string formattedState = formatCPUState(cpu);
         logFile << formattedState << '\n';
         //std::cerr << formattedState << " - " << x << "\n";
@@ -108,19 +111,16 @@ void runEmulation(CPU &cpu, PPU &ppu) {  // NOLINT(clang-diagnostic-missing-nore
         if (x < blarggStates.size()) {
             const std::string &expectedState = blarggStates[x];
             if (formattedState != expectedState) {
-                std::cerr << "Mismatch at iteration " << x << ":\n";
+                /*std::cerr << "Mismatch at iteration " << x << ":\n";
                 std::cerr << "Expected: " << expectedState << "\n";
                 std::cerr << "Actual  : " << formattedState << "\n";
+                */
                 
                 //break;
             }
         } else if(x > blarggStates.size()) {
             //std::cerr << "No more expected states to compare.\n";
             //break;
-        }
-        
-        if(x == 53455) {
-            printf("");
         }
         
         uint16_t opcode = cpu.fetchOpCode();
@@ -144,6 +144,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/dmg-acid2.gb";
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb";
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb";
+    //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb";
     //std::string filename = "Roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb";
     std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb";
     //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb";

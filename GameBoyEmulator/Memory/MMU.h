@@ -52,6 +52,9 @@ private:
     uint8_t wramBank         = 1;
     //uint8_t m_RAMBanks[0x8000] = { 0 };
     
+    // Prepare speed switch thingies
+    uint8_t key1;
+    
     InterruptHandler& interruptHandler;
     
     // Memories

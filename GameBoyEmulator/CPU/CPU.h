@@ -33,7 +33,7 @@ public:
     
     void adc(uint8_t& a, const uint8_t& reg, bool carry);
     void add(uint8_t& regA, uint8_t& regB);
-
+    
     void sbc(uint8_t& regA, const uint8_t& regB, bool carry);
     void sub(uint8_t& regA, uint8_t& regB);
     
@@ -49,11 +49,15 @@ public:
     void setBit(uint8_t bit, uint8_t& reg);
     
     void swap(uint8_t& reg) noexcept;
+    
     void rlc(uint8_t& reg);
     void rl(uint8_t& reg);
     void rrc(uint8_t& reg);
     void rr(uint8_t& reg);
+    
     void srl(uint8_t& reg);
+    void sla(uint8_t& reg);
+    void sra(uint8_t& reg);
     
     void pushToStack(uint16_t value);
     uint16_t popStack();
@@ -286,8 +290,7 @@ public:
     };
     
 public:
-    
-    //Registers registers;
+    bool stop;
     
     /**
      * Flags in order;

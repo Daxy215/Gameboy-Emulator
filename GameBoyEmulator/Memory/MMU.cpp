@@ -14,6 +14,7 @@
 
 #include "../Pipeline/OAM.h"
 #include "../Pipeline/PPU.h"
+#include "../Utility/Bitwise.h"
 
 uint8_t MMU::fetch8(uint16_t address) {
     /**
@@ -44,7 +45,7 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         return wram.fetch8(address - 0xC000);
     } else if(address >= 0xD000 && address <= 0xFDFF) {
-        return wram.fetch8((address - 0xD000) | (wramBank * 0x1000));
+        return wram.fetch8((wramBank * 0x1000) | (address & 0x0FFF));
     } else if(address >= 0xFE00 && address <= 0xFE9F) {
         return oam.fetch8(address);
     } else if(address >= 0xFF00 && address <= 0xFF7F) {
@@ -79,7 +80,8 @@ uint8_t MMU::fetchIO(uint16_t address) {
             return lcdc.fetch8(address);
         }
     } else if(address == 0xFF4D) {
-        // Prepare speed switch	
+        return (key1 & 0x81) | 0x7E;
+        //return (key1 & 0xb10000001) | 0b01111110;
     } else if(address == 0xFF4F) {
         //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
@@ -97,7 +99,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
         std::cerr << "";
     }
     
-    return 0;
+    return 0xFF;
 }
 
 uint16_t MMU::fetch16(uint16_t address) {
@@ -110,9 +112,9 @@ uint16_t MMU::fetch16(uint16_t address) {
 }
 
 void MMU::write8(uint16_t address, uint8_t data) {
-    /*if(address == 65411) {
+    if(address == 57086) {
         printf("");
-    }*/
+    }
     
     // Handle ROM and RAM bank switching for MBC1/MBC2
     if (address < 0x8000) {
@@ -186,7 +188,7 @@ void MMU::write8(uint16_t address, uint8_t data) {
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         wram.write8(address - 0xC000, data);
     } else if(address >= 0xD000 && address <= 0xFDFF) {
-        wram.write8((address - 0xD000) + (wramBank * 0x1000), data);
+        wram.write8((wramBank * 0x1000) | (address & 0x0FFF), data);
     } else if (address >= 0xFE00 && address <= 0xFE9F) {
         oam.write8(address - 0xFE00, data);
     } else if (address >= 0xFF00 && address <= 0xFF7F) {
@@ -230,6 +232,8 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             // https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
             ppu.write8(address, data);
         }
+    } else if(address == 0xFF4D) {
+        key1 = (key1 & 0x80) | (data & 0x01); // Preserve current speed (bit 7) and `only` update switch armed (bit 0)
     } else if(address == 0xFF4F) {
         std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
