@@ -2322,6 +2322,19 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 12;
         }
+		
+		case 0xE2: {
+        	/**
+        	 * LD (DFF00,C), A
+        	 * 1, 8
+        	 * - - - -
+        	 */
+        	
+        	uint16_t address = 0xFF00 | BC.C;
+        	mmu.write8(address, AF.A);
+        	
+        	return 8;
+        }
         
         case 0xE5: {
             /**
@@ -2456,6 +2469,19 @@ int CPU::decodeInstruction(uint16_t opcode) {
             AF = v;
             
             return 12;
+        }
+		
+		case 0xF2: {
+			/**
+			 * LD A, (FF00+C)
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	uint16_t result = (0xFF00 | BC.C);
+        	AF.A = mmu.fetch8(result);
+        	
+        	return 8;
         }
         
         case 0xF3: {
@@ -3543,85 +3569,2329 @@ int CPU::decodePrefix(uint16_t opcode) {
 			return 8;
 		}
 		
-		case 0x7E: {
+		case 0x40: {
 			/**
-			 * BIT 7, (HL)
-			 * 2, 12
+			 * BIT 0, B
+			 * 2, 8
 			 * Z 0 1 -
 			 */
 			
-			uint16_t v = HL.get();
-			checkBit(7, v);
-			
-			PC++;
-			
-			return 12;
-		}
-		
-		case 0xBE: {
-			/**
-			 * REST 7, (HL)
-			 * 2, 16
-			 * - - - -
-			 */
-			
-			uint16_t hl = HL.get();
-			clearBit(7, hl);
-			
-			PC++;
-			
-			return 16;
-		}
-		
-		case 0xCE: {
-			/**
-			 * SET 1, (HL)
-			 * 2, 16
-			 * - - - -
-			 */
-			
-			uint16_t hl = HL.get();
-			setBit(1, hl);
-			
-			return 16;
-		}
-		
-		case 0xE6: {
-			/**
-			 * SET 4, (HL)
-			 * 2, 16
-			 * - - - -
-			 */
-			
-			uint16_t hl = HL.get();
-			setBit(2, hl);
-			
-			return 16;
-		}
-		
-		case 0xE9: {
-			/**
-			 * SET 5, C
-			 * 2, 8
-			 * - - - -
-			 */
-			
-			setBit(5, BC.C);
+			checkBit(0, BC.B);
 			
 			return 8;
 		}
 		
-		case 0xF6: {
-			/**
-			 * SET 6, (HL)
-			 * 2, 16
-			 * - - - -
-			 */
+		case 0x41: { // BIT 0, C
+		    /**
+		     * BIT 0, C
+		     * 1, 8
+		     * Z - H -
+		     */
+		    checkBit(0, BC.C);
+		    return 8;
+		}
+		
+		case 0x42: {
+		    /**
+		     * BIT 0, D
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(0, DE.D);
+			
+		    return 8;
+		}
+		
+		case 0x43: {
+		    /**
+		     * BIT 0, E
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(0, DE.E);
+			
+		    return 8;
+		}
+		
+		case 0x44: {
+		    /**
+		     * BIT 0, H
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(0, HL.H);
+			
+		    return 8;
+		}
+		
+		case 0x45: {
+		    /**
+		     * BIT 0, L
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(0, HL.L);
+			
+		    return 8;
+		}
+		
+		case 0x46: {
+		    /**
+		     * BIT 0, (HL)
+		     * 2, 8
+		     * Z - H -
+		     */
+
+			uint16_t hl = HL.get();
+		    checkBit(0, hl);
+			
+		    return 8;
+		}
+		
+		case 0x47: {
+		    /**
+		     * BIT 0, A
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(0, AF.A);
+			
+		    return 8;
+		}
+		
+		case 0x48: {
+		    /**
+		     * BIT 1, B
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(1, BC.B);
+			
+		    return 8;
+		}
+		
+		case 0x49: {
+		    /**
+		     * BIT 1, C
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(1, BC.C);
+			
+		    return 8;
+		}
+		
+		case 0x4A: {
+		    /**
+		     * BIT 1, D
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(1, DE.D);
+			
+		    return 8;
+		}
+		
+		case 0x4B: {
+		    /**
+		     * BIT 1, E
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(1, DE.E);
+			
+		    return 8;
+		}
+		
+		case 0x4C: {
+		    /**
+		     * BIT 1, H
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(1, HL.H);
+			
+		    return 8;
+		}
+		
+		case 0x4D: {
+		    /**
+		     * BIT 1, L
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(1, HL.L);
+			
+		    return 8;
+		}
+		
+		case 0x4E: {
+		    /**
+		     * BIT 1, (HL)
+		     * 2, 16
+		     * Z - H -
+		     */
+
+			uint16_t hl = HL.get();
+		    checkBit(1, hl);
+			
+		    return 16;
+		}
+		
+		case 0x4F: {
+		    /**
+		     * BIT 1, A
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(1, AF.A);
+			
+		    return 8;
+		}
+		
+		case 0x50: {
+		    /**
+		     * BIT 2, B
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(2, BC.B);
+			
+		    return 8;
+		}
+		
+		case 0x51: {
+		    /**
+		     * BIT 2, C
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(2, BC.C);
+			
+		    return 8;
+		}
+		
+		case 0x52: {
+		    /**
+		     * BIT 2, D
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(2, DE.D);
+			
+		    return 8;
+		}
+		
+		case 0x53: {
+		    /**
+		     * BIT 2, E
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(2, DE.E);
+			
+		    return 8;
+		}
+		
+		case 0x54: {
+		    /**
+		     * BIT 2, H
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(2, HL.H);
+			
+		    return 8;
+		}
+		
+		case 0x55: {
+		    /**
+		     * BIT 2, L
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(2, HL.L);
+			
+		    return 8;
+		}
+		
+		case 0x56: {
+		    /**
+		     * BIT 2, (HL)
+		     * 2, 16
+		     * Z - H -
+		     */
+
+			uint16_t hl = HL.get();
+		    checkBit(2, hl);
+			
+		    return 16;
+		}
+		
+		case 0x57: {
+		    /**
+		     * BIT 2, A
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(2, AF.A);
+			
+		    return 8;
+		}
+		
+		case 0x58: {
+		    /**
+		     * BIT 3, B
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(3, BC.B);
+			
+		    return 8;
+		}
+	
+		case 0x59: {
+		    /**
+		     * BIT 3, C
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(3, BC.C);
+			
+		    return 8;
+		}
+		
+		case 0x5A: {
+		    /**
+		     * BIT 3, D
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(3, DE.D);
+			
+		    return 8;
+		}
+		
+		case 0x5B: {
+		    /**
+		     * BIT 3, E
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(3, DE.E);
+			
+		    return 8;
+		}
+		
+		case 0x5C: {
+		    /**
+		     * BIT 3, H
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(3, HL.H);
+			
+		    return 8;
+		}
+		
+		case 0x5D: {
+		    /**
+		     * BIT 3, L
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(3, HL.L);
+			
+		    return 8;
+		}
+		
+		case 0x5E: {
+		    /**
+		     * BIT 3, (HL)
+		     * 2, 16
+		     * Z - H -
+		     */
+
+			uint16_t hl = HL.get();
+		    checkBit(3, hl);
+			
+		    return 16;
+		}
+		
+		case 0x5F: {
+		    /**
+		     * BIT 3, A
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(3, AF.A);
+			
+		    return 8;
+		}
+		
+		case 0x60: {
+		    /**
+		     * BIT 4, B
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(4, BC.B);
+			
+		    return 8;
+		}
+		
+		case 0x61: {
+		    /**
+		     * BIT 4, C
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(4, BC.C);
+			
+		    return 8;
+		}
+		
+		case 0x62: {
+		    /**
+		     * BIT 4, D
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(4, DE.D);
+			
+		    return 8;
+		}
+		
+		case 0x63: {
+		    /**
+		     * BIT 4, E
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(4, DE.E);
+			
+		    return 8;
+		}
+		
+		case 0x64: {
+		    /**
+		     * BIT 4, H
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(4, HL.H);
+			
+		    return 8;
+		}
+		
+		case 0x65: {
+		    /**
+		     * BIT 4, L
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(4, HL.L);
+			
+		    return 8;
+		}
+		
+		case 0x66: {
+		    /**
+		     * BIT 4, (HL)
+		     * 2, 16
+		     * Z - H -
+		     */
+
+			uint16_t hl = HL.get();
+		    checkBit(4, hl);
+			
+		    return 16;
+		}
+		
+		case 0x67: {
+		    /**
+		     * BIT 4, A
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(4, AF.A);
+			
+		    return 8;
+		}
+		
+		case 0x68: {
+		    /**
+		     * BIT 5, B
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(5, BC.B);
+			
+		    return 8;
+		}
+		
+		case 0x69: {
+		    /**
+		     * BIT 5, C
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(5, BC.C);
+			
+		    return 8;
+		}
+		
+		case 0x6A: {
+		    /**
+		     * BIT 5, D
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(5, DE.D);
+			
+		    return 8;
+		}
+		
+		case 0x6B: {
+		    /**
+		     * BIT 5, E
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(5, DE.E);
+			
+		    return 8;
+		}
+		
+		case 0x6C: {
+		    /**
+		     * BIT 5, H
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(5, HL.H);
+			
+		    return 8;
+		}
+		
+		case 0x6D: {
+		    /**
+		     * BIT 5, L
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(5, HL.L);
+		
+		    return 8;
+		}
+		
+		case 0x6E: {
+		    /**
+		     * BIT 5, (HL)
+		     * 2, 16
+		     * Z - H -
+		     */
 			
 			uint16_t hl = HL.get();
-			setBit(6, hl);
+		    checkBit(5, hl);
 			
-			return 16;
+		    return 16;
+		}
+		
+		case 0x6F: {
+		    /**
+		     * BIT 5, A
+		     * 1, 8
+		     * Z - H -
+		     */
+			
+		    checkBit(5, AF.A);
+			
+		    return 8;
+		}
+		
+		case 0x70: {
+		    /**
+		     * BIT 6, B
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(6, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0x71: {
+		    /**
+		     * BIT 6, C
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(6, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0x72: {
+		    /**
+		     * BIT 6, D
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(6, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0x73: {
+		    /**
+		     * BIT 6, E
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(6, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0x74: {
+		    /**
+		     * BIT 6, H
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(6, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0x75: {
+		    /**
+		     * BIT 6, L
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(6, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0x76: {
+		    /**
+		     * BIT 6, (HL)
+		     * 2, 16
+		     * Z - H -
+		     */
+			
+			uint16_t hl = HL.get();
+		    checkBit(6, hl);
+		    
+		    return 16;
+		}
+		
+		case 0x77: {
+		    /**
+		     * BIT 6, A
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(6, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0x78: {
+		    /**
+		     * BIT 7, B
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(7, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0x79: {
+		    /**
+		     * BIT 7, C
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(7, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0x7A: {
+		    /**
+		     * BIT 7, D
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(7, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0x7B: {
+		    /**
+		     * BIT 7, E
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(7, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0x7C: {
+		    /**
+		     * BIT 7, H
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(7, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0x7D: {
+		    /**
+		     * BIT 7, L
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(7, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0x7E: {
+		    /**
+		     * BIT 7, (HL)
+		     * 2, 16
+		     * Z - H -
+		     */
+			
+			uint16_t hl = HL.get();
+		    checkBit(7, hl);
+			
+		    return 16;
+		}
+		
+		case 0x7F: {
+		    /**
+		     * BIT 7, A
+		     * 1, 8
+		     * Z - H -
+		     */
+		     
+		    checkBit(7, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0x80: {
+		    /**
+		     * RES 0, B
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(0, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0x81: {
+		    /**
+		     * RES 0, C
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(0, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0x82: {
+		    /**
+		     * RES 0, D
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(0, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0x83: {
+		    /**
+		     * RES 0, E
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(0, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0x84: {
+		    /**
+		     * RES 0, H
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(0, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0x85: {
+		    /**
+		     * RES 0, L
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(0, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0x86: {
+		    /**
+		     * RES 0, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    clearBit(0, hl);
+		    
+		    return 16;
+		}
+		
+		case 0x87: {
+		    /**
+		     * RES 0, A
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(0, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0x88: {
+		    /**
+		     * RES 1, B
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(1, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0x89: {
+		    /**
+		     * RES 1, C
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(1, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0x8A: {
+		    /**
+		     * RES 1, D
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(1, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0x8B: {
+		    /**
+		     * RES 1, E
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(1, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0x8C: {
+		    /**
+		     * RES 1, H
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(1, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0x8D: {
+		    /**
+		     * RES 1, L
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(1, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0x8E: {
+		    /**
+		     * RES 1, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    clearBit(1, hl);
+		    
+		    return 16;
+		}
+		
+		case 0x8F: {
+		    /**
+		     * RES 1, A
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(1, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0x90: {
+		    /**
+		     * RES 2, B
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(2, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0x91: {
+		    /**
+		     * RES 2, C
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(2, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0x92: {
+		    /**
+		     * RES 2, D
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(2, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0x93: {
+		    /**
+		     * RES 2, E
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(2, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0x94: {
+		    /**
+		     * RES 2, H
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(2, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0x95: {
+		    /**
+		     * RES 2, L
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(2, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0x96: {
+		    /**
+		     * RES 2, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+
+			uint16_t hl = HL.get();
+		    clearBit(2, hl);
+		    
+		    return 16;
+		}
+		
+		case 0x97: {
+		    /**
+		     * RES 2, A
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(2, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0x98: {
+		    /**
+		     * RES 3, B
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(3, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0x99: {
+		    /**
+		     * RES 3, C
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(3, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0x9A: {
+		    /**
+		     * RES 3, D
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(3, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0x9B: {
+		    /**
+		     * RES 3, E
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(3, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0x9C: {
+		    /**
+		     * RES 3, H
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(3, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0x9D: {
+		    /**
+		     * RES 3, L
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(3, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0x9E: {
+		    /**
+		     * RES 3, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    clearBit(3, hl);
+		    
+		    return 16;
+		}
+		
+		case 0x9F: {
+		    /**
+		     * RES 3, A
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(3, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xA0: {
+		    /**
+		     * RES 4, B
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(4, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xA1: {
+		    /**
+		     * RES 4, C
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(4, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xA2: {
+		    /**
+		     * RES 4, D
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(4, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xA3: {
+		    /**
+		     * RES 4, E
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(4, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xA4: {
+		    /**
+		     * RES 4, H
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(4, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xA5: {
+		    /**
+		     * RES 4, L
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(4, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xA6: {
+		    /**
+		     * RES 4, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+
+			uint16_t hl = HL.get();
+		    clearBit(4, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xA7: {
+		    /**
+		     * RES 4, A
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(4, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xA8: {
+		    /**
+		     * RES 5, B
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(5, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xA9: {
+		    /**
+		     * RES 5, C
+		     * 1, 8
+		     * - - - -
+		     */
+		     
+		    clearBit(5, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xAA: {
+		    /**
+		     * RES 5, D
+		     * 1, 8
+		     * - - - -
+		     */
+			
+		    clearBit(5, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xAB: {
+		    /**
+		     * RES 5, E
+		     * 1, 8
+		     * - - - -
+		     */
+			
+		    clearBit(5, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xAC: {
+		    /**
+		     * RES 5, H
+		     * 1, 8
+		     * - - - -
+		     */
+			
+		    clearBit(5, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xAD: {
+		    /**
+		     * RES 5, L
+		     * 1, 8
+		     * - - - -
+		     */
+			
+		    clearBit(5, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xAE: {
+		    /**
+		     * RES 5, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    clearBit(5, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xAF: {
+		    /**
+		     * RES 5, A
+		     * 1, 8
+		     * - - - -
+		     */
+			
+		    clearBit(5, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xB0: {
+		    /**
+		     * RES 6, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(6, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xB1: {
+		    /**
+		     * RES 6, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(6, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xB2: {
+		    /**
+		     * RES 6, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(6, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xB3: {
+		    /**
+		     * RES 6, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(6, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xB4: {
+		    /**
+		     * RES 6, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(6, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xB5: {
+		    /**
+		     * RES 6, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(6, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xB6: {
+		    /**
+		     * RES 6, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    clearBit(6, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xB7: {
+		    /**
+		     * RES 6, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(6, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xB8: {
+		    /**
+		     * RES 7, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(7, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xB9: {
+		    /**
+		     * RES 7, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(7, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xBA: {
+		    /**
+		     * RES 7, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(7, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xBB: {
+		    /**
+		     * RES 7, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(7, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xBC: {
+		    /**
+		     * RES 7, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(7, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xBD: {
+		    /**
+		     * RES 7, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(7, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xBE: {
+		    /**
+		     * RES 7, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    clearBit(7, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xBF: {
+		    /**
+		     * RES 7, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    clearBit(7, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xC0: {
+		    /**
+		     * SET 0, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(0, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xC1: {
+		    /**
+		     * SET 0, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(0, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xC2: {
+		    /**
+		     * SET 0, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(0, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xC3: {
+		    /**
+		     * SET 0, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(0, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xC4: {
+		    /**
+		     * SET 0, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(0, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xC5: {
+		    /**
+		     * SET 0, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(0, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xC6: {
+		    /**
+		     * SET 0, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    setBit(0, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xC7: {
+		    /**
+		     * SET 0, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(0, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xC8: {
+		    /**
+		     * SET 1, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(1, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xC9: {
+		    /**
+		     * SET 1, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(1, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xCA: {
+		    /**
+		     * SET 1, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(1, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xCB: {
+		    /**
+		     * SET 1, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(1, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xCC: {
+		    /**
+		     * SET 1, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(1, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xCD: {
+		    /**
+		     * SET 1, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(1, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xCE: {
+		    /**
+		     * SET 1, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    setBit(1, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xCF: {
+		    /**
+		     * SET 1, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(1, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xD0: {
+		    /**
+		     * SET 2, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(2, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xD1: {
+		    /**
+		     * SET 2, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(2, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xD2: {
+		    /**
+		     * SET 2, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(2, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xD3: {
+		    /**
+		     * SET 2, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(2, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xD4: {
+		    /**
+		     * SET 2, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(2, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xD5: {
+		    /**
+		     * SET 2, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(2, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xD6: {
+		    /**
+		     * SET 2, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+
+			uint16_t hl = HL.get();
+		    setBit(2, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xD7: {
+		    /**
+		     * SET 2, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(2, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xD8: {
+		    /**
+		     * SET 3, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(3, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xD9: {
+		    /**
+		     * SET 3, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(3, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xDA: {
+		    /**
+		     * SET 3, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(3, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xDB: {
+		    /**
+		     * SET 3, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(3, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xDC: {
+		    /**
+		     * SET 3, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(3, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xDD: {
+		    /**
+		     * SET 3, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(3, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xDE: {
+		    /**
+		     * SET 3, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    setBit(3, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xDF: {
+		    /**
+		     * SET 3, A
+		     * 2, 8
+		     * - - - -
+		     */
+		    setBit(3, AF.A);
+		    
+		    return 8;
+		}
+
+		case 0xE0: {
+		    /**
+		     * SET 4, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(4, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xE1: {
+		    /**
+		     * SET 4, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(4, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xE2: {
+		    /**
+		     * SET 4, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(4, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xE3: {
+		    /**
+		     * SET 4, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(4, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xE4: {
+		    /**
+		     * SET 4, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(4, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xE5: {
+		    /**
+		     * SET 4, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(4, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xE6: {
+		    /**
+		     * SET 4, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    setBit(4, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xE7: {
+		    /**
+		     * SET 4, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(4, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xE8: {
+		    /**
+		     * SET 5, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(5, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xE9: {
+		    /**
+		     * SET 5, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(5, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xEA: {
+		    /**
+		     * SET 5, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(5, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xEB: {
+		    /**
+		     * SET 5, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(5, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xEC: {
+		    /**
+		     * SET 5, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(5, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xED: {
+		    /**
+		     * SET 5, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(5, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xEE: {
+		    /**
+		     * SET 5, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    setBit(5, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xEF: {
+		    /**
+		     * SET 5, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(5, AF.A);
+		    
+		    return 8;
+		}
+
+		case 0xF0: {
+		    /**
+		     * SET 6, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(6, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xF1: {
+		    /**
+		     * SET 6, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(6, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xF2: {
+		    /**
+		     * SET 6, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(6, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xF3: {
+		    /**
+		     * SET 6, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(6, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xF4: {
+		    /**
+		     * SET 6, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(6, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xF5: {
+		    /**
+		     * SET 6, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(6, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xF6: {
+		    /**
+		     * SET 6, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    setBit(6, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xF7: {
+		    /**
+		     * SET 6, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(6, AF.A);
+		    
+		    return 8;
+		}
+		
+		case 0xF8: {
+		    /**
+		     * SET 7, B
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(7, BC.B);
+		    
+		    return 8;
+		}
+		
+		case 0xF9: {
+		    /**
+		     * SET 7, C
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(7, BC.C);
+		    
+		    return 8;
+		}
+		
+		case 0xFA: {
+		    /**
+		     * SET 7, D
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(7, DE.D);
+		    
+		    return 8;
+		}
+		
+		case 0xFB: {
+		    /**
+		     * SET 7, E
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(7, DE.E);
+		    
+		    return 8;
+		}
+		
+		case 0xFC: {
+		    /**
+		     * SET 7, H
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(7, HL.H);
+		    
+		    return 8;
+		}
+		
+		case 0xFD: {
+		    /**
+		     * SET 7, L
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(7, HL.L);
+		    
+		    return 8;
+		}
+		
+		case 0xFE: {
+		    /**
+		     * SET 7, (HL)
+		     * 2, 16
+		     * - - - -
+		     */
+			
+			uint16_t hl = HL.get();
+		    setBit(7, hl);
+		    
+		    return 16;
+		}
+		
+		case 0xFF: {
+		    /**
+		     * SET 7, A
+		     * 2, 8
+		     * - - - -
+		     */
+			
+		    setBit(7, AF.A);
+		    
+		    return 8;
 		}
 		
 		default: {
@@ -3920,6 +6190,14 @@ void CPU::xor8(uint8_t& regA, uint8_t& regB) {
 	AF.setCarry(false);
 }
 
+void CPU::checkBit(uint8_t bit, uint8_t& reg) {
+	bool bitSet = (reg & (1 << bit)) != 0;
+    
+	AF.setZero(!bitSet);
+	AF.setSubtract(false);
+	AF.setHalfCarry(true);
+}
+
 void CPU::checkBit(uint8_t bit, uint16_t& reg) {
 	uint8_t value = mmu.fetch8(reg);
 	
@@ -3928,15 +6206,26 @@ void CPU::checkBit(uint8_t bit, uint16_t& reg) {
 	AF.setZero(!isBit);
 	AF.setSubtract(false);
 	AF.setHalfCarry(true);
+	
+	// No need
+	//mmu.write8(reg, value);
+}
+
+void CPU::clearBit(uint8_t bit, uint8_t& reg) {
+	reg &= ~(1 << bit);
 }
 
 void CPU::clearBit(uint8_t bit, uint16_t& reg) {
 	uint8_t value = mmu.fetch8(reg);
-
+	
 	// To clear the bit
 	value &= ~(1 << bit);
 	
 	mmu.write8(reg, value);
+}
+
+void CPU::setBit(uint8_t bit, uint8_t& reg) {
+	reg |= (1 << bit);
 }
 
 void CPU::setBit(uint8_t bit, uint16_t& reg) {
@@ -3945,10 +6234,6 @@ void CPU::setBit(uint8_t bit, uint16_t& reg) {
 	value |= (1 << bit);
 	
 	mmu.write8(reg, value);
-}
-
-void CPU::setBit(uint8_t bit, uint8_t& reg) {
-	reg |= (1 << bit);
 }
 
 void CPU::swap(uint8_t& reg) noexcept {

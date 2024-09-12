@@ -56,10 +56,14 @@ public:
     void xor8(uint8_t& regA, uint8_t& regB);
     
     // Prefix instructions
+    void checkBit(uint8_t bit, uint8_t& reg);
     void checkBit(uint8_t bit, uint16_t& reg);
+    
+    void clearBit(uint8_t bit, uint8_t& reg);
     void clearBit(uint8_t bit, uint16_t& reg);
-    void setBit(uint8_t bit, uint16_t& reg);
+    
     void setBit(uint8_t bit, uint8_t& reg);
+    void setBit(uint8_t bit, uint16_t& reg);
     
     void swap(uint8_t& reg) noexcept;
     
@@ -202,18 +206,18 @@ public:
             }
         } DE;
         
-        struct HL {
+        struct HLReg {
             uint8_t H;
             uint8_t L;
             
-            HL& operator=(uint16_t value) {
+            HLReg& operator=(uint16_t value) {
                 H = static_cast<uint8_t>(((value >> 8) & 0xFF));
                 L = static_cast<uint8_t>(value & 0xFF);
                 
                 return *this;
             }
             
-            HL& operator+=(uint16_t value) {
+            HLReg& operator+=(uint16_t value) {
                 uint16_t newL = L + (value & 0xFF);
                 
                 H += (value >> 8) + (newL >> 8);
