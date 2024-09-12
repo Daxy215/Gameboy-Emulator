@@ -93,14 +93,14 @@ void runEmulation(CPU &cpu, PPU &ppu) {
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 550000) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 9500) {
         blarggStates.push_back(line);
     }
     
     uint64_t x = 0;
     
     while (true) {
-        if(x == 3989487) {
+        if(x == 1453268) {
             printf("");
         }
         
@@ -113,8 +113,7 @@ void runEmulation(CPU &cpu, PPU &ppu) {
             if (formattedState != expectedState) {
                 /*std::cerr << "Mismatch at iteration " << x << ":\n";
                 std::cerr << "Expected: " << expectedState << "\n";
-                std::cerr << "Actual  : " << formattedState << "\n";
-                */
+                std::cerr << "Actual  : " << formattedState << "\n";*/
                 
                 //break;
             }
@@ -142,12 +141,16 @@ int main(int argc, char* argv[]) {
     
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/dmg-acid2.gb";
-    //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb";
-    //std::string filename = "Roms/cpu_instrs/individual/01-special.gb";
-    //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb";
-    //std::string filename = "Roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb";
-    std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb";
-    //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb";
+    //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // TODO;
+    //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
+    //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // TODO;
+    //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb"; // Passed
+    //std::string filename = "Roms/cpu_instrs/individual/04-op r,imm.gb"; // Passed
+    //std::string filename = "Roms/cpu_instrs/individual/05-op rp.gb"; // Passed
+    //std::string filename = "Roms/cpu_instrs/individual/06-ld r,r.gb"; // Passed
+    std::string filename = "Roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb"; // TODO;
+    //std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb"; // Passed
+    //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb"; // TODO;
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
     
@@ -201,7 +204,7 @@ int main(int argc, char* argv[]) {
     // TODO; Test
     //cpu.testCases();
     
-    ppu->createWindow();
+    //ppu->createWindow();
     
     // Gather cartridge information
     cartridge.decode(memory);

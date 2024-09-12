@@ -23,8 +23,14 @@ public:
     int jrc(int8_t& offset);
     int jrnc(int8_t& offset);
     
+    int jpc(uint16_t& address);
+    int jpnc(uint16_t& address);
+    
     int jrz(int8_t& offset);
     int jrnz(int8_t& offset);
+
+    int jpz(uint16_t& address);
+    int jpnz(uint16_t& address);
     
     void ld(uint8_t& regA, uint8_t& regB);
     
@@ -33,6 +39,7 @@ public:
     
     void adc(uint8_t& a, const uint8_t& reg, bool carry);
     void add(uint8_t& regA, uint8_t& regB);
+    void add(uint16_t& regA, uint16_t& regB);
     
     void sbc(uint8_t& regA, const uint8_t& regB, bool carry);
     void sub(uint8_t& regA, uint8_t& regB);
@@ -95,6 +102,13 @@ public:
         struct AF {
             uint8_t A; // Flags register
             uint8_t F; // Accumulator register
+            
+            AF& operator=(uint16_t value) {
+                A = static_cast<uint8_t>((value >> 8) & 0xFF);
+                F = static_cast<uint8_t>(value & 0xFF);
+                
+                return *this;
+            }
             
             inline bool getCarry() const {
                 // Extracts the carry from the F register flag
@@ -205,6 +219,10 @@ public:
             uint16_t operator+(uint16_t value) const {
                 return static_cast<uint16_t>(H << 8 | L) + value;
             }
+            
+            /*operator uint16_t() const {
+                return static_cast<uint16_t>(H << 8 | L);
+            }*/
             
             uint16_t get() const {
                 return static_cast<uint16_t>((H << 8) | L);

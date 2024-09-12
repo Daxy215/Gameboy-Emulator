@@ -162,11 +162,23 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	return 20;
         }
 		
-		/*case 0x09: {
+		case 0x09: {
 			/**
-			 * 
-			 #1#
-		}*/
+			 * ADD HL, BC
+			 * 1, 8
+			 * - 0 H C
+			 */
+			
+        	uint16_t hl = HL.get();
+        	uint16_t bc = BC.get();
+        	add(hl, bc);
+			
+        	// TODO; ..
+        	HL = hl;
+        	BC = bc;
+        	
+        	return 8;
+		}
 		
 		case 0x0B: {
 			/**
@@ -309,7 +321,20 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			
         	return 4;
         }
-
+		
+		case 0x16: {
+			/**
+			 * LD D, u8
+			 * 2, 8
+			 * - - - -
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(PC++);
+        	ld(DE.D, u8);
+        	
+        	return 8;
+        }
+		
 		case 0x17: {
 			/**
 			 * RLA (Rotate Left A throguh Carry)
@@ -343,7 +368,25 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 12;
         }
+		
+		case 0x19: {
+			/**
+			 * ADD HL, DE
+			 * 1, 8
+			 * - 0 H C
+			 */
+			
+        	uint16_t hl = HL.get();
+        	uint16_t de = DE.get();
+        	add(hl, de);
 
+        	// Idk how to fix this so..
+        	HL = hl;
+        	DE = de;
+        	
+        	return 8;
+		}
+		
 		case 0x1A: {
 			/**
 			 * LD A, (DE)
@@ -355,7 +398,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	
         	return 8;
         }
-
+		
 		case 0x1B: {
 			/**
 			 * DEC DE
@@ -392,6 +435,19 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	return 4;
         }
 		
+		case 0x1E: {
+			/**
+			 * LD E, u8
+			 * 2, 8
+			 * - - - -
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(PC++);
+        	ld(DE.E, u8);
+        	
+        	return 8;
+		}
+		
 		case 0x1F: {
         	/**
         	 * RRA
@@ -400,6 +456,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	 */
 			
         	rra();
+        	
         	return 4;
         }
         
@@ -502,6 +559,56 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	return 8;
         }
 		
+		case 0x27: {
+	        /**
+	         * DAA (Decimal Adjust Accumultor)
+	         * 1, 4
+	         * Z - 0 C
+	         *
+	         * https://blog.ollien.com/posts/gb-daa/
+	         */
+			
+        	uint8_t a = AF.A;
+        	uint8_t correction = 0;
+        	bool carrySet = AF.getCarry();  // Track if the carry flag needs to be set
+			
+        	// After addition (N flag is clear)
+        	if (!AF.getSubtract()) {
+        		if (AF.getHalfCarry() || (a & 0x0F) > 9) {
+        			correction |= 0x06;  // Adjust lower nibble
+        		}
+        		
+        		if (AF.getCarry() || a > 0x99) {
+        			correction |= 0x60;  // Adjust upper nibble
+        			carrySet = true;     // Carry flag should be set
+        		}
+        	}
+        	// After subtraction (N flag is set)
+        	else {
+        		if (AF.getHalfCarry()) {
+        			correction |= 0x06;  // Adjust lower nibble
+        		}
+        		
+        		if (AF.getCarry()) {
+        			correction |= 0x60;  // Adjust upper nibble
+        		}
+        	}
+			
+        	if (!AF.getSubtract()) {
+        		a += correction;
+        	} else {
+        		a -= correction;
+        	}
+			
+        	AF.A = a;
+			
+        	AF.setZero(a == 0);
+        	AF.setHalfCarry(false);
+        	AF.setCarry(carrySet);
+			
+        	return 4;
+        }
+		
 		case 0x28: {
 			/**
 			 * JR Z, i8
@@ -520,8 +627,6 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	}
 			
         	PC++;*/
-        	
-        	return 8;
         }
 		
 		case 0x29: {
@@ -560,6 +665,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
             HL += 1;
             
             return 8;
+        }
+		
+		case 0x2B: {
+			/**
+			 * DEC HL
+			 * 1, 8
+			 * - - - -
+			 */
+			
+        	HL = HL.get() - 1;
+        	
+        	return 8;
         }
 		
 		case 0x2C: {
@@ -700,6 +817,18 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	AF.setZero(res == 0);
         	AF.setSubtract(true);
         	AF.setHalfCarry((res & 0x0F) == 0x00);
+        	
+        	return 12;
+        }
+
+		case 0x36: {
+	        /**
+	         * LD (HL), u8
+	         * 2, 12
+	         * - - - -
+	         */
+			
+        	mmu.write8(HL.get(), mmu.fetch8(PC++));
         	
         	return 12;
         }
@@ -1440,7 +1569,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 4;
         }
-
+		
     	case 0xAE: {
             /**
              * XOR A, (HL)
@@ -1899,6 +2028,17 @@ int CPU::decodeInstruction(uint16_t opcode) {
             return 16;
         }
 		
+		case 0xCA: {
+			/**
+			 * JP Z, u16
+			 * 3, 12 (16 with branch)
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(PC);
+        	return jpz(u16);
+        }
+		
 		case 0xCB: {
 			/**
 			 * PREFIX CB
@@ -1967,6 +2107,17 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	
         	return 12;
         }
+
+		case 0xD2: {
+			/**
+			 * JP NC, u16
+			 * 3, 12 (16 with branch)
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(PC);
+        	return jpnz(u16);
+        }
     	
 		case 0xD5: {
 			/**
@@ -2001,7 +2152,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
         	
         	return 8;
         }
-
+		
 		case 0xD8: {
 			/**
 			 * RET C
@@ -2016,6 +2167,30 @@ int CPU::decodeInstruction(uint16_t opcode) {
         		return 20;
         	}
 			
+        	return 8;
+        }
+		
+		case 0xDA: {
+			/**
+			 * JP C, u16
+			 * 3, 12 (16 with branch)
+			 * - - - -
+			 */
+			
+        	uint16_t u16 = mmu.fetch16(PC);
+        	return jpc(u16);
+        }
+		
+		case 0xDE: {
+			/**
+			 * SBC A, u8
+			 * 2, 8
+			 * Z 1 H C
+			 */
+			
+        	uint8_t u8 = mmu.fetch8(PC++);
+        	sbc(AF.A, u8, AF.getCarry());
+        	
         	return 8;
         }
         
@@ -2094,10 +2269,12 @@ int CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	int8_t i8 = static_cast<int8_t>(mmu.fetch8(PC++));
-        	uint16_t res = SP + i8;
+        	uint16_t res = SP + static_cast<uint16_t>(static_cast<int16_t>(i8));
 			
+        	AF.setZero(false);
+        	AF.setSubtract(false);
         	AF.setHalfCarry((SP & 0xF) + (i8 & 0xF) > 0xF);
-        	AF.setCarry(res > 0xFF);
+        	AF.setCarry((SP & 0xFF) + (i8 & 0xFF) > 0xFF);
 			
         	SP = res;
         	
@@ -2159,9 +2336,10 @@ int CPU::decodeInstruction(uint16_t opcode) {
              * POP AF
              * 1, 12
              */
+			
+        	uint16_t v = popStack() & 0xFFF0;
             
-            AF.F = mmu.fetch8(SP++);
-            AF.A = mmu.fetch8(SP++);
+            AF = v;
             
             return 12;
         }
@@ -2187,6 +2365,55 @@ int CPU::decodeInstruction(uint16_t opcode) {
             pushToStack(AF.get());
             
             return 16;
+        }
+		
+		case 0xF6: {
+	        /**
+	         * OR A, u8
+	         * 2, 8
+	         * Z 0 0 0
+	         */
+			
+        	uint8_t u8 = mmu.fetch8(PC++);
+        	AF.A |= u8;
+        	
+        	AF.setZero(AF.A == 0);
+        	AF.setSubtract(false);
+        	AF.setHalfCarry(false);
+        	AF.setCarry(false);
+        	
+        	return 8;
+        }
+		
+		case 0xF7: {
+			/**
+			 * RST 30h
+			 * 1, 16
+			 * - - - -
+			 */
+			
+        	rst(30);
+        	
+        	return 16;
+		}
+		
+		case 0xF8: {
+	        /**
+	         * LD HL, SP + i8
+	         * 2, 12
+	         * 0 0 H C
+	         */
+			
+        	int8_t i8 = static_cast<int8_t>(mmu.fetch8(PC++));
+        	uint16_t result = SP + i8;
+        	HL = result;
+			
+        	AF.setZero(false);
+        	AF.setSubtract(false);
+        	AF.setHalfCarry((SP & 0x0F) + (i8 & 0x0F) > 0x0F);
+        	AF.setCarry((SP & 0xFF) + (i8 & 0xFF) > 0xFF);
+        	
+        	return 12;
         }
 		
 		case 0xF9: {
@@ -3329,6 +3556,30 @@ int CPU::jrnc(int8_t& offset) {
 	return 8;
 }
 
+int CPU::jpc(uint16_t& address) {
+	if(AF.getCarry()) {
+		PC = address;
+		
+		return 16;
+	}
+	
+	PC += 2;
+	
+	return 12;
+}
+
+int CPU::jpnc(uint16_t& address) {
+	if(!AF.getCarry()) {
+		PC = address;
+		
+		return 16;
+	}
+	
+	PC += 2;
+	
+	return 12;
+}
+
 int CPU::jrz(int8_t& offset) {
 	if (AF.getZero()) {
 		PC += offset + 1; // For the byte
@@ -3350,6 +3601,30 @@ int CPU::jrnz(int8_t& offset) {
 	PC++;
 	
 	return 8;
+}
+
+int CPU::jpz(uint16_t& address) {
+	if(AF.getZero()) {
+		PC = address;
+		
+		return 16;
+	}
+	
+	PC += 2;
+	
+	return 12;
+}
+
+int CPU::jpnz(uint16_t& address) {
+	if(!AF.getZero()) {
+		PC = address;
+		
+		return 16;
+	}
+	
+	PC += 2;
+	
+	return 12;
 }
 
 void CPU::ld(uint8_t& regA, uint8_t& regB) {
@@ -3407,6 +3682,17 @@ void CPU::add(uint8_t& regA, uint8_t& regB) {
 	AF.setCarry(result > 0xFF);
 	
 	regA = static_cast<uint8_t>(result);
+}
+
+void CPU::add(uint16_t& regA, uint16_t& regB) {
+	uint16_t u8 = regB;
+	uint32_t result = regA + u8;
+	
+	AF.setSubtract(false);
+	AF.setHalfCarry((regA & 0xFFF) + (u8 & 0xFFF) > 0xFFF);
+	AF.setCarry(result > 0xFFFF);
+	
+	regA = static_cast<uint16_t>(result);
 }
 
 void CPU::sbc(uint8_t& regA, const uint8_t& regB, bool carry) {
@@ -3605,10 +3891,18 @@ void CPU::pushToStack(uint16_t value) {
 }
 
 uint16_t CPU::popStack() {
-	uint8_t low = mmu.fetch8(SP++);
-	uint8_t high = mmu.fetch8(SP++);
+	uint16_t stack = mmu.fetch16(SP);
+	SP += 2;
 	
-	return static_cast<uint8_t>(high << 8) | low;
+	return stack;
+	/*uint8_t low = mmu.fetch8(SP++);
+	uint8_t high = mmu.fetch8(SP++);
+
+	if(f != (static_cast<uint8_t>(high << 8) | low)) {
+		printf("");
+	}
+	
+	return static_cast<uint8_t>(high << 8) | low;*/
 }
 
 void CPU::reset() {
