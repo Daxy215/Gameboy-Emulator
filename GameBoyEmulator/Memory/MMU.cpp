@@ -205,7 +205,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     // https://gbdev.io/pandocs/Hardware_Reg_List.html
     
      if(address == 0xFF00) {
-        std::cerr << "Joypad input write\n";
+        //std::cerr << "Joypad input write\n";
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         serial.write8(address, data);
     } else if(address >= 0xFF04 && address <= 0xFF07) {

@@ -42,7 +42,7 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 
 uint8_t InterruptHandler::fetch8(uint16_t address) {
 	if(address == 0xFF0F)
-		return IF | 0b11100000;
+		return IF; // | 0xE0?
 	else if(address == 0xFFFF) {
 		/**
 		 * https://gbdev.io/pandocs/Interrupts.html#ffff--ie-interrupt-enable

@@ -1116,7 +1116,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	
         	return 8;
         }
-
+		
 		case 0x76: {
 			/**
 			 * HALT
