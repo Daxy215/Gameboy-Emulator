@@ -12,9 +12,9 @@ public:
     CPU(InterruptHandler& interruptHandler, MMU& mmu);
     
     uint16_t fetchOpCode();
-    int decodeInstruction(uint16_t opcode);
-    int decodePrefix(uint16_t opcode);
-
+    uint16_t decodeInstruction(uint16_t opcode);
+    uint16_t decodePrefix(uint16_t opcode);
+    
     void popReg(uint8_t& reg);
     void popReg(uint8_t& high, uint8_t& low);
     
@@ -86,6 +86,8 @@ public:
     void testCases();
 
 public:
+    int8_t ei = -1;
+    
     InterruptHandler& interruptHandler;
     
     MMU& mmu;

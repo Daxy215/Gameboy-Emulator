@@ -16,6 +16,7 @@
 
 #include "Pipeline/LCDC.h"
 #include "CPU/Serial.h"
+#include "CPU/Timer.h"
 
 #include "Memory/MMU.h"
 #include "Pipeline/OAM.h"
@@ -79,7 +80,7 @@ std::string formatCPUState(const CPU &cpu) {
     return oss.str();
 }
 
-void runEmulation(CPU &cpu, PPU &ppu) {
+void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     std::ofstream logFile("cpu_state_log.txt");
     
     if (!logFile.is_open()) {
@@ -125,8 +126,52 @@ void runEmulation(CPU &cpu, PPU &ppu) {
         }
         
         uint16_t opcode = cpu.fetchOpCode();
-        int cycles = cpu.decodeInstruction(opcode);
+        uint16_t cycles = cpu.decodeInstruction(opcode);
+        
+        // https://gbdev.io/pandocs/Interrupts.html#ime-interrupt-master-enable-flag-write-only
+        if(cpu.ei >= 0) cpu.ei--;
+        
+        if(cpu.ei == 0) {
+            cpu.interruptHandler.IME = true;
+        }
+        
+        if(cpu.interruptHandler.IME) {
+            uint8_t interrupt = cpu.interruptHandler.IF & cpu.interruptHandler.IE;
+            
+            if(interrupt == 0)
+                continue;
+            
+            if(cpu.interruptHandler.IME == false) {
+                printf("huh??");
+                continue;
+            }
+            
+            cpu.interruptHandler.IME = false;
+            
+            cpu.pushToStack(cpu.PC);
+            
+            // https://gbdev.io/pandocs/Interrupt_Sources.html
+             if(interrupt & 0x01) { // V-Blank interrupt
+                cpu.PC = 0x0040;
+            } else if(interrupt & 0x02) { // LCD STAT interrupt
+                cpu.PC = 0x0048;
+            } else if(interrupt & 0x04) { // Timer interrupt
+                cpu.PC = 0x0050;
+            } else if(interrupt & 0x08) { // Serial interrupt
+                cpu.PC = 0x0058;
+            } else if(interrupt & 0x10) { // Joypad interrupt
+                cpu.PC = 0x0060;
+            }
+            
+            cpu.interruptHandler.IF &= ~interrupt;
+        }
+        
+        timer.tick(cycles);
         ppu.tick(cycles);
+        
+        // Apply interrupts if any occured
+        cpu.interruptHandler.IF |= timer.interrupt;
+        timer.interrupt = 0;
         
         x++;
     }
@@ -141,12 +186,12 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    std::string filename = "Roms/Tennis (World).gb";
+    //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/dmg-acid2.gb";
     
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // TODO;
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
-    //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // TODO;
+    std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // TODO;
     //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/04-op r,imm.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/05-op rp.gb"; // Passed
@@ -179,6 +224,7 @@ int main(int argc, char* argv[]) {
     // I/O
     LCDC lcdc;
     Serial serial;
+    Timer timer;
     
     OAM oam;
     
@@ -191,7 +237,7 @@ int main(int argc, char* argv[]) {
     PPU* ppu;
     
     // Create MMU
-    MMU mmu(interruptHandler, wram, hram, vram, externalRam, lcdc, serial, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
+    MMU mmu(interruptHandler, wram, hram, vram, externalRam, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
     ppu = &mmu.ppu;
     
     Cartridge cartridge;
@@ -216,7 +262,7 @@ int main(int argc, char* argv[]) {
     
     //runEmulation(cpu, *ppu);
     
-    std::thread emulationThread(runEmulation, std::ref(cpu), std::ref(*ppu));
+    std::thread emulationThread(runEmulation, std::ref(cpu), std::ref(*ppu), std::ref(timer));
     
     bool running = true;
     const int targetFPS = 60;

@@ -40,7 +40,7 @@ uint16_t CPU::fetchOpCode() {
     return opcode;
 }
 
-int CPU::decodeInstruction(uint16_t opcode) {
+uint16_t CPU::decodeInstruction(uint16_t opcode) {
     switch (opcode) {
         case 0x00: {
             // NOP
@@ -122,7 +122,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
             
             return 8;
         }
-
+		
 		case 0x07: {
 	        /**
 	         * RLCA
@@ -2538,12 +2538,11 @@ int CPU::decodeInstruction(uint16_t opcode) {
         case 0xF3: {
             /**
              * DI - Disable Interrupts by clearing the IME flag
-             *
              * 1, 4
              */
-            
-            interruptHandler.IME = false;
-            
+			
+			interruptHandler.IME = false;
+        	
             return 4;
         }
 		
@@ -2638,8 +2637,9 @@ int CPU::decodeInstruction(uint16_t opcode) {
              * EI - Enable Interrupts
              * 1, 4
              */
-            
-            interruptHandler.IME = true;
+			
+        	// To enable after 1 instruction
+        	ei = 2;
             
             return 4;
         }
@@ -2777,7 +2777,7 @@ int CPU::decodeInstruction(uint16_t opcode) {
     }
  }
 
-int CPU::decodePrefix(uint16_t opcode) {
+uint16_t CPU::decodePrefix(uint16_t opcode) {
 	switch (opcode) {
 		case 0x00: {
 			/**
@@ -6469,6 +6469,4 @@ void CPU::testCases() {
         assert(HL.L == expectedL);
         assert(SP == expectedSP);
     };
-	
-	
 }

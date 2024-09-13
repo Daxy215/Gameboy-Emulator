@@ -378,6 +378,7 @@
       <AdditionalIncludeDirectories>..\libs\glew-2.2.0\src;..\libs\glew-2.2.0\include;..\libs\SDL2-2.30.3\include;</AdditionalIncludeDirectories>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
+    <ClCompile Include="CPU\Timer.cpp" />
     <ClCompile Include="Memory\Cartridge.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -1114,6 +1115,7 @@
     <ClInclude Include="CPU\CPU.h" />
     <ClInclude Include="CPU\InterrupHandler.h" />
     <ClInclude Include="CPU\Serial.h" />
+    <ClInclude Include="CPU\Timer.h" />
     <ClInclude Include="Memory\Cartridge.h" />
     <ClInclude Include="Memory\ExternalRAM.h" />
     <ClInclude Include="Memory\HRAM.h" />

@@ -11,6 +11,7 @@
 #include "../CPU/InterrupHandler.h"
 #include "../Pipeline/LCDC.h"
 #include "../CPU/Serial.h"
+#include "../CPU/Timer.h"
 
 #include "../Pipeline/OAM.h"
 #include "../Pipeline/PPU.h"
@@ -67,12 +68,13 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         return serial.fetch8(address);
     } else if(address >= 0xFF04 && address <= 0xFF07) {
-        std::cerr << "Timer and divider\n";
+        //std::cerr << "Timer and divider\n";
+        return timer.fetch8(address);
     } else if(address == 0xFF0F) {
         //std::cerr << "Interrupts\n";
         return interruptHandler.fetch8(address);
     } else if(address >= 0xFF10 && address <= 0xFF26) {
-        std::cerr << "Wave pattern\n";
+        //std::cerr << "Wave pattern\n";
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
@@ -112,10 +114,6 @@ uint16_t MMU::fetch16(uint16_t address) {
 }
 
 void MMU::write8(uint16_t address, uint8_t data) {
-    if(address == 57086) {
-        printf("");
-    }
-    
     // Handle ROM and RAM bank switching for MBC1/MBC2
     if (address < 0x8000) {
         // RAM enabling (0x0000 - 0x1FFF)
@@ -211,12 +209,13 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         serial.write8(address, data);
     } else if(address >= 0xFF04 && address <= 0xFF07) {
-        std::cerr << "Timer and divider\n";
+        //std::cerr << "Timer and divider\n";
+        timer.write8(address, data);
     } else if(address == 0xFF0F) {
         //std::cerr << "Interrupts\n";
         interruptHandler.write8(address, data);
     } else if(address >= 0xFF10 && address <= 0xFF26) {
-        std::cerr << "Wave pattern\n";
+        //std::cerr << "Wave pattern\n";
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         

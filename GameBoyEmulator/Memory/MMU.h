@@ -10,13 +10,14 @@ class ExternalRAM;
 
 class LCDC;
 class Serial;
+class Timer;
 
 class OAM;
 class PPU;
 
 class MMU {
 public:
-    MMU(InterruptHandler& interruptHandler, WRAM& wram, HRAM& hram, VRAM& vram, ExternalRAM& externalRam, LCDC& lcdc, Serial& serial, OAM& oam, PPU& ppu, const std::vector<uint8_t>& memory)
+    MMU(InterruptHandler& interruptHandler, WRAM& wram, HRAM& hram, VRAM& vram, ExternalRAM& externalRam, LCDC& lcdc, Serial& serial, Timer& timer, OAM& oam, PPU& ppu, const std::vector<uint8_t>& memory)
         : interruptHandler(interruptHandler),
           wram(wram),
           hram(hram),
@@ -24,6 +25,7 @@ public:
           externalRam(externalRam),
           lcdc(lcdc),
           serial(serial),
+          timer(timer),
           oam(oam), ppu(ppu),
           memory(memory) {
         
@@ -66,6 +68,7 @@ private:
     // I/O
     LCDC& lcdc;
     Serial& serial;
+    Timer& timer;
     
     OAM& oam;
 
