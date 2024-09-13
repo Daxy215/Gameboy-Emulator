@@ -1116,6 +1116,18 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	
         	return 8;
         }
+
+		case 0x76: {
+			/**
+			 * HALT
+			 * 1, 4
+			 * - - - -
+			 */
+			
+        	halted = true;
+        	
+        	return 4;
+        }
     	
 		case 0x77: {
 			/**
@@ -2504,7 +2516,10 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	uint8_t u8 = mmu.fetch8(PC++);
+        	//printf("%x\n", AF.A);
         	AF.A = mmu.fetch8(0xFF00 | u8);
+        	//printf("%x\n", AF.A);
+        	//std::cerr << "";
         	
         	return 12;
         }

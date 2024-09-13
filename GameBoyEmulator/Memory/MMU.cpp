@@ -64,7 +64,7 @@ uint8_t MMU::fetch8(uint16_t address) {
 
 uint8_t MMU::fetchIO(uint16_t address) {
     if(address == 0xFF00) {
-        std::cerr << "Joypad input fetch\n";
+        //std::cerr << "Joypad input fetch\n";
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         return serial.fetch8(address);
     } else if(address >= 0xFF04 && address <= 0xFF07) {
@@ -87,7 +87,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address == 0xFF4F) {
         //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
-        std::cerr << "Set to non-zero to disable boot ROM\n";
+        //std::cerr << "Set to non-zero to disable boot ROM\n";
         return 1;
     } else if(address >= 0xFF51 && address <= 0xFF55) {
         //std::cerr << "CGB VRAM DMA\n";
@@ -97,8 +97,8 @@ uint8_t MMU::fetchIO(uint16_t address) {
         //std::cerr << "CGB WRAM Bank Select\n";
         return wramBank;
     } else {
-        printf("IO Fetch Address; %x\n", address);
-        std::cerr << "";
+        //printf("IO Fetch Address; %x\n", address);
+        //std::cerr << "";
     }
     
     return 0xFF;
@@ -234,13 +234,13 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address == 0xFF4D) {
         key1 = (key1 & 0x80) | (data & 0x01); // Preserve current speed (bit 7) and `only` update switch armed (bit 0)
     } else if(address == 0xFF4F) {
-        std::cerr << "CGB VRAM Bank Select\n";
+        //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
-        std::cerr << "Set to non-zero to disable boot ROM\n";
+        //std::cerr << "Set to non-zero to disable boot ROM\n";
     } else if(address >= 0xFF51 && address <= 0xFF55) {
         std::cerr << "CGB VRAM DMA\n";
     } else if(address >= 0xFF68 && address <= 0xFF6B) {
-        std::cerr << "CGB BG / OBJ Pallets\n";
+        //std::cerr << "CGB BG / OBJ Pallets\n";
     } else if(address == 0xFF70) {
         //std::cerr << "CGB WRAM Bank Select\n";
         wramBank = (data & 0x7) == 0 ? 1 : static_cast<size_t>(data & 0x7);

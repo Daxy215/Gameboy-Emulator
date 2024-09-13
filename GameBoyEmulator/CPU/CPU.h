@@ -85,9 +85,8 @@ public:
     
     void testCases();
 
-public:
-    int8_t ei = -1;
     
+public:
     InterruptHandler& interruptHandler;
     
     MMU& mmu;
@@ -307,12 +306,6 @@ public:
      * FLAG_C: If the result will be greater than max byte (255)
      * FLAG_H: If there will be a carry from the lower nibble to the upper nibble
      */
-    /*enum FlagRegister {
-        Z = 1 << 7, // Zero Flag
-        N = 1 << 6, // Subtract Flag
-        H = 1 << 5, // Half Carry Flag
-        C = 1 << 4  // Carry Flag
-    };*/
     
     struct Flags {
         static const uint8_t Z = 1 << 7; // Zero Flag
@@ -322,14 +315,10 @@ public:
     };
     
 public:
+    bool halted = false;
     bool stop;
     
-    /**
-     * Flags in order;
-     *
-     * Z N H C
-     */
-    //Flags flags;
+    int8_t ei = -1;
     
     // Program Counter/Pointer
     uint16_t PC = 0x0100;

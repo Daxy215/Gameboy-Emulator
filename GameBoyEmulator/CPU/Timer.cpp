@@ -16,7 +16,7 @@ void Timer::tick(uint16_t cycles) {
 	
 	if(enabled) {
 		counterTimer += cycles;
-
+		
 		while (counterTimer >= clockSpeed) {
 			counter++;
 			
@@ -27,12 +27,12 @@ void Timer::tick(uint16_t cycles) {
 			 *  it is reset to the value specified in TMA (FF06),
 			 *  and an interrupt is requested
 			 */
-
+			
 			// Overflow
 			// TODO; Check if this is correct
 			if(counter == 0) {
 				counter = modulo;
-				interrupt |= 0x04; // Timer intrrupt
+				interrupt |= 0x04; // Timer interrupt
 			}
 			
 			counterTimer -= clockSpeed;

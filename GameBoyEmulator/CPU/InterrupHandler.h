@@ -2,11 +2,13 @@
 
 // https://gbdev.io/pandocs/Interrupts.html
 
+class CPU;
+
 class InterruptHandler {
 public:
 	InterruptHandler() = default;
-
-	void handleInterrupt();
+	
+	uint8_t handleInterrupt(CPU& cpu);
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
@@ -18,5 +20,6 @@ public:
 	 */
 	bool IME = false;
 	
-	uint8_t IE, IF;
+	uint8_t IE = 0;
+	uint8_t IF = 0;
 };

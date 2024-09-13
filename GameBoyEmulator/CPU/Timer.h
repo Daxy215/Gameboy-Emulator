@@ -15,16 +15,16 @@ public:
 	uint8_t interrupt;
 	
 private:
-	uint8_t divider;
-	uint8_t counter;
-	uint8_t modulo;
-	uint8_t control;
+	uint8_t divider = 0;
+	uint8_t counter = 0;
+	uint8_t modulo = 0;
+	uint8_t control = 0;
 	
 	// Timers
-	uint8_t divTimer;
-	uint8_t counterTimer;
+	uint16_t divTimer = 0;
+	uint16_t counterTimer = 0;
 	
-	bool enabled;
-	uint8_t clockSelected;
-	uint32_t clockSpeed;
+	bool enabled = false;
+	uint8_t clockSelected = 0;
+	uint32_t clockSpeed = 0;
 };

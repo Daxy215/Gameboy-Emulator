@@ -94,7 +94,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 9500) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 950000) {
         blarggStates.push_back(line);
     }
     
@@ -103,7 +103,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     bool running = true;
     
     while (running) {
-        if(x == 1453268) {
+        if(x == 156431) {
             printf("");
         }
         
@@ -125,9 +125,6 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             //break;
         }
         
-        uint16_t opcode = cpu.fetchOpCode();
-        uint16_t cycles = cpu.decodeInstruction(opcode);
-        
         // https://gbdev.io/pandocs/Interrupts.html#ime-interrupt-master-enable-flag-write-only
         if(cpu.ei >= 0) cpu.ei--;
         
@@ -135,35 +132,18 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             cpu.interruptHandler.IME = true;
         }
         
-        if(cpu.interruptHandler.IME) {
-            uint8_t interrupt = cpu.interruptHandler.IF & cpu.interruptHandler.IE;
-            
-            if(interrupt == 0)
-                continue;
-            
-            if(cpu.interruptHandler.IME == false) {
-                printf("huh??");
-                continue;
+        uint16_t cycles = cpu.interruptHandler.handleInterrupt(cpu);
+        
+        // If cycles are not 0 then an interrupt happend
+        if(!cpu.halted && cycles == 0) {
+            uint16_t opcode = cpu.fetchOpCode();
+            cycles = cpu.decodeInstruction(opcode);
+        } else if(cpu.halted) {
+            if(cycles > 0) {
+                printf("??");
             }
             
-            cpu.interruptHandler.IME = false;
-            
-            cpu.pushToStack(cpu.PC);
-            
-            // https://gbdev.io/pandocs/Interrupt_Sources.html
-             if(interrupt & 0x01) { // V-Blank interrupt
-                cpu.PC = 0x0040;
-            } else if(interrupt & 0x02) { // LCD STAT interrupt
-                cpu.PC = 0x0048;
-            } else if(interrupt & 0x04) { // Timer interrupt
-                cpu.PC = 0x0050;
-            } else if(interrupt & 0x08) { // Serial interrupt
-                cpu.PC = 0x0058;
-            } else if(interrupt & 0x10) { // Joypad interrupt
-                cpu.PC = 0x0060;
-            }
-            
-            cpu.interruptHandler.IF &= ~interrupt;
+            cycles = 4;
         }
         
         timer.tick(cycles);
@@ -189,9 +169,9 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/dmg-acid2.gb";
     
-    //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // TODO;
+    std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // TODO;
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
-    std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // TODO;
+    //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/04-op r,imm.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/05-op rp.gb"; // Passed
