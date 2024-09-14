@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <vector>
 
+class MBC;
 class InterruptHandler;
 
 class WRAM;
@@ -17,8 +18,9 @@ class PPU;
 
 class MMU {
 public:
-    MMU(InterruptHandler& interruptHandler, WRAM& wram, HRAM& hram, VRAM& vram, ExternalRAM& externalRam, LCDC& lcdc, Serial& serial, Timer& timer, OAM& oam, PPU& ppu, const std::vector<uint8_t>& memory)
+    MMU(InterruptHandler& interruptHandler, MBC& mbc, WRAM& wram, HRAM& hram, VRAM& vram, ExternalRAM& externalRam, LCDC& lcdc, Serial& serial, Timer& timer, OAM& oam, PPU& ppu, const std::vector<uint8_t>& memory)
         : interruptHandler(interruptHandler),
+          mbc(mbc),
           wram(wram),
           hram(hram),
           vram(vram),
@@ -26,8 +28,8 @@ public:
           lcdc(lcdc),
           serial(serial),
           timer(timer),
-          oam(oam), ppu(ppu),
-          memory(memory) {
+          oam(oam),
+          ppu(ppu) {
         
     }
     
@@ -44,20 +46,14 @@ public:
     void clear();
     
 private:
-    //TODO; Move to RAM
-    bool m_MBC1 = true;
-    bool m_MBC2 = false;
-    bool m_EnableRAM = false;
-    bool m_ROMBanking = true;
-    uint8_t m_CurrentROMBank = 1;
-    uint8_t m_CurrentRAMBank = 0;
-    uint8_t wramBank         = 1;
-    //uint8_t m_RAMBanks[0x8000] = { 0 };
+    uint8_t wramBank = 1;
     
     // Prepare speed switch thingies
     uint8_t key1;
     
     InterruptHandler& interruptHandler;
+    
+    MBC& mbc;
     
     // Memories
     WRAM& wram;
@@ -75,6 +71,6 @@ private:
 public:
     PPU& ppu;
     
-public:
-    std::vector<uint8_t> memory;
+/*public:
+    std::vector<uint8_t> memory;*/
 };

@@ -83,6 +83,7 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
             // https://gbdev.io/pandocs/The_Cartridge_Header.html#0147--cartridge-type
             
             type = getCartridgeType(data[i]);
+            std::cerr << "Type; " << cartridgeTypeToString(type) << "\n";
         } else if(i == 0x0148) {
             // ROM Size
             // https://gbdev.io/pandocs/The_Cartridge_Header.html#0148--rom-size
@@ -99,7 +100,10 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
     }
 }
 
-CartridgeType Cartridge::getCartridgeType(uint8_t data) {
+enums::CartridgeType Cartridge::getCartridgeType(uint8_t data) {
+    // too lazy :}
+    using namespace enums;
+    
     switch (data) {
         case ROM_ONLY: return ROM_ONLY;
         case MBC1: return MBC1;
@@ -131,5 +135,40 @@ CartridgeType Cartridge::getCartridgeType(uint8_t data) {
         case HUC1_RAM_BATTERY: return HUC1_RAM_BATTERY;
         
         default: return UNKNOWN_CARTRIDGE;  // Handle unrecognized cartridge types
+    }
+}
+
+const char* Cartridge::cartridgeTypeToString(enums::CartridgeType type) {
+    switch (type) {
+    case enums::ROM_ONLY: return "ROM Only";
+    case enums::MBC1: return "MBC1";
+    case enums::MBC1_RAM: return "MBC1 + RAM";
+    case enums::MBC1_RAM_BATTERY: return "MBC1 + RAM + Battery";
+    case enums::MBC2: return "MBC2";
+    case enums::MBC2_BATTERY: return "MBC2 + Battery";
+    case enums::ROM_RAM: return "ROM + RAM";
+    case enums::ROM_RAM_BATTERY: return "ROM + RAM + Battery";
+    case enums::MMM01: return "MMM01";
+    case enums::MMM01_RAM: return "MMM01 + RAM";
+    case enums::MMM01_RAM_BATTERY: return "MMM01 + RAM + Battery";
+    case enums::MBC3_TIMER_BATTERY: return "MBC3 + Timer + Battery";
+    case enums::MBC3_TIMER_RAM_BATTERY: return "MBC3 + Timer + RAM + Battery";
+    case enums::MBC3: return "MBC3";
+    case enums::MBC3_RAM: return "MBC3 + RAM";
+    case enums::MBC3_RAM_BATTERY: return "MBC3 + RAM + Battery";
+    case enums::MBC5: return "MBC5";
+    case enums::MBC5_RAM: return "MBC5 + RAM";
+    case enums::MBC5_RAM_BATTERY: return "MBC5 + RAM + Battery";
+    case enums::MBC5_RUMBLE: return "MBC5 + Rumble";
+    case enums::MBC5_RUMBLE_RAM: return "MBC5 + Rumble + RAM";
+    case enums::MBC5_RUMBLE_RAM_BATTERY: return "MBC5 + Rumble + RAM + Battery";
+    case enums::MBC6: return "MBC6";
+    case enums::MBC7_SENSOR_RUMBLE_RAM_BATTERY: return "MBC7 + Sensor + Rumble + RAM + Battery";
+    case enums::POCKET_CAMERA: return "Pocket Camera";
+    case enums::BANDAI_TAMA5: return "Bandai Tama5";
+    case enums::HUC3: return "Huc3";
+    case enums::HUC1_RAM_BATTERY: return "Huc1 + RAM + Battery";
+    //case UNKNOWN_CARTRIDGE: return "Unknown Cartridge";
+    default: return "Invalid Cartridge Type";
     }
 }

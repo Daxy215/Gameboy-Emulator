@@ -12,46 +12,83 @@
 
 #include "../Memory/MMU.h"
 
+const int WIDTH = 640;
+const int HEIGHT = 480;
+
 void PPU::tick(const int& cycles = 4) {
 	this->cycle += cycles;
 	
+	// https://gbdev.io/pandocs/Rendering.html#ppu-modes
 	const uint16_t CyclesHBlank = 204;     // Mode 0 (H-Blank) 204 cycles per Scanline
 	const uint16_t CyclesVBlank = 456;     // Mode 1 (V-Blank) 4560 cycles per Frame 4560/10 times per Frame
 	const uint16_t CyclesOam = 80;         // Mode 2 (OAM Search) 80 cycles per Scanline
 	const uint16_t CyclesTransfer = 173;   // Mode 3 (Transfer LCD) 173 cycles per Scanline
 	
+	uint8_t LCDControl = mmu.fetch8(0xFF40);
 	uint8_t LY = mmu.fetch8(0xFF44);
+	uint8_t LYC = mmu.fetch8(0xFF45);
+	uint8_t SCY = mmu.fetch8(0xFF42);
+	uint8_t SCX = mmu.fetch8(0xFF43);
+	uint8_t WY = mmu.fetch8(0xFF4A);
+	uint8_t WX = mmu.fetch8(0xFF4B);
+	
+	if(!lcdc.enable)
+		return;
 	
 	switch (mode) {
-	case 0:
-		if(cycle >= CyclesOam) {
-			mode = 1; // Transfer
+	case 2: // OAM
+		while(cycle >= CyclesOam) {
+			uint16_t tileWinMapBase = lcdc.windowEnabled ? 0x9C00 : 0x9800;
+			uint16_t tileBGMapBase = lcdc.bgTileMapArea ? 0x9800 : 0x9800;
+			
+			uint16_t addr = tileWinMapBase;
+			
+			fetcher.begin(addr + ((LY  / 8) * 32), (LY % 8));
+			
+			x = 0;
+			y = SCY + LY;
+			
+			mode = 3; // VRRAM Transfer
 			cycle -= CyclesOam;
 		}
 		
 		break;
-	case 1:
-		if(cycle >= CyclesTransfer) {
-			mode = 2; // HBlank
+	case 3: {
+		// VRAM Transfer
+		fetcher.tick();
+		
+		if(fetcher.fifo.size() <= 8)
+			return;
+		
+		uint8_t byte0 = fetcher.fifo.pop();
+		uint8_t pixelColor = (bgp >> (byte0 * 2)) & 0x03;
+		
+		updatePixel(x, LY, paletteIndexToColor(pixelColor));
+		
+		x++;
+		
+		//SDL_RenderPresent(renderer);
+		
+		if(x >= 160) {
+			if(LYC == LY) {
+				interrupt |= 0x02;
+			}
+			
+			mode = 0; // HBlank
 			cycle -= CyclesTransfer;
 		}
 		
 		break;
-	case 2: //HBlank
-		if(cycle >= CyclesHBlank) {
+	}
+	
+	case 0: //HBlank
+		while(cycle >= CyclesHBlank) {
 			if(LY == 143) {
-				mode = 3; // VBLank
+				mode = 1; // VBLank
 			} else {
 				// Go to OAM mode
-				mode = 0;
+				mode = 2;
 			}
-			
-			// Draw background, window and sprites
-			fetchBackground();
-			//fetchSprites();
-			//pushPixelsToLCDC();
-
-			SDL_RenderPresent(renderer);
 			
 			// Increment LY
 			mmu.write8(0xFF44, LY + 1);
@@ -60,15 +97,18 @@ void PPU::tick(const int& cycles = 4) {
 		}
 		
 		break;
-	case 3:
-		if(cycle >= CyclesVBlank) {
+	case 1: // VBlank
+		while(cycle >= CyclesVBlank) {
 			if(LY == 144) {
 				// TODO;..
+				interrupt |= 0x01;
+				
+				SDL_RenderPresent(renderer);
 			}
 			
 			if(LY == 153) {
 				mmu.write8(0xFF44, 0);
-				mode = 0; // OAM
+				mode = 2; // OAM
 			} else {
 				mmu.write8(0xFF44, LY + 1);
 			}
@@ -81,10 +121,12 @@ void PPU::tick(const int& cycles = 4) {
 }
 
 void PPU::fetchBackground() {
-	uint8_t LCDControl = mmu.fetch8(0xFF40);
-	uint8_t LY = mmu.fetch8(0xFF44);
-	uint8_t SCY = mmu.fetch8(0xFF42);
-	uint8_t SCX = mmu.fetch8(0xFF43);
+    uint8_t LCDControl = mmu.fetch8(0xFF40);
+    uint8_t LY = mmu.fetch8(0xFF44);
+    uint8_t SCY = mmu.fetch8(0xFF42);
+    uint8_t SCX = mmu.fetch8(0xFF43);
+	uint8_t WY = mmu.fetch8(0xFF4A);
+	uint8_t WX = mmu.fetch8(0xFF4B);
 	
 	
 }
@@ -100,9 +142,12 @@ void PPU::write8(uint16_t address, uint8_t data) {
 	if(address == 0xFF47) {
 		// https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
 		
+		bgp = data;
+		
 		for(int i = 0; i < 4; i++) {
-			BGPalette[i] = (data >> (i * 2)) & 0x03;
+			BGPalette[i] = (bgp >> (i * 2)) & 0x03;
 		}
+		
 	} else if(address == 0xFF48 || address == 0xFF49) {
 		// https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
 		
@@ -125,7 +170,7 @@ void PPU::createWindow() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     
     window = SDL_CreateWindow("Game Boy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        1024, 512, SDL_WINDOW_OPENGL);
+        WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
     
     if (window == nullptr) {
         std::cerr << "Window could not be created SDL_Error: " << SDL_GetError() << '\n';
@@ -141,9 +186,6 @@ void PPU::createWindow() {
     }
     
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-    
-    glClearColor(1, 0, 0, 1.0f);
-    SDL_GL_SwapWindow(window);
     
     GLenum err = glewInit();
     if (err!= GLEW_OK) {
@@ -161,11 +203,8 @@ void PPU::createWindow() {
         std::cerr << "OpenGL Error con: " << ersr << '\n';
     }
 	
-	// Create main display texture
-	mainTexture = createTexture(160, 144);
-	
-	for(uint8_t x = 0; x < 160; x++) {
-		for(uint8_t y = 0; y < 144; y++) {
+	for(int x = 0; x < surface->w; x++) {
+		for(int y = 0; y < surface->h; y++) {
 			updatePixel(x, y, 0xFFFF0000);
 		}
 	}
@@ -173,19 +212,31 @@ void PPU::createWindow() {
 	SDL_RenderPresent(renderer);
 }
 
-void PPU::updatePixel(uint8_t x, uint8_t y, Uint32 color) {
-	if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) {
-		return; // Out of bounds
+void PPU::updatePixel(uint8_t x, uint8_t y, uint32_t color) {
+	uint8_t scale = 2;
+	
+	x *= scale;
+	y *= scale;
+	
+	for(int nx = x; nx < x + scale; nx++) {
+		for(int ny = y; ny < y + scale; ny++) {
+			setPixel(nx, ny, color);
+		}
 	}
 	
-	Uint32* pixels = (Uint32*)surface->pixels;
-	pixels[(y * surface->w) + x] = color;
+	/*SDL_RenderCopy(renderer, mainTexture, nullptr, nullptr);
 	
-	SDL_Rect destRect = { x, y, 1, 1 };
-	SDL_RenderCopy(renderer, mainTexture, nullptr, &destRect);
-	
-	SDL_DestroyTexture(mainTexture);
+	SDL_DestroyTexture(mainTexture);*/
 	SDL_FreeSurface(surface);
+}
+
+void PPU::setPixel(uint8_t x, uint8_t y, uint32_t color) {
+	if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) {
+		return;
+	}
+	
+	uint32_t* pixels = static_cast<uint32_t*>(surface->pixels);
+	pixels[(y * surface->w) + x] = color;
 }
 
 SDL_Texture* PPU::createTexture(uint8_t width, uint8_t height) {

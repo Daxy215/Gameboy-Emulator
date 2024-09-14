@@ -5,6 +5,8 @@
 #include <SDL_video.h>
 #include <tuple>
 
+#include "Fetcher.h"
+
 /**
  * https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data
  */
@@ -37,10 +39,11 @@ class MMU;
 class PPU {
 public:
 	PPU(VRAM& vram, OAM& oam, LCDC& lcdc, MMU& mmu)
-		: vram(vram),
+		: fetcher(mmu),
+		  vram(vram),
 		  oam(oam),
 		  lcdc(lcdc),
-          mmu(mmu) {
+		  mmu(mmu) {
 		
 	}
 	
@@ -54,9 +57,10 @@ public:
 	
 	void createWindow();
 	
-	void updatePixel(uint8_t x, uint8_t y, Uint32 color);
+	void updatePixel(uint8_t x, uint8_t y, uint32_t color);
+	void setPixel(uint8_t x, uint8_t y, uint32_t color);
 	
-	// TODO;
+	// TODO; Remove
 	
 	const uint32_t COLOR_WHITE = 0xFFFFFF;  // White
 	const uint32_t COLOR_LIGHT_GRAY = 0xC0C0C0;  // Light Gray
@@ -74,23 +78,28 @@ public:
 	}
 	
 	SDL_Texture* createTexture(uint8_t width, uint8_t height);
+
+private:
+	uint32_t cycle;
+	uint8_t mode;
+	
+	uint8_t bgp;
+	
+	uint8_t x = 0;
+	uint8_t y = 0;
+
+public:
+	uint8_t interrupt;
 	
 private:
+	Fetcher fetcher;
+	
 	VRAM& vram;
 	OAM& oam;
 	
 	LCDC& lcdc;
 	
 	MMU& mmu;
-	
-private:
-	uint32_t cycle;
-	uint8_t mode;
-	
-	uint8_t scanLineY = 0;
-	
-	std::array<Pixel, 8> bgFifo;
-	std::array<Pixel, 8> spriteFifo;
 	
 public:
 	uint8_t BGPalette[4];
@@ -102,6 +111,4 @@ public:
 	SDL_GLContext sdl_context;
 	SDL_Renderer* renderer;
 	SDL_Surface* surface;
-	
-	SDL_Texture* mainTexture;
 };

@@ -25,6 +25,9 @@ private:
 	
 	// Viewport X position
 	uint8_t SCX = 0;
+
+	uint8_t WY = 0;
+	uint8_t WX = 0;
 	
 	// LCD Y coordinate
 	uint8_t LY = 0;
@@ -47,7 +50,7 @@ public: //TODO; I am too lazy.. Make this private
 	 *
 	 * "0x9C00-0x9FFF" : "0x9800-0x9BFF"
 	 */
-	bool tileMapArea;
+	bool windowTileMapArea;
 	
 	/**
 	 * https://gbdev.io/pandocs/LCDC.html#lcdc5--window-enable
@@ -70,7 +73,7 @@ public: //TODO; I am too lazy.. Make this private
 	 *
 	 * "0x8000-0x8FFF" : "0x8800-0x97FF"
 	 */
-	bool bgWindowTileDataArea;
+	bool bgTileDataArea;
 	
 	/**
 	 * https://gbdev.io/pandocs/LCDC.html#lcdc3--bg-tile-map-area

@@ -16,6 +16,7 @@
 #include "../Pipeline/OAM.h"
 #include "../Pipeline/PPU.h"
 #include "../Utility/Bitwise.h"
+#include "MBC/MBC.h"
 
 uint8_t MMU::fetch8(uint16_t address) {
     /**
@@ -24,16 +25,20 @@ uint8_t MMU::fetch8(uint16_t address) {
      */
     
     if(address <= 0x3FFF) { // bank 0 (fixed)
-        return memory[address];
+        return mbc.read(address); //memory[address];
     } else if(address >= 0x4000 && address <= 0x7FFF) {
+        return mbc.read(address);
         // Switchable ROM bank
-        uint16_t newAddress = address - 0x4000;
+        /*uint16_t newAddress = address - 0x4000;
         
         // bank 0 isn't allowed in this region
-        uint8_t bank = (m_CurrentROMBank == 0) ? 1 : m_CurrentROMBank;
-        return memory[newAddress + (bank * 0x4000)];
+        uint8_t bank = (mbc.c == 0) ? 1 : m_CurrentROMBank;
+        return memory[newAddress + (bank * 0x4000)];*/
+    }  else if(address >= 0x8000 && address < 0xA000) {
+        return vram.fetch8(address);
     } else if (address >= 0xA000 && address <= 0xBFFF) {
-        // Switchable RAM bank
+        return mbc.read(address);
+        /*// Switchable RAM bank
         if (m_EnableRAM) {
             uint16_t newAddress = address - 0xA000;
             uint8_t bank = (m_CurrentROMBank == 0) ? 1 : m_CurrentROMBank;
@@ -42,7 +47,7 @@ uint8_t MMU::fetch8(uint16_t address) {
             return externalRam.read(newAddress + (bank * 0x2000));
         }
         
-        return 0xFF; // If RAM isn't enabled, return open bus (0xFF)
+        return 0xFF; // If RAM isn't enabled, return open bus (0xFF)*/
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         return wram.fetch8(address - 0xC000);
     } else if(address >= 0xD000 && address <= 0xFDFF) {
@@ -56,7 +61,8 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address == 0xFFFF) {
         return interruptHandler.fetch8(address);
     } else {
-        //std::cerr << "Unknown fetch address\n";
+        //printf("Unknown fetch address %x\n", address);
+        //std::cerr << "";
     }
     
     return 0xFF;
@@ -78,7 +84,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
-        if(address >= 0xFF40 && address <= 0xFF45) {
+        if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
             return lcdc.fetch8(address);
         }
     } else if(address == 0xFF4D) {
@@ -101,7 +107,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
         //std::cerr << "";
     }
     
-    return 0xFF;
+    return 0;
 }
 
 uint16_t MMU::fetch16(uint16_t address) {
@@ -116,7 +122,8 @@ uint16_t MMU::fetch16(uint16_t address) {
 void MMU::write8(uint16_t address, uint8_t data) {
     // Handle ROM and RAM bank switching for MBC1/MBC2
     if (address < 0x8000) {
-        // RAM enabling (0x0000 - 0x1FFF)
+        mbc.write(address, data);
+        /*// RAM enabling (0x0000 - 0x1FFF)
         if (address < 0x2000) {
             if (m_MBC1 || m_MBC2) {
                 if (m_MBC2 && (address & 0x10)) return; // MBC2 checks bit 4 of address
@@ -128,7 +135,7 @@ void MMU::write8(uint16_t address, uint8_t data) {
                  * Before external RAM can be read or written, it must be enabled by writing $A to anywhere in this address space.
                  * Any value with $A in the lower 4 bits enables the RAM attached to the MBC, and any other value disables the RAM.
                  * It is unknown why $A is the value used to enable RAM.
-                 */
+                 #1#
                 
                 uint8_t testData = data & 0xF;
                 m_EnableRAM = (testData == 0xA);
@@ -174,15 +181,16 @@ void MMU::write8(uint16_t address, uint8_t data) {
                     m_CurrentRAMBank = 0;  // RAM banking disabled, default to RAM bank 0
                 }
             }
-        }
+        }*/
+    } else if(address >= 0x8000 && address < 0xA000) {
+        vram.write8(address - 0x8000, data);
     }
     // Handle RAM bank writes (0xA000 - 0xBFFF)
     else if (address >= 0xA000 && address < 0xC000) {
-        if (m_EnableRAM) {
-            uint16_t newAddress = address - 0xA000;
-            //m_RAMBanks[newAddress + (m_CurrentRAMBank * 0x2000)] = data;
-            externalRam.write(newAddress + (m_CurrentRAMBank * 0x2000), data);
-        }
+        mbc.write(address, data);
+        /*if (m_EnableRAM) {
+            externalRam.write(addr + (m_CurrentRAMBank * 0x2000), data);
+        }*/
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         wram.write8(address - 0xC000, data);
     } else if(address >= 0xD000 && address <= 0xFDFF) {
@@ -219,7 +227,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
-        if(address >= 0xFF40 && address <= 0xFF45) {
+        if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
             lcdc.write8(address, data);
         } else if(address == 0xFF46) {
             //  $FF46	DMA	OAM DMA source address & start
@@ -256,7 +264,8 @@ void MMU::write16(uint16_t address, uint16_t data) {
 }
 
 void MMU::clear() {
-    std::fill(std::begin(memory), std::end(memory), 0);
+    // TODO;
+    //std::fill(std::begin(memory), std::end(memory), 0);
 }
 
 /*

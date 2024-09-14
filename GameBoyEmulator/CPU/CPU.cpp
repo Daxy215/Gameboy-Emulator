@@ -1124,6 +1124,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * - - - -
 			 */
 			
+        	std::cerr << "HALT\n";
         	halted = true;
         	
         	return 4;

@@ -18,11 +18,17 @@ uint8_t LCDC::fetch8(uint16_t address) {
 		return SCX;
 	} else if(address == 0xFF44) {
 		// https://gbdev.io/pandocs/STAT.html#ff44--ly-lcd-y-coordinate-read-only
-		//return LY;
-		return 0x90;
+		return LY;
+		//return 0x90;
 	} else if(address == 0xFF45) {
 		// https://gbdev.io/pandocs/STAT.html#ff45--lyc-ly-compare
 		return LYC;
+	}  else if(address == 0xFF4A) {
+		// https://gbdev.io/pandocs/Scrolling.html#ff4aff4b--wy-wx-window-y-position-x-position-plus-7
+		return WY;
+	}  else if(address == 0xFF4B) {
+		// https://gbdev.io/pandocs/Scrolling.html#ff4aff4b--wy-wx-window-y-position-x-position-plus-7
+		return WX;
 	} else {
 		std::cerr << "Fetch8 LCD???\n";
 	}
@@ -46,6 +52,12 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 	} else if(address == 0xFF45) {
 		// https://gbdev.io/pandocs/STAT.html#ff45--lyc-ly-compare
 		LYC = data;
+	}  else if(address == 0xFF4A) {
+		// https://gbdev.io/pandocs/Scrolling.html#ff4aff4b--wy-wx-window-y-position-x-position-plus-7
+		WY = data;
+	}  else if(address == 0xFF4B) {
+		// https://gbdev.io/pandocs/Scrolling.html#ff4aff4b--wy-wx-window-y-position-x-position-plus-7
+		WX = data;
 	} else if(address == 0xFF40) {
 		/**
 		 * https://gbdev.io/pandocs/LCDC.html#ff40--data-lcd-control
@@ -66,13 +78,13 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		enable = check_bit(data, 7);
 		
 		// Window tile map area (Bit 6)
-		tileMapArea = check_bit(data, 6);
+		windowTileMapArea = check_bit(data, 6); // 0 = 9800–9BFF; 1 = 9C00–9FFF
 		
 		// Window enable (Bit 5)
 		windowEnabled = check_bit(data, 5);
 		
 		// BG & Window tile data area (Bit 4)
-		bgWindowTileDataArea = check_bit(data, 4);
+		bgTileDataArea = check_bit(data, 4);
 		//std::cerr << "BG & Window Tile Data Area: " << (bgWindowTileDataArea ? "0x8000-0x8FFF" : "0x8800-0x97FF") << "\n";
 		
 		// BG tile map area (Bit 3)

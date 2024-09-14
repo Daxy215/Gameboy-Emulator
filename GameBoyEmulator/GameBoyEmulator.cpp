@@ -17,8 +17,10 @@
 #include "Pipeline/LCDC.h"
 #include "CPU/Serial.h"
 #include "CPU/Timer.h"
+#include "Memory/MBC/MBC.h"
 
 #include "Memory/MMU.h"
+#include "Memory/MBC/MBC.h"
 #include "Pipeline/OAM.h"
 #include "Pipeline/PPU.h"
 
@@ -30,6 +32,7 @@
  * https://gb-archive.github.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html
  * http://www.codeslinger.co.uk/pages/projects/gameboy/banking.html
  * https://robertovaccari.com/gameboy/memory_map.png
+ * https://blog.tigris.fr/2019/09/15/writing-an-emulator-the-first-pixel/
  *
  * Main guide:
  * https://gbdev.io/pandocs/Specifications.html
@@ -153,6 +156,9 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         cpu.interruptHandler.IF |= timer.interrupt;
         timer.interrupt = 0;
         
+        cpu.interruptHandler.IF |= ppu.interrupt;
+        ppu.interrupt = 0;
+        
         x++;
     }
 }
@@ -166,10 +172,11 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    //std::string filename = "Roms/Tennis (World).gb";
+    std::string filename = "Roms/Tennis (World).gb";
+    //std::string filename = "Roms/Tetris 2.gb";
     //std::string filename = "Roms/dmg-acid2.gb";
     
-    std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // TODO;
+    //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb"; // Passed
@@ -181,6 +188,8 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/cpu_instrs/individual/09-op r,r.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/11-op a,(hl).gb"; // Passed
+    
+    //std::string filename = "Roms/halt_bug.gb"; // TODO;
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
     
@@ -198,6 +207,12 @@ int main(int argc, char* argv[]) {
         
         return 1;
     }
+    
+    Cartridge cartridge;
+    
+    // Gather cartridge information
+    cartridge.decode(memory);
+    MBC mbc(cartridge, memory);
     
     InterruptHandler interruptHandler;
     
@@ -217,10 +232,10 @@ int main(int argc, char* argv[]) {
     PPU* ppu;
     
     // Create MMU
-    MMU mmu(interruptHandler, wram, hram, vram, externalRam, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
-    ppu = &mmu.ppu;
+    MMU mmu(interruptHandler, mbc, wram, hram, vram, externalRam, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
     
-    Cartridge cartridge;
+    // Listen.. I'm too lazy to deal with this crap
+    ppu = &mmu.ppu;
     
     CPU cpu(interruptHandler, mmu);
     
@@ -236,9 +251,6 @@ int main(int argc, char* argv[]) {
     //cpu.testCases();
     
     ppu->createWindow();
-    
-    // Gather cartridge information
-    cartridge.decode(memory);
     
     //runEmulation(cpu, *ppu);
     
