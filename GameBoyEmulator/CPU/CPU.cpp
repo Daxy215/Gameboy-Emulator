@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include "InterrupHandler.h"
+#include "../IO/InterrupHandler.h"
 
 #include "../Memory/MMU.h"
 #include "../Utility/Bitwise.h"

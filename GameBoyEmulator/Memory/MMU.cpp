@@ -8,10 +8,10 @@
 #include "WRAM.h"
 #include "ExternalRAM.h"
 
-#include "../CPU/InterrupHandler.h"
+#include "../IO/InterrupHandler.h"
 #include "../Pipeline/LCDC.h"
-#include "../CPU/Serial.h"
-#include "../CPU/Timer.h"
+#include "../IO/Serial.h"
+#include "../IO/Timer.h"
 
 #include "../Pipeline/OAM.h"
 #include "../Pipeline/PPU.h"

@@ -7,7 +7,7 @@
 #include "Memory/Cartridge.h"
 #include "CPU/CPU.h"
 
-#include "CPU/InterrupHandler.h"
+#include "IO/InterrupHandler.h"
 
 #include "Memory/HRAM.h"
 #include "Pipeline//VRAM.h"
@@ -15,12 +15,11 @@
 #include "Memory/ExternalRAM.h"
 
 #include "Pipeline/LCDC.h"
-#include "CPU/Serial.h"
-#include "CPU/Timer.h"
+#include "IO/Serial.h"
+#include "IO/Timer.h"
 #include "Memory/MBC/MBC.h"
 
 #include "Memory/MMU.h"
-#include "Memory/MBC/MBC.h"
 #include "Pipeline/OAM.h"
 #include "Pipeline/PPU.h"
 
