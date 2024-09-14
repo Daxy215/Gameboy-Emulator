@@ -12,7 +12,6 @@
 #include "Memory/HRAM.h"
 #include "Pipeline//VRAM.h"
 #include "Memory/WRAM.h"
-#include "Memory/ExternalRAM.h"
 
 #include "Pipeline/LCDC.h"
 #include "IO/Serial.h"
@@ -171,9 +170,9 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    std::string filename = "Roms/Tennis (World).gb";
+    //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/Tetris 2.gb";
-    //std::string filename = "Roms/dmg-acid2.gb";
+    std::string filename = "Roms/dmg-acid2.gb";
     
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
@@ -226,12 +225,11 @@ int main(int argc, char* argv[]) {
     WRAM wram;
     HRAM hram;
     VRAM vram(lcdc);
-    ExternalRAM externalRam;
     
     PPU* ppu;
     
     // Create MMU
-    MMU mmu(interruptHandler, mbc, wram, hram, vram, externalRam, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
+    MMU mmu(interruptHandler, mbc, wram, hram, vram, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
     
     // Listen.. I'm too lazy to deal with this crap
     ppu = &mmu.ppu;

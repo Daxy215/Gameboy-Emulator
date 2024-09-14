@@ -6,7 +6,6 @@
 #include "HRAM.h"
 #include "../Pipeline/VRAM.h"
 #include "WRAM.h"
-#include "ExternalRAM.h"
 
 #include "../IO/InterrupHandler.h"
 #include "../Pipeline/LCDC.h"
