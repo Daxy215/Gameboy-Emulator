@@ -23,7 +23,6 @@ public:
           wram(wram),
           hram(hram),
           vram(vram),
-          externalRam(externalRam),
           lcdc(lcdc),
           serial(serial),
           timer(timer),

@@ -38,10 +38,11 @@ void PPU::tick(const int& cycles = 4) {
 	switch (mode) {
 	case 2: // OAM
 		while(cycle >= CyclesOam) {
-			uint16_t tileWinMapBase = lcdc.windowEnabled ? 0x9C00 : 0x9800;
-			uint16_t tileBGMapBase = lcdc.bgTileMapArea ? 0x9800 : 0x9800;
+			uint16_t tileWinMapBase = !lcdc.windowTileMapArea ? 0x9800 : 0x9C00;
+			uint16_t tileBGMapBase  = !lcdc.bgTileMapArea     ? 0x9800 : 0x9C00;
+			uint16_t tileBGMap      = !lcdc.bgTileDataArea    ? 0x8000 : 0x8800;
 			
-			uint16_t addr = tileWinMapBase;
+			uint16_t addr = tileBGMapBase;
 			
 			fetcher.begin(addr + ((LY  / 8) * 32), (LY % 8));
 			
@@ -66,8 +67,6 @@ void PPU::tick(const int& cycles = 4) {
 		updatePixel(x, LY, paletteIndexToColor(pixelColor));
 		
 		x++;
-		
-		//SDL_RenderPresent(renderer);
 		
 		if(x >= 160) {
 			if(LYC == LY) {

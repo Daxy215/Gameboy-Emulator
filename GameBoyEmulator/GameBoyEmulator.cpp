@@ -170,9 +170,9 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    //std::string filename = "Roms/Tennis (World).gb";
+    std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/Tetris 2.gb";
-    std::string filename = "Roms/dmg-acid2.gb";
+    //std::string filename = "Roms/dmg-acid2.gb";
     
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed

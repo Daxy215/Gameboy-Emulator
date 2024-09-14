@@ -305,6 +305,7 @@
       <AdditionalIncludeDirectories>..\libs\glew-2.2.0\src;..\libs\glew-2.2.0\include;..\libs\SDL2-2.30.3\include;</AdditionalIncludeDirectories>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
+    <ClCompile Include="IO\Joypad.cpp" />
     <ClCompile Include="IO\Serial.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -1334,6 +1335,7 @@
   <ItemGroup>
     <ClInclude Include="CPU\CPU.h" />
     <ClInclude Include="IO\InterrupHandler.h" />
+    <ClInclude Include="IO\Joypad.h" />
     <ClInclude Include="IO\Serial.h" />
     <ClInclude Include="IO\Timer.h" />
     <ClInclude Include="Memory\Cartridge.h" />
