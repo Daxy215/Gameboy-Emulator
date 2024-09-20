@@ -23,30 +23,12 @@ uint8_t MMU::fetch8(uint16_t address) {
      * https://gbdev.io/pandocs/Memory_Map.html
      */
     
-    if(address <= 0x7FFF) { // bank 0 (fixed)
-        return mbc.read(address); //memory[address];
-    }/* else if(address >= 0x4000 && address <= 0x7FFF) {
+    if(address <= 0x7FFF) {
         return mbc.read(address);
-        // Switchable ROM bank
-        /*uint16_t newAddress = address - 0x4000;
-        
-        // bank 0 isn't allowed in this region
-        uint8_t bank = (mbc.c == 0) ? 1 : m_CurrentROMBank;
-        return memory[newAddress + (bank * 0x4000)];#1#
-    }*/  else if(address >= 0x8000 && address < 0xA000) {
+    } else if(address >= 0x8000 && address < 0xA000) {
         return vram.fetch8(address);
     } else if (address >= 0xA000 && address <= 0xBFFF) {
         return mbc.read(address);
-        /*// Switchable RAM bank
-        if (m_EnableRAM) {
-            uint16_t newAddress = address - 0xA000;
-            uint8_t bank = (m_CurrentROMBank == 0) ? 1 : m_CurrentROMBank;
-            
-            //return m_RAMBanks[newAddress + (bank * 0x2000)];
-            return externalRam.read(newAddress + (bank * 0x2000));
-        }
-        
-        return 0xFF; // If RAM isn't enabled, return open bus (0xFF)*/
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         return wram.fetch8(address - 0xC000);
     } else if(address >= 0xD000 && address <= 0xFDFF) {
@@ -120,77 +102,12 @@ uint16_t MMU::fetch16(uint16_t address) {
 }
 
 void MMU::write8(uint16_t address, uint8_t data) {
-    // Handle ROM and RAM bank switching for MBC1/MBC2
     if (address < 0x8000) {
         mbc.write(address, data);
-        /*// RAM enabling (0x0000 - 0x1FFF)
-        if (address < 0x2000) {
-            if (m_MBC1 || m_MBC2) {
-                if (m_MBC2 && (address & 0x10)) return; // MBC2 checks bit 4 of address
-                
-                /**
-                 * According to;
-                 * https://gbdev.io/pandocs/MBC1.html
-                 *
-                 * Before external RAM can be read or written, it must be enabled by writing $A to anywhere in this address space.
-                 * Any value with $A in the lower 4 bits enables the RAM attached to the MBC, and any other value disables the RAM.
-                 * It is unknown why $A is the value used to enable RAM.
-                 #1#
-                
-                uint8_t testData = data & 0xF;
-                m_EnableRAM = (testData == 0xA);
-            }
-        }
-        // ROM bank switching (0x2000 - 0x3FFF)
-        else if (address >= 0x2000 && address < 0x4000) {
-            if (m_MBC1 || m_MBC2) {
-                if (m_MBC2) {
-                    // MBC2: set ROM bank (lower 4 bits)
-                    m_CurrentROMBank = data & 0xF;
-                    
-                    if (m_CurrentROMBank == 0) m_CurrentROMBank++;  // Avoid ROM bank 0
-                } else {
-                    // MBC1: set the lower 5 bits of ROM bank
-                    uint8_t lower5 = data & 0x1F;
-                    m_CurrentROMBank &= 0xE0; // Clear lower 5 bits
-                    m_CurrentROMBank |= lower5; // Set new lower 5 bits
-                    
-                    if (m_CurrentROMBank == 0) m_CurrentROMBank++;  // Avoid ROM bank 0
-                }
-            }
-        }
-        // ROM or RAM bank switching (0x4000 - 0x5FFF)
-        else if (address >= 0x4000 && address < 0x6000) {
-            if (m_MBC1) {
-                if (m_ROMBanking) {
-                    // ROM bank switching (high bits)
-                    m_CurrentROMBank &= 0x1F; // Clear upper bits
-                    m_CurrentROMBank |= (data & 0xE0); // Set new upper bits (5 and 6)
-                    if (m_CurrentROMBank == 0) m_CurrentROMBank++;  // Avoid ROM bank 0
-                } else {
-                    // RAM bank switching
-                    m_CurrentRAMBank = data & 0x3; // Set lower 2 bits for RAM bank
-                }
-            }
-        }
-        // ROM/RAM mode selection (0x6000 - 0x7FFF)
-        else if (address >= 0x6000 && address < 0x8000) {
-            if (m_MBC1) {
-                m_ROMBanking = (data & 0x1) == 0;  // Set ROM banking mode
-                if (m_ROMBanking) {
-                    m_CurrentRAMBank = 0;  // RAM banking disabled, default to RAM bank 0
-                }
-            }
-        }*/
     } else if(address >= 0x8000 && address < 0xA000) {
         vram.write8(address - 0x8000, data);
-    }
-    // Handle RAM bank writes (0xA000 - 0xBFFF)
-    else if (address >= 0xA000 && address < 0xC000) {
+    } else if (address >= 0xA000 && address < 0xC000) {
         mbc.write(address, data);
-        /*if (m_EnableRAM) {
-            externalRam.write(addr + (m_CurrentRAMBank * 0x2000), data);
-        }*/
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         wram.write8(address - 0xC000, data);
     } else if(address >= 0xD000 && address <= 0xFDFF) {

@@ -17,7 +17,7 @@ const int HEIGHT = 480;
 
 void PPU::tick(const int& cycles = 4) {
 	this->cycle += cycles;
-
+	
 	if(!lcdc.enable)
 		return;
 	
@@ -52,23 +52,23 @@ void PPU::tick(const int& cycles = 4) {
 				mmu.write8(0xFF4B, WX + 1);
 				*/
 			
-			int16_t winX = -(static_cast<int32_t>(WX)) + x;
+			//int16_t winX = -(static_cast<int32_t>(WX));
 			
-			/*if(lcdc.windowEnabled && /*winX >= 0 && WY >= 0#1# (LY >= WY) && (WX <= 166)) {
+			if(/*lcdc.windowEnabled &&*/ WX >= 0 && WY >= 0/*(LY >= WY) && (WX <= 166)*/) {
 				mmu.write8(0xFF4A, WY + 1);
 				
 				y = LY - WY;
 				addr = tileWinMapBase;
 				
 				tileY = (static_cast<uint16_t>(WY) >> 3) & 31;
-				tileX = (winX >> 3);
-			} else {*/
-				y = SCY + (LY % 256);
+				tileX = (WX >> 3);
+			} else {
+				y = ((SCY) % 256) + (LY % 256);
 				addr = tileBGMapBase;
 				
-				tileY = (y >> 3) & 31;
-				tileX = ((SCX + 0) >> 3) & 31;
-			//}
+				tileY = (y >> 3);
+				tileX = (((SCX) % 256) >> 3);
+			}
 			
 			x = 0;
 			fetcher.begin(tileBGMap, addr + tileY * 32 + tileX, y % 8);
@@ -87,10 +87,10 @@ void PPU::tick(const int& cycles = 4) {
 		uint8_t byte0 = fetcher.fifo.pop();
 		uint8_t pixelColor = (bgp >> (byte0 * 2)) & 0x03;
 		//if(pixelColor != 0)
-			updatePixel((x - 16), LY, paletteIndexToColor(pixelColor));
+			updatePixel(x - 32, LY, paletteIndexToColor(pixelColor));
 		x++;
-
-		//SDL_RenderPresent(renderer);
+		
+		SDL_RenderPresent(renderer);
 		
 		if(x >= 160) {
 			if(LYC == LY) {

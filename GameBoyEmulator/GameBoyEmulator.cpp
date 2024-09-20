@@ -46,9 +46,26 @@
 std::string formatCPUState(const CPU &cpu) {
     std::ostringstream oss;
     
+    oss << std::hex/* << std::uppercase*/ << std::setfill('0');
+    oss << "PC = " <<  std::setw(2) << static_cast<int>(cpu.PC) << ' ';
+    oss << "Just executed=" <<  std::setw(1) << static_cast<int>(cpu.mmu.fetch8(cpu.PC)) << ' ';
+    
+    oss << "AF: " << std::setw(1) << static_cast<int>(cpu.AF.A) << ' ';
+    oss  << std::setw(2) << static_cast<int>(cpu.AF.F) << ' ';
+    
+    oss << "BC: " << std::setw(1) << static_cast<int>(cpu.BC.B) << ' ';
+    oss  << std::setw(2) << static_cast<int>(cpu.BC.C) << ' ';
+    
+    oss << "HL: " << std::setw(2) << static_cast<int>(cpu.HL.get()) << ' ';
+    
+    oss << "DE: " << std::setw(1) << static_cast<int>(cpu.DE.D) << ' ';
+    oss  << std::setw(2) << static_cast<int>(cpu.DE.E) << ' ';
+    
+    oss << "SP: " << std::setw(2) << static_cast<int>(cpu.SP) << ' ';
+    oss << " PC: " << std::setw(2) << static_cast<int>(cpu.PC);
+    
     // Format the registers and SP, PC in hex with leading zeros
-    oss << std::hex << std::uppercase << std::setfill('0');
-    oss << "A: " << std::setw(2) << static_cast<int>(cpu.AF.A) << ' ';
+    /*oss << "A: " << std::setw(2) << static_cast<int>(cpu.AF.A) << ' ';
     oss << "F: " << std::setw(2) << static_cast<int>(cpu.AF.F) << ' ';
     oss << "B: " << std::setw(2) << static_cast<int>(cpu.BC.B) << ' ';
     oss << "C: " << std::setw(2) << static_cast<int>(cpu.BC.C) << ' ';
@@ -71,14 +88,14 @@ std::string formatCPUState(const CPU &cpu) {
     for (int i = 0; i < 4; i++) {
         oss << std::setw(2) << static_cast<int>(mem[i]);
         if (i < 3) oss << ',';
-    }*/
+    }#1#
     
     oss << "(" << std::hex;
     for (int i = 0; i < 4; i++) {
         oss << std::setw(2) << static_cast<int>(mem[i]);
         if (i < 3) oss << ' ';
     }
-    oss << ")" << std::hex;
+    oss << ")" << std::hex;*/
     
     return oss.str();
 }
@@ -90,14 +107,14 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         throw std::runtime_error("Unable to open log file.");
     }
     
-    std::ifstream blarggFile("Roms/cpu_state.txt");
+    std::ifstream blarggFile("Roms/testRom1.txt");
     if (!blarggFile.is_open()) {
         throw std::runtime_error("Unable to open cpu_state.txt.");
     }
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 950) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 950000) {
         blarggStates.push_back(line);
     }
     
@@ -106,7 +123,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     bool running = true;
     
     while (running) {
-        if(x == 284088) {
+        if(x == 16) {
             printf("");
         }
         
@@ -119,7 +136,8 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             if (formattedState != expectedState) {
                 /*std::cerr << "Mismatch at iteration " << x << ":\n";
                 std::cerr << "Expected: " << expectedState << "\n";
-                std::cerr << "Actual  : " << formattedState << "\n";*/
+                std::cerr << "Actual  : " << formattedState << "\n";
+                */
                 
                 //break;
             }
@@ -175,12 +193,14 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    //std::string filename = "Roms/Tennis (World).gb";
-    std::string filename = "Roms/Tetris 2.gb";
+    std::string filename = "Roms/Tennis (World).gb";
+    //std::string filename = "Roms/Tetris 2.gb";
+    //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     //std::string filename = "Roms/dmg-acid2.gb";
     //std::string filename = "Roms/window_y_trigger.gb";
     
+    //std::string filename = "Roms/testRom1.gb";
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // Passed

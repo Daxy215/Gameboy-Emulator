@@ -160,8 +160,8 @@ public:
                 if (flag) F |= Flags::N;
                 else F &= ~Flags::N;
             }
-
-            uint16_t get() {
+            
+            uint16_t get() const {
                 return static_cast<uint16_t>((A << 8) | F);
             }
         } AF;

@@ -18,6 +18,8 @@ uint8_t Joypad::fetch8(uint16_t address) {
 	 * then the low nibble reads $F (all buttons released).
 	 */
 	
+	return 0xFF;
+	
 	uint8_t result = P1 | 0xF;
 	
 	if (!(P1 & 0x20)) { // Bit 5 - Buttons mode selected

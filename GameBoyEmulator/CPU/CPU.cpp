@@ -23,14 +23,14 @@ CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
 		HL.H = 0x00;
 		HL.L = 0x0D;
 	} else {
-		AF.A = 0x01;
-		AF.F = 0x00;
-		BC.B = 0xFF;
-		BC.C = 0x13;
+		AF.A = 0x11;
+		AF.F = Flags::Z;
+		BC.B = 0x00;
+		BC.C = 0x00;
 		DE.D = 0x00;
-		DE.E = 0xC1;
-		HL.H = 0x84;
-		HL.L = 0x03;
+		DE.E = 0xD8;
+		HL.H = 0x01;
+		HL.L = 0x4D;
 	}
 	
 	// Classic
@@ -2463,14 +2463,14 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	int8_t i8 = static_cast<int8_t>(mmu.fetch8(PC++));
-        	uint16_t res = SP + static_cast<uint16_t>(static_cast<int16_t>(i8));
-			
-        	AF.setZero(false);
-        	AF.setSubtract(false);
+        	//uint16_t u8 = static_cast<uint16_t>(static_cast<int16_t>(i8));
+        	
+        	//AF.setZero(false);
+        	//AF.setSubtract(false);
         	AF.setHalfCarry((SP & 0xF) + (i8 & 0xF) > 0xF);
         	AF.setCarry((SP & 0xFF) + (i8 & 0xFF) > 0xFF);
 			
-        	SP = res;
+        	SP = SP + i8;
         	
         	return 16;
         }
