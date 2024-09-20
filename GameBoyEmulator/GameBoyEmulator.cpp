@@ -4,23 +4,23 @@
 #include <sstream>
 #include <thread>
 
-#include "Memory/Cartridge.h"
 #include "CPU/CPU.h"
 
 #include "IO/InterrupHandler.h"
-
-#include "Memory/HRAM.h"
-#include "Pipeline//VRAM.h"
-#include "Memory/WRAM.h"
-
-#include "Pipeline/LCDC.h"
+#include "IO/Joypad.h"
 #include "IO/Serial.h"
 #include "IO/Timer.h"
+
+#include "Memory/Cartridge.h"
+#include "Memory/MMU.h"
+#include "Memory/HRAM.h"
+#include "Memory/WRAM.h"
 #include "Memory/MBC/MBC.h"
 
-#include "Memory/MMU.h"
-#include "Pipeline/OAM.h"
 #include "Pipeline/PPU.h"
+#include "Pipeline/LCDC.h"
+#include "Pipeline//VRAM.h"
+#include "Pipeline/OAM.h"
 
 /*
  * GOOD GUIDES;
@@ -39,6 +39,8 @@
  * https://robertheaton.com/gameboy-doctor/
  * https://github.com/retrio/gb-test-roms/tree/master
  */
+
+// TODO; https://gbdev.io/pandocs/Power_Up_Sequence.html#hardware-registers
 
 // Function to format CPU state as a string
 std::string formatCPUState(const CPU &cpu) {
@@ -95,7 +97,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 950000) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 950) {
         blarggStates.push_back(line);
     }
     
@@ -104,7 +106,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     bool running = true;
     
     while (running) {
-        if(x == 156431) {
+        if(x == 284088) {
             printf("");
         }
         
@@ -154,6 +156,9 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         cpu.interruptHandler.IF |= timer.interrupt;
         timer.interrupt = 0;
         
+        cpu.interruptHandler.IF |= ppu.lcdc.interrupt;
+        ppu.lcdc.interrupt = 0;
+        
         cpu.interruptHandler.IF |= ppu.interrupt;
         ppu.interrupt = 0;
         
@@ -170,9 +175,11 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    std::string filename = "Roms/Tennis (World).gb";
-    //std::string filename = "Roms/Tetris 2.gb";
+    //std::string filename = "Roms/Tennis (World).gb";
+    std::string filename = "Roms/Tetris 2.gb";
+    //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     //std::string filename = "Roms/dmg-acid2.gb";
+    //std::string filename = "Roms/window_y_trigger.gb";
     
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
@@ -188,6 +195,9 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/cpu_instrs/individual/11-op a,(hl).gb"; // Passed
     
     //std::string filename = "Roms/halt_bug.gb"; // TODO;
+    //std::string filename = "Roms/instr_timing/instr_timing.gb"; // Passed
+    //std::string filename = "Roms/mem_timing/mem_timing.gb"; // TODO;
+    //std::string filename = "Roms/mooneye/emulator-only/mbc1/bits_bank1.gb"; // TODO;
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
     
@@ -216,6 +226,7 @@ int main(int argc, char* argv[]) {
     
     // I/O
     LCDC lcdc;
+    Joypad joypad;
     Serial serial;
     Timer timer;
     
@@ -229,7 +240,7 @@ int main(int argc, char* argv[]) {
     PPU* ppu;
     
     // Create MMU
-    MMU mmu(interruptHandler, mbc, wram, hram, vram, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
+    MMU mmu(interruptHandler, joypad, mbc, wram, hram, vram, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
     
     // Listen.. I'm too lazy to deal with this crap
     ppu = &mmu.ppu;
@@ -267,10 +278,67 @@ int main(int argc, char* argv[]) {
         SDL_Event e;
         
         // Handle events on queue
-        while (SDL_PollEvent(&e) != 0) {
+        while (SDL_PollEvent(&e)) {
             // User requests quit
             if (e.type == SDL_QUIT) {
                 running = false;  // Exit the loop
+            }
+            
+            if (e.type == SDL_KEYDOWN) {
+                switch (e.key.keysym.sym) {
+                case SDLK_RETURN: // Start
+                        joypad.pressButton(START);
+                        break;
+                    case SDLK_BACKSPACE: // Select
+                        joypad.pressButton(SELECT);
+                        break;
+                    case SDLK_a: // A button
+                        joypad.pressButton(A);
+                        break;
+                    case SDLK_s: // B button
+                        joypad.pressButton(B);
+                        break;
+                    case SDLK_UP: // D-pad up
+                        joypad.pressDpad(UP);
+                        break;
+                    case SDLK_DOWN: // D-pad down
+                        joypad.pressDpad(DOWN);
+                        break;
+                    case SDLK_LEFT: // D-pad left
+                        joypad.pressDpad(LEFT);
+                        break;
+                    case SDLK_RIGHT: // D-pad right
+                        joypad.pressDpad(RIGHT);
+                        break;
+                }
+            }
+            else if (e.type == SDL_KEYUP) {
+                switch (e.key.keysym.sym) {
+                    case SDLK_RETURN: // Start
+                        joypad.releaseButton(START);
+                        break;
+                    case SDLK_BACKSPACE: // Select
+                        joypad.releaseButton(SELECT);
+                        break;
+                    case SDLK_a: // A button
+                        joypad.releaseButton(A);
+                        break;
+                    case SDLK_s: // B button
+                        joypad.releaseButton(B);
+                        break;
+                    case SDLK_UP: // D-pad up
+                        joypad.releaseDpad(UP);
+                        break;
+                    case SDLK_DOWN: // D-pad down
+                        joypad.releaseDpad(DOWN);
+                        break;
+                    case SDLK_LEFT: // D-pad left
+                        joypad.releaseDpad(LEFT);
+                        break;
+                    case SDLK_RIGHT: // D-pad right
+                        joypad.releaseDpad(RIGHT);
+                        break;
+                    }
             }
         }
         

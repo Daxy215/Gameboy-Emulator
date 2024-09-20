@@ -1,9 +1,12 @@
 #include "MBC1.h"
 
+#include <iostream>
+
 MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
 	this->rom = rom;
 	
-	eram.resize(static_cast<size_t>(cartridge.ramSize) * 1024);
+	//eram.resize(static_cast<size_t>(cartridge.ramSize) * 1024);
+	eram.resize(static_cast<size_t>(cartridge.romSize) * 1024);
 }
 
 uint8_t MBC1::fetch8(uint16_t address) {
@@ -11,18 +14,18 @@ uint8_t MBC1::fetch8(uint16_t address) {
 		return rom[address];
 	} else if(address >= 0x4000 && address <= 0x7FFF) {
 		// Switchable ROM bank
-		uint16_t newAddress = address - 0x4000;
-		
 		// bank 0 isn't allowed in this region
 		uint8_t bank = (curRomBank == 0) ? 1 : curRomBank;
-		return rom[(newAddress - 0x4000) + (bank * 0x4000)];
+		uint16_t addr = (address - 0x4000) + (bank * 0x4000);
+		
+		return rom[addr];
 	} else if (address >= 0xA000 && address <= 0xBFFF) {
 		// Switchable RAM bank
 		if (ramEnabled) {
 			uint16_t addr = address - 0xA000;
 			uint8_t bank = (curRamBank == 0 && bankingMode) ? 1 : curRamBank;
 			
-			return eram[(addr - 0xA000) + (bank * 0x2000)];
+			return eram[addr + (bank * 0x2000)];
 		}
 		
 		return 0xFF;
@@ -48,19 +51,15 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 	}
 	// ROM bank switching (0x2000 - 0x3FFF)
 	else if (address >= 0x2000 && address < 0x3FFF) {
-		uint8_t lower5 = data & 0x1F;
 		curRomBank &= 0xE0; // Clear lower 5 bits
-		curRomBank |= lower5; // Set new lower 5 bits
-		
-		if (curRomBank == 0)
-			curRomBank++; // Avoid ROM bank 0
+		curRomBank = (data & 0x1F); // Set new lower 5 bits
 	}
 	// ROM or RAM bank switching (0x4000 - 0x5FFF)
 	else if (address >= 0x4000 && address < 0x5FFF) {
 		if (bankingMode) {
 			// ROM bank switching (high bits)
 			curRomBank &= 0x1F; // Clear upper bits
-			curRomBank |= (data & 0xE0); // Set new upper bits (5 and 6)
+			curRomBank |= ((data & 0x3) << 5); // Set upper 2 bits (5 and 6)
 			
 			if (curRomBank == 0)
 				curRomBank++; // Avoid ROM bank 0
@@ -83,12 +82,12 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 		}
 		
 		uint16_t addr = address - 0xA000;
-		if(bankingMode) {
-			eram[addr + (curRomBank * 0x2000)] = data;
-		} else {
+		//if(bankingMode) {
+		eram[addr + (curRamBank * 0x2000)] = data;
+		/*} else {
 			eram[addr] = data;
-		}
-
+		}*/
+		
 		// TODO; Disable after use? Is it needed?
 	}
 }

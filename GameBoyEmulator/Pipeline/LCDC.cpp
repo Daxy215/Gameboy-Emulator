@@ -18,8 +18,8 @@ uint8_t LCDC::fetch8(uint16_t address) {
 		return SCX;
 	} else if(address == 0xFF44) {
 		// https://gbdev.io/pandocs/STAT.html#ff44--ly-lcd-y-coordinate-read-only
-		return LY;
-		//return 0x90;
+		//return LY;
+		return 0x90;
 	} else if(address == 0xFF45) {
 		// https://gbdev.io/pandocs/STAT.html#ff45--lyc-ly-compare
 		return LYC;
@@ -52,6 +52,10 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 	} else if(address == 0xFF45) {
 		// https://gbdev.io/pandocs/STAT.html#ff45--lyc-ly-compare
 		LYC = data;
+		
+		if(LYC == LY) {
+			interrupt |= 0x02;
+		}
 	}  else if(address == 0xFF4A) {
 		// https://gbdev.io/pandocs/Scrolling.html#ff4aff4b--wy-wx-window-y-position-x-position-plus-7
 		WY = data;
@@ -84,7 +88,7 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		windowEnabled = check_bit(data, 5);
 		
 		// BG & Window tile data area (Bit 4)
-		bgTileDataArea = check_bit(data, 4);
+		bgWinTileDataArea = check_bit(data, 4);
 		//std::cerr << "BG & Window Tile Data Area: " << (bgWindowTileDataArea ? "0x8000-0x8FFF" : "0x8800-0x97FF") << "\n";
 		
 		// BG tile map area (Bit 3)

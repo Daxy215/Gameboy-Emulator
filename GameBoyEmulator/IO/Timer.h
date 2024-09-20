@@ -26,5 +26,5 @@ private:
 	
 	bool enabled = false;
 	uint8_t clockSelected = 0;
-	uint32_t clockSpeed = 0;
+	uint32_t clockSpeed = 256;
 };

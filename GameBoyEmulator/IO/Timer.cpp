@@ -1,6 +1,7 @@
 #include "Timer.h"
 
 #include <cstdio>
+#include <iostream>
 
 void Timer::tick(uint16_t cycles) {
 	divTimer += cycles;
@@ -81,8 +82,10 @@ void Timer::write8(uint16_t address, uint8_t data) {
 		control = data;
 		
 		enabled = data & 0b0100; // 3rd bit
-		clockSelected = data & 0x0011; // 1st & 2nd bit
-
+		
+		// I wrote '0x011' instead of '0b0011' :)
+		clockSelected = data & 0b0011; // 1st & 2nd bit
+		
 		// 1 M = 4 T
 		switch (clockSelected) {
 		case 0:
@@ -91,15 +94,19 @@ void Timer::write8(uint16_t address, uint8_t data) {
 		case 1:
 			clockSpeed = 4 * 4;
 			break;
-		case 10:
+		case 2:
 			clockSpeed = 16 * 4;
 			break;
-		case 11:
+		case 3:
 			clockSpeed = 64 * 4;
 			break;
 		default:
-			printf("Unknown clock speed of %d", clockSelected);
+			clockSpeed = 256 * 4;
+			printf("Unknown clock speed of %d\n", clockSelected);
 			break;
 		}
 	}
+	
+	//printf("Time write; %x -> %x\n", clockSpeed, clockSelected);
+	//std::cerr << "";
 }

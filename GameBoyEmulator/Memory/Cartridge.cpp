@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+Mode Cartridge::mode;
+
 void Cartridge::decode(const std::vector<uint8_t>& data) {
     // From 0x100 - 0x014F
     
@@ -10,7 +12,9 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
         if(i >= 0x0100 && i <= 0x0103) {
             // Entry point, just ignore
             
-        } else if(i >= 0x0104 && i <= 0x0133) {
+        }
+        
+        if(i >= 0x0104 && i <= 0x0133) {
             // Nintendo logo
             
             /**
@@ -27,7 +31,9 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
              */
             
             //printf("%x", data[i]);
-        } else if(i >= 0x0134 && i <= 0x0143) {
+        }
+        
+        if(i == 0x0134/* && i <= 0x0142*/) {
             /**
              * Title;
              *
@@ -39,14 +45,16 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
              */
             
             for(size_t j = 0; j < 16; j++) {
-                uint8_t val = data[i++];
+                uint8_t val = data[j + i];
                 
                 if(val != 0)
                     title += val;
             }
             
             std::cerr << "Title; " << title << "\n";
-        } else if(i >= 0x013F && i <= 0x0142) {
+        }
+        
+        if(i == 0x013F/* && i <= 0x0142*/) {
             /**
              * Manufacturer code;
              * 
@@ -56,40 +64,55 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
              */
             
             for(size_t j = 0; j < 4; j++)
-                manufacturer += data[i+j];
+                manufacturer += data[i + j];
             
             std::cerr << "Manufacturer: " << manufacturer << "\n";
-            
-            i += 4;
-        } else if(i == 0x0143) {
+        }
+        
+        if(i == 0x0143) {
             /**
+             * https://gbdev.io/pandocs/The_Cartridge_Header.html#0143--cgb-flag
              * CGB flag
              *
-             * TODO; UNSUPORTED
+             * 80 - Game supports CGB though can work with Game Boy
+             * C0 - Only CGB
+             *
+             * Igoring PGB Mode
              */
-        } else if(i >= 0x0144 && i <= 0x0145) {
+            if((data[i] & 0x80) == 0x80) {
+                mode = Color;
+            }
+        }
+        
+        if(i >= 0x0144 && i <= 0x0145) {
             // New licensee code
             // It is only meaningful if the Old licensee is exactly $33.
             
             std::string newLicenseeCode = "";
             
-            for(size_t j = i; j < 2; j++, i++) {
+            for(size_t j = i; j < 2; j++, j++) {
                 newLicenseeCode += data[j];
             }
             
             //std::cout << "Soo; " << newLicenseeCode << "\n";
-        } else if(i == 0x0147) {
+        }
+        
+        if(i == 0x0147) {
             // Cartridge type
             // https://gbdev.io/pandocs/The_Cartridge_Header.html#0147--cartridge-type
             
             type = getCartridgeType(data[i]);
             std::cerr << "Type; " << cartridgeTypeToString(type) << "\n";
-        } else if(i == 0x0148) {
+        }
+        
+        if(i == 0x0148) {
             // ROM Size
             // https://gbdev.io/pandocs/The_Cartridge_Header.html#0148--rom-size
             
             romSize = static_cast<uint8_t>(32 * (1 << data[i]));
-        }  else if(i == 0x0149) {
+        }
+        
+        if(i == 0x0149) {
             // RAM Size
             // https://gbdev.io/pandocs/The_Cartridge_Header.html#0149--ram-size
             

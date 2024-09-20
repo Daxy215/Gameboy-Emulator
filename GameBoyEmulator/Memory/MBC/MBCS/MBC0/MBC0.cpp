@@ -3,7 +3,7 @@
 MBC0::MBC0(Cartridge cartridge, std::vector<uint8_t> rom) {
 	this->rom = rom;
 	
-	eram.resize(static_cast<size_t>(cartridge.ramSize) * 1024);
+	eram.resize(static_cast<size_t>(cartridge.romSize) * 1024);
 }
 
 uint8_t MBC0::fetch8(uint16_t address) {

@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "../IO/InterrupHandler.h"
+#include "../Memory/Cartridge.h"
 
 #include "../Memory/MMU.h"
 #include "../Utility/Bitwise.h"
@@ -10,28 +11,42 @@
 CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
     : interruptHandler(interruptHandler), mmu(mmu) {
     // https://gbdev.io/pandocs/Power_Up_Sequence.html#cpu-registers
-
-	// Expected: A: 11 F: 80 B: 00 C: 00 D: FF E: 56 H: 00 L: 0D SP: FFFE PC: 00:0100 (00 C3 13 02)
-	AF.A = 0x11;
-	AF.F = 0x80;
-	BC.B = 0x00;
-	BC.C = 0x00;
-	DE.D = 0xFF;
-	DE.E = 0x56;
-	HL.H = 0x00;
-	HL.L = 0x0D;
 	
+	// Color
+	if(Cartridge::mode == Color) {
+		AF.A = 0x11;
+		AF.F = Flags::Z;
+		BC.B = 0x00;
+		BC.C = 0x00;
+		DE.D = 0xFF;
+		DE.E = 0x56;
+		HL.H = 0x00;
+		HL.L = 0x0D;
+	} else {
+		AF.A = 0x01;
+		AF.F = 0x00;
+		BC.B = 0xFF;
+		BC.C = 0x13;
+		DE.D = 0x00;
+		DE.E = 0xC1;
+		HL.H = 0x84;
+		HL.L = 0x03;
+	}
+	
+	// Classic
     /*AF.A = 0x01;
-    AF.F = 0xB0;
+    AF.F = Flags::C | Flags::H | Flags::Z;
     BC.B = 0x00;
     BC.C = 0x13;
     DE.D = 0x00;
     DE.E = 0xD8;
     HL.H = 0x01;
     HL.L = 0x4D;*/
-    
+	
     PC = 0x0100;
     SP = 0xFFFE;
+	
+	bootRom();
 }
 
 uint16_t CPU::fetchOpCode() {
@@ -1258,14 +1273,14 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
     	case 0x96: {
 			/**
 			 * SUB A, (HL)
-			 * 1, 4
+			 * 1, 8
 			 * Z 1 H C
 			 */
 			
         	uint8_t u8 = mmu.fetch8(HL.get());
         	sub(AF.A, u8);
         	
-        	return 4;
+        	return 8;
         }
 
     	case 0x97: {
@@ -1354,15 +1369,15 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 		
     	case 0x9E: {
 			/**
-			 * SUB A, (HL)
-			 * 1, 4
+			 * SBC A, (HL)
+			 * 1, 8
 			 * Z 1 H C
 			 */
 			
         	uint8_t u8 = mmu.fetch8(HL.get());
         	sbc(AF.A, u8, AF.getCarry());
         	
-        	return 4;
+        	return 8;
         }
     	
         case 0x9F: {
@@ -1497,7 +1512,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
     	case 0xA6: {
         	/**
 			 * AND A, (HL)
-			 * 1, 4
+			 * 1, 8
 			 *
 			 * Z 0 1 0
 			 */
@@ -1509,7 +1524,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	AF.setHalfCarry(true);
         	AF.setCarry(false);
             
-        	return 4;
+        	return 8;
 		}
 		
     	case 0xA7: {
@@ -1637,7 +1652,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
     	case 0xAE: {
             /**
              * XOR A, (HL)
-             * 1, 4
+             * 1, 8
              * Z 0 0 0
              */
             
@@ -1648,7 +1663,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
             AF.setHalfCarry(false);
             AF.setCarry(false);
             
-            return 4;
+            return 8;
         }
 		
     	case 0xAF: {
@@ -1774,7 +1789,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
     	case 0xB6: {
             /**
              * OR A, (HL)
-             * 1, 4
+             * 1, 8
              * Z 0 0 0
              */
             
@@ -1785,7 +1800,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
             AF.setHalfCarry(false);
             AF.setCarry(false);
             
-            return 4;
+            return 8;
         }
 		
     	case 0xB7: {
@@ -2365,8 +2380,8 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			
         	uint8_t u8 = mmu.fetch8(PC++);
         	uint16_t address = 0xFF00 | u8;
-        	/*printf("%x %x %x\n", u8, address, AF.A);
-        	std::cerr << "";*/
+        	//printf("%x %x %x\n", u8, address, AF.A);
+        	//std::cerr << "";
         	
             mmu.write8(address, AF.A);
             
@@ -2870,14 +2885,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x06: {
 			/**
 			 * RLC (HL)
-			 * 2, 12
+			 * 2, 16
 			 * Z 0 0 C
 			 */
 			
 			uint16_t hl = HL.get();
 			rlc(hl);
 			
-			return 12;
+			return 16;
 		}
 		
 		case 0x07: {
@@ -3605,7 +3620,7 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x3E: {
 			/**
 			 * SRL (HL)
-			 * 2, 8
+			 * 2, 16
 			 * Z 0 0 C
 			 */
 			
@@ -3623,7 +3638,7 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 			
 			mmu.write8(address, value);
 			
-			return 8;
+			return 16;
 		}
 		
 		case 0x3F: {
@@ -3711,14 +3726,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x46: {
 		    /**
 		     * BIT 0, (HL)
-		     * 2, 8
+		     * 2, 12
 		     * Z - H -
 		     */
 
 			uint16_t hl = HL.get();
 		    checkBit(0, hl);
 			
-		    return 8;
+		    return 12;
 		}
 		
 		case 0x47: {
@@ -3808,14 +3823,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x4E: {
 		    /**
 		     * BIT 1, (HL)
-		     * 2, 16
+		     * 2, 12
 		     * Z - H -
 		     */
 
 			uint16_t hl = HL.get();
 		    checkBit(1, hl);
 			
-		    return 16;
+		    return 12;
 		}
 		
 		case 0x4F: {
@@ -3905,14 +3920,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x56: {
 		    /**
 		     * BIT 2, (HL)
-		     * 2, 16
+		     * 2, 12
 		     * Z - H -
 		     */
 
 			uint16_t hl = HL.get();
 		    checkBit(2, hl);
 			
-		    return 16;
+		    return 12;
 		}
 		
 		case 0x57: {
@@ -4002,14 +4017,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x5E: {
 		    /**
 		     * BIT 3, (HL)
-		     * 2, 16
+		     * 2, 12
 		     * Z - H -
 		     */
-
+			
 			uint16_t hl = HL.get();
 		    checkBit(3, hl);
 			
-		    return 16;
+		    return 12;
 		}
 		
 		case 0x5F: {
@@ -4099,14 +4114,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x66: {
 		    /**
 		     * BIT 4, (HL)
-		     * 2, 16
+		     * 2, 12
 		     * Z - H -
 		     */
 
 			uint16_t hl = HL.get();
 		    checkBit(4, hl);
 			
-		    return 16;
+		    return 12;
 		}
 		
 		case 0x67: {
@@ -4196,14 +4211,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x6E: {
 		    /**
 		     * BIT 5, (HL)
-		     * 2, 16
+		     * 2, 12
 		     * Z - H -
 		     */
 			
 			uint16_t hl = HL.get();
 		    checkBit(5, hl);
 			
-		    return 16;
+		    return 12;
 		}
 		
 		case 0x6F: {
@@ -4293,14 +4308,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x76: {
 		    /**
 		     * BIT 6, (HL)
-		     * 2, 16
+		     * 2, 12
 		     * Z - H -
 		     */
 			
 			uint16_t hl = HL.get();
 		    checkBit(6, hl);
 		    
-		    return 16;
+		    return 12;
 		}
 		
 		case 0x77: {
@@ -4390,14 +4405,14 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		case 0x7E: {
 		    /**
 		     * BIT 7, (HL)
-		     * 2, 16
+		     * 2, 12
 		     * Z - H -
 		     */
 			
 			uint16_t hl = HL.get();
 		    checkBit(7, hl);
 			
-		    return 16;
+		    return 12;
 		}
 		
 		case 0x7F: {
@@ -4684,7 +4699,7 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 		     * 2, 16
 		     * - - - -
 		     */
-
+			
 			uint16_t hl = HL.get();
 		    clearBit(2, hl);
 		    
@@ -5970,6 +5985,52 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 			return 4;
 		}
 	}
+}
+
+void CPU::bootRom() {
+	// https://gbdev.io/pandocs/Power_Up_Sequence.html#hardware-registers
+
+	mmu.write8(0xFF00, 0xCF);
+	mmu.write8(0xFF01, 0x00);
+	mmu.write8(0xFF02, 0x7E);
+	mmu.write8(0xFF04, 0xAB);
+	mmu.write8(0xFF05, 0x00);
+	mmu.write8(0xFF06, 0x00);
+	mmu.write8(0xFF07, 0xF8);
+	mmu.write8(0xFF0F, 0xE1);
+	mmu.write8(0xFF10, 0x80);
+	mmu.write8(0xFF11, 0xBF);
+	mmu.write8(0xFF12, 0xF3);
+	mmu.write8(0xFF13, 0xFF);
+	mmu.write8(0xFF14, 0xBF);
+	mmu.write8(0xFF16, 0x3F);
+	mmu.write8(0xFF17, 0x00);
+	mmu.write8(0xFF18, 0xFF);
+	mmu.write8(0xFF19, 0xBF);
+	mmu.write8(0xFF1A, 0x7F);
+	mmu.write8(0xFF1B, 0xFF);
+	mmu.write8(0xFF1C, 0x9F);
+	mmu.write8(0xFF1D, 0xFF);
+	mmu.write8(0xFF1E, 0xBF);
+	mmu.write8(0xFF20, 0xFF);
+	mmu.write8(0xFF21, 0x00);
+	mmu.write8(0xFF22, 0x00);
+	mmu.write8(0xFF23, 0xBF);
+	mmu.write8(0xFF24, 0x77);
+	mmu.write8(0xFF25, 0xF3);
+	mmu.write8(0xFF26, 0xF1);
+	mmu.write8(0xFF40, 0x91);
+	mmu.write8(0xFF41, 0x85);
+	mmu.write8(0xFF42, 0x00);
+	mmu.write8(0xFF43, 0x00);
+	mmu.write8(0xFF44, 0x00);
+	mmu.write8(0xFF45, 0x00);
+	mmu.write8(0xFF46, 0xFF);
+	mmu.write8(0xFF47, 0xFC);
+	mmu.write8(0xFF48, 0xFF); /// ?
+	mmu.write8(0xFF49, 0xFF); /// ?
+	mmu.write8(0xFF4A, 0x00);
+	mmu.write8(0xFF4B, 0x00);
 }
 
 void CPU::popReg(uint8_t& reg) {

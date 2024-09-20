@@ -1,7 +1,5 @@
 ﻿#include "VRAM.h"
 
-#include <cstdio>
-
 #include "PPU.h"
 
 uint8_t VRAM::fetch8(uint16_t address) {
@@ -13,8 +11,5 @@ uint8_t VRAM::fetch8(uint16_t address) {
 }
 
 void VRAM::write8(uint16_t address, uint8_t data) {
-    if(data != 0)
-        printf("");
-    
     RAM[address] = data;
 }

@@ -1,31 +1,34 @@
 ﻿#pragma once
 #include <vector>
 
-class MBC;
+#include "../IO/Joypad.h"
+
 class InterruptHandler;
-
-class WRAM;
-class HRAM;
-class VRAM;
-
-class LCDC;
+class Joypad;
 class Serial;
 class Timer;
 
-class OAM;
+class MBC;
+class WRAM;
+class HRAM;
+
 class PPU;
+class LCDC;
+class VRAM;
+class OAM;
 
 class MMU {
 public:
-    MMU(InterruptHandler& interruptHandler, MBC& mbc, WRAM& wram, HRAM& hram, VRAM& vram, LCDC& lcdc, Serial& serial, Timer& timer, OAM& oam, PPU& ppu, const std::vector<uint8_t>& memory)
+    MMU(InterruptHandler& interruptHandler, Joypad& joypad, MBC& mbc, WRAM& wram, HRAM& hram, VRAM& vram, LCDC& lcdc, Serial& serial, Timer& timer, OAM& oam, PPU& ppu, const std::vector<uint8_t>& memory)
         : interruptHandler(interruptHandler),
+          joypad(joypad),
+          serial(serial),
+          timer(timer),
           mbc(mbc),
           wram(wram),
           hram(hram),
           vram(vram),
           lcdc(lcdc),
-          serial(serial),
-          timer(timer),
           oam(oam),
           ppu(ppu) {
         
@@ -49,20 +52,19 @@ private:
     // Prepare speed switch thingies
     uint8_t key1;
     
+    // I/O
     InterruptHandler& interruptHandler;
-    
-    MBC& mbc;
+    Joypad& joypad;
+    Serial& serial;
+    Timer& timer;
     
     // Memories
+    MBC& mbc;
     WRAM& wram;
     HRAM& hram;
     VRAM& vram;
     
-    // I/O
     LCDC& lcdc;
-    Serial& serial;
-    Timer& timer;
-    
     OAM& oam;
 
 public:

@@ -14,7 +14,9 @@ public:
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
 	
-private:
+public:
+	uint8_t interrupt;
+	
 	uint8_t LCDCControl;
 	
 	// Status Registers
@@ -32,6 +34,7 @@ private:
 	// LCD Y coordinate
 	uint8_t LY = 0;
 	uint8_t	LYC = 0;
+	
 public: //TODO; I am too lazy.. Make this private
 	/**
 	 * https://gbdev.io/pandocs/LCDC.html#lcdc7--lcd-enable
@@ -71,9 +74,9 @@ public: //TODO; I am too lazy.. Make this private
 	 *
 	 * NOTE; Objects (sprites) aren’t affected by this, and will always use the $8000 addressing mode.
 	 *
-	 * "0x8000-0x8FFF" : "0x8800-0x97FF"
+	 * "0x8800-0x97FF" : "0x8000-0x8FFFF"
 	 */
-	bool bgTileDataArea;
+	bool bgWinTileDataArea;
 	
 	/**
 	 * https://gbdev.io/pandocs/LCDC.html#lcdc3--bg-tile-map-area

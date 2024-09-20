@@ -1,26 +1,9 @@
 ﻿#pragma once
-#include <array>
 #include <cstdint>
 #include <SDL_render.h>
 #include <SDL_video.h>
-#include <tuple>
 
 #include "Fetcher.h"
-
-/**
- * https://gbdev.io/pandocs/Tile_Data.html#vram-tile-data
- */
-struct TileData {
-	uint8_t nr;
-	uint8_t data[8][8];
-};
-
-/**
- * https://gbdev.io/pandocs/Tile_Maps.html
- */
-struct TileMap {
-	uint8_t data[32][32];
-};
 
 struct Pixel {
 	uint8_t color;
@@ -63,8 +46,8 @@ public:
 	// TODO; Remove
 	
 	const uint32_t COLOR_WHITE = 0xFFFFFF;  // White
-	const uint32_t COLOR_LIGHT_GRAY = 0xC0C0C0;  // Light Gray
-	const uint32_t COLOR_DARK_GRAY = 0x404040;  // Dark Gray
+	const uint32_t COLOR_LIGHT_GRAY = 0xAAAAAA;  // Light Gray
+	const uint32_t COLOR_DARK_GRAY = 0x505050;  // Dark Gray
 	const uint32_t COLOR_BLACK = 0x000000;  // Black
 	
 	uint32_t paletteIndexToColor(uint8_t index) {
@@ -96,9 +79,11 @@ private:
 	
 	VRAM& vram;
 	OAM& oam;
-	
+
+public:
 	LCDC& lcdc;
-	
+
+private:
 	MMU& mmu;
 	
 public:

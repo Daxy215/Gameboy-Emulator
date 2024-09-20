@@ -1,6 +1,6 @@
 ﻿#include <cstdint>
 
-#include "CPU.h"
+#include "../CPU/CPU.h"
 #include "InterrupHandler.h"
 
 uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
@@ -9,7 +9,7 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		
 		if(interrupt == 0)
 			return 0;
-
+		
 		cpu.halted = false;
 		if(cpu.interruptHandler.IME == false) {
 			return 0;

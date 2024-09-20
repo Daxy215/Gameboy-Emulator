@@ -16,19 +16,24 @@ public:
 	Fetcher(MMU& mmu)
 		: curTileID(0), curTileIndex(0), tileLine(0), mapAddress(0), ticks(0), curState(), mmu(mmu) {
 	}
-
+	
 	Fetcher(const Fetcher& other)
 		: curTileID(0), curTileIndex(0), tileLine(0), mapAddress(0), ticks(0), curState(), mmu(other.mmu) {
 	}
 
-	void begin(uint16_t tileAddress, uint8_t tileLine);
+public:
+	void begin(uint16_t baseAddress, uint16_t tileAddress, uint8_t tileLine);
 	void tick();
 	
 private:
+	void fetchData(uint8_t index);
+
+private:
 	uint8_t curTileID, curTileIndex;
-	
-	uint16_t tileLine;
+
+	uint16_t baseAddress;
 	uint16_t mapAddress;
+	uint16_t tileLine;
 	
 	uint16_t ticks;
 	

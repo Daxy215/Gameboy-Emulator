@@ -23,17 +23,17 @@ uint8_t MMU::fetch8(uint16_t address) {
      * https://gbdev.io/pandocs/Memory_Map.html
      */
     
-    if(address <= 0x3FFF) { // bank 0 (fixed)
+    if(address <= 0x7FFF) { // bank 0 (fixed)
         return mbc.read(address); //memory[address];
-    } else if(address >= 0x4000 && address <= 0x7FFF) {
+    }/* else if(address >= 0x4000 && address <= 0x7FFF) {
         return mbc.read(address);
         // Switchable ROM bank
         /*uint16_t newAddress = address - 0x4000;
         
         // bank 0 isn't allowed in this region
         uint8_t bank = (mbc.c == 0) ? 1 : m_CurrentROMBank;
-        return memory[newAddress + (bank * 0x4000)];*/
-    }  else if(address >= 0x8000 && address < 0xA000) {
+        return memory[newAddress + (bank * 0x4000)];#1#
+    }*/  else if(address >= 0x8000 && address < 0xA000) {
         return vram.fetch8(address);
     } else if (address >= 0xA000 && address <= 0xBFFF) {
         return mbc.read(address);
@@ -69,7 +69,7 @@ uint8_t MMU::fetch8(uint16_t address) {
 
 uint8_t MMU::fetchIO(uint16_t address) {
     if(address == 0xFF00) {
-        //std::cerr << "Joypad input fetch\n";
+        return joypad.fetch8(address);
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         return serial.fetch8(address);
     } else if(address >= 0xFF04 && address <= 0xFF07) {
@@ -87,8 +87,9 @@ uint8_t MMU::fetchIO(uint16_t address) {
             return lcdc.fetch8(address);
         }
     } else if(address == 0xFF4D) {
-        return (key1 & 0x81) | 0x7E;
-        //return (key1 & 0xb10000001) | 0b01111110;
+        // TODO; This is only for CGB
+        //return (key1 & 0x81) | 0x7E;
+        return /*(key1 & 0xb10000001) |*/ 0b01111110;
     } else if(address == 0xFF4F) {
         //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
@@ -212,7 +213,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     // https://gbdev.io/pandocs/Hardware_Reg_List.html
     
      if(address == 0xFF00) {
-        //std::cerr << "Joypad input write\n";
+        joypad.write8(address, data);
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         serial.write8(address, data);
     } else if(address >= 0xFF04 && address <= 0xFF07) {

@@ -17,6 +17,9 @@ const int HEIGHT = 480;
 
 void PPU::tick(const int& cycles = 4) {
 	this->cycle += cycles;
+
+	if(!lcdc.enable)
+		return;
 	
 	// https://gbdev.io/pandocs/Rendering.html#ppu-modes
 	const uint16_t CyclesHBlank = 204;     // Mode 0 (H-Blank) 204 cycles per Scanline
@@ -25,37 +28,57 @@ void PPU::tick(const int& cycles = 4) {
 	const uint16_t CyclesTransfer = 173;   // Mode 3 (Transfer LCD) 173 cycles per Scanline
 	
 	uint8_t LCDControl = mmu.fetch8(0xFF40);
-	uint8_t LY = mmu.fetch8(0xFF44);
+	uint8_t LY = lcdc.LY;//mmu.fetch8(0xFF44);
 	uint8_t LYC = mmu.fetch8(0xFF45);
 	uint8_t SCY = mmu.fetch8(0xFF42);
 	uint8_t SCX = mmu.fetch8(0xFF43);
-	uint8_t WY = mmu.fetch8(0xFF4A);
-	uint8_t WX = mmu.fetch8(0xFF4B);
-	
-	if(!lcdc.enable)
-		return;
+	int8_t WY = mmu.fetch8(0xFF4A);
+	int8_t WX = mmu.fetch8(0xFF4B) - 7;
 	
 	switch (mode) {
 	case 2: // OAM
 		while(cycle >= CyclesOam) {
-			uint16_t tileWinMapBase = !lcdc.windowTileMapArea ? 0x9800 : 0x9C00;
-			uint16_t tileBGMapBase  = !lcdc.bgTileMapArea     ? 0x9800 : 0x9C00;
-			uint16_t tileBGMap      = !lcdc.bgTileDataArea    ? 0x8000 : 0x8800;
+			// https://gbdev.io/pandocs/pixel_fifo.html#get-tile
+			uint16_t tileWinMapBase = lcdc.windowTileMapArea  ? 0x9C00 : 0x9800;
+			uint16_t tileBGMapBase  = lcdc.bgTileMapArea      ? 0x9C00 : 0x9800;
+			uint16_t tileBGMap      = lcdc.bgWinTileDataArea  ? 0x8000 : 0x8800;
 			
-			uint16_t addr = tileBGMapBase;
+			uint8_t y;
+			uint16_t addr;
 			
-			fetcher.begin(addr + ((LY  / 8) * 32), (LY % 8));
+			uint16_t tileX, tileY;
+			
+			/*if(lcdc.windowEnabled)
+				mmu.write8(0xFF4B, WX + 1);
+				*/
+			
+			int16_t winX = -(static_cast<int32_t>(WX)) + x;
+			
+			/*if(lcdc.windowEnabled && /*winX >= 0 && WY >= 0#1# (LY >= WY) && (WX <= 166)) {
+				mmu.write8(0xFF4A, WY + 1);
+				
+				y = LY - WY;
+				addr = tileWinMapBase;
+				
+				tileY = (static_cast<uint16_t>(WY) >> 3) & 31;
+				tileX = (winX >> 3);
+			} else {*/
+				y = SCY + (LY % 256);
+				addr = tileBGMapBase;
+				
+				tileY = (y >> 3) & 31;
+				tileX = ((SCX + 0) >> 3) & 31;
+			//}
 			
 			x = 0;
-			y = SCY + LY;
+			fetcher.begin(tileBGMap, addr + tileY * 32 + tileX, y % 8);
 			
 			mode = 3; // VRRAM Transfer
 			cycle -= CyclesOam;
 		}
 		
 		break;
-	case 3: {
-		// VRAM Transfer
+	case 3: { // VRAM Transfer
 		fetcher.tick();
 		
 		if(fetcher.fifo.size() <= 8)
@@ -63,10 +86,11 @@ void PPU::tick(const int& cycles = 4) {
 		
 		uint8_t byte0 = fetcher.fifo.pop();
 		uint8_t pixelColor = (bgp >> (byte0 * 2)) & 0x03;
-		
-		updatePixel(x, LY, paletteIndexToColor(pixelColor));
-		
+		//if(pixelColor != 0)
+			updatePixel((x - 16), LY, paletteIndexToColor(pixelColor));
 		x++;
+
+		//SDL_RenderPresent(renderer);
 		
 		if(x >= 160) {
 			if(LYC == LY) {
