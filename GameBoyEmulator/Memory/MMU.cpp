@@ -42,8 +42,8 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address == 0xFFFF) {
         return interruptHandler.fetch8(address);
     } else {
-        //printf("Unknown fetch address %x\n", address);
-        //std::cerr << "";
+        printf("Unknown fetch address %x\n", address);
+        std::cerr << "";
     }
     
     return 0xFF;
@@ -121,8 +121,8 @@ void MMU::write8(uint16_t address, uint8_t data) {
     } else if (address == 0xFFFF) {
         interruptHandler.write8(address, data);
     } else {
-        //printf("Unknown write address %x - %x\n", address, data);
-        //std::cerr << "";
+        printf("Unknown write address %x - %x\n", address, data);
+        std::cerr << "";
     }
 }
 
@@ -148,7 +148,12 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             lcdc.write8(address, data);
         } else if(address == 0xFF46) {
             //  $FF46	DMA	OAM DMA source address & start
+            uint16_t u16 = (static_cast<uint16_t>(data)) << 8;
             
+            for(uint16_t i = 0; i < 160; i++) {
+                uint8_t val = fetch8(u16 + i);
+                write8(0xFE00 + i, val);
+            }
         } else if(address == 0xFF47) {
             // https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
             ppu.write8(address, data);
@@ -170,8 +175,8 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         //std::cerr << "CGB WRAM Bank Select\n";
         wramBank = (data & 0x7) == 0 ? 1 : static_cast<size_t>(data & 0x7);
     } else {
-        //printf("IO Write Address; %x = %x\n", address, data);
-        //std::cerr << "";
+        printf("IO Write Address; %x = %x\n", address, data);
+        std::cerr << "";
     }
 }
 

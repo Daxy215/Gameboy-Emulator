@@ -1,13 +1,26 @@
 ﻿#include "LCDC.h"
 
+#include <cassert>
 #include <iostream>
 
+#include "PPU.h"
 #include "../Utility/Bitwise.h"
 
 uint8_t LCDC::fetch8(uint16_t address) {
 	if(address == 0xFF40) {
 		return LCDCControl;
 	} else if(address == 0xFF41) {
+		// Update LYC == LY flag (Bit 2)
+		if (LY == LYC) {
+			status |= 0x04; // Set bit 2
+		} else {
+			status &= ~0x04; // Clear bit 2
+		}
+		
+		// Update PPU mode (Bits 1-0)
+		status &= ~0x03; // Clear the current mode bits
+		status |= PPU::mode; // Set the PPU mode based on the current mode
+		
 		// https://gbdev.io/pandocs/STAT.html#ff41--stat-lcd-status
 		return status;
 	} else if(address == 0xFF42) {
@@ -19,6 +32,8 @@ uint8_t LCDC::fetch8(uint16_t address) {
 	} else if(address == 0xFF44) {
 		// https://gbdev.io/pandocs/STAT.html#ff44--ly-lcd-y-coordinate-read-only
 		return LY;
+		
+		// For blarggs tests
 		//return 0x90;
 	} else if(address == 0xFF45) {
 		// https://gbdev.io/pandocs/STAT.html#ff45--lyc-ly-compare
@@ -33,13 +48,33 @@ uint8_t LCDC::fetch8(uint16_t address) {
 		std::cerr << "Fetch8 LCD???\n";
 	}
 	
-    return 0;
+    return 0xFF;
 }
 
 void LCDC::write8(uint16_t address, uint8_t data) {
 	if(address == 0xFF41) {
 		// https://gbdev.io/pandocs/STAT.html#ff41--stat-lcd-status
 		status = data;
+		
+		// Check for LYC == LY interrupt (Bit 6)
+		if ((status & 0x40) && (LY == LYC)) {
+			interrupt |= 0x02;
+		}
+		
+		// Check for Mode 2 (OAM Scan) interrupt (Bit 5)
+		if ((status & 0x20) && (PPU::mode == PPU::OAMScan)) {
+			interrupt |= 0x02;
+		}
+		
+		// Check for Mode 1 (VBlank) interrupt (Bit 4)
+		if ((status & 0x10) && (PPU::mode == PPU::VBlank)) {
+			interrupt |= 0x02;
+		}
+		
+		// Check for Mode 0 (HBlank) interrupt (Bit 3)
+		if ((status & 0x08) && (PPU::mode == PPU::HBlank)) {
+			interrupt |= 0x02;
+		}
 	} else if(address == 0xFF42) {
 		// $FF42	SCY	Viewport Y position	R/W	All
 		SCY = data;
@@ -48,7 +83,8 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		SCX = data;
 	} else if(address == 0xFF44) {
 		// https://gbdev.io/pandocs/STAT.html#ff44--ly-lcd-y-coordinate-read-only
-		LY = data;
+		// This is meant to be read only
+		//LY = data;
 	} else if(address == 0xFF45) {
 		// https://gbdev.io/pandocs/STAT.html#ff45--lyc-ly-compare
 		LYC = data;
@@ -87,9 +123,13 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		// Window enable (Bit 5)
 		windowEnabled = check_bit(data, 5);
 		
+		if(windowEnabled || (LCDCControl & 0x20) == 0x20) {
+			printf("F");
+		}
+		
 		// BG & Window tile data area (Bit 4)
 		bgWinTileDataArea = check_bit(data, 4);
-		//std::cerr << "BG & Window Tile Data Area: " << (bgWindowTileDataArea ? "0x8000-0x8FFF" : "0x8800-0x97FF") << "\n";
+		//std::cerr << "BG & Window Tile Data Area: " << (bgWinTileDataArea ? "0x8000-0x8FFF" : "0x8800-0x97FF") << "\n";
 		
 		// BG tile map area (Bit 3)
 		bgTileMapArea = check_bit(data, 3);

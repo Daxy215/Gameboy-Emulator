@@ -15,9 +15,9 @@ public:
 	void write8(uint16_t address, uint8_t data);
 	
 public:
-	uint8_t interrupt;
+	uint8_t interrupt = 0;
 	
-	uint8_t LCDCControl;
+	uint8_t LCDCControl = 0;
 	
 	// Status Registers
 	uint8_t status = 0;
@@ -27,7 +27,7 @@ public:
 	
 	// Viewport X position
 	uint8_t SCX = 0;
-
+	
 	uint8_t WY = 0;
 	uint8_t WX = 0;
 	

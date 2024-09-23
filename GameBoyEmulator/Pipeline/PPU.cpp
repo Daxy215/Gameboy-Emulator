@@ -15,148 +15,170 @@
 const int WIDTH = 640;
 const int HEIGHT = 480;
 
+PPU::PPUMode PPU::mode = PPU::HBlank;
+
 void PPU::tick(const int& cycles = 4) {
-	this->cycle += cycles;
+	this->clock += cycles;
 	
-	if(!lcdc.enable)
-		return;
-	
-	// https://gbdev.io/pandocs/Rendering.html#ppu-modes
-	const uint16_t CyclesHBlank = 204;     // Mode 0 (H-Blank) 204 cycles per Scanline
-	const uint16_t CyclesVBlank = 456;     // Mode 1 (V-Blank) 4560 cycles per Frame 4560/10 times per Frame
-	const uint16_t CyclesOam = 80;         // Mode 2 (OAM Search) 80 cycles per Scanline
-	const uint16_t CyclesTransfer = 173;   // Mode 3 (Transfer LCD) 173 cycles per Scanline
-	
-	uint8_t LCDControl = mmu.fetch8(0xFF40);
-	uint8_t LY = lcdc.LY;//mmu.fetch8(0xFF44);
-	uint8_t LYC = mmu.fetch8(0xFF45);
+	//uint8_t LCDControl = mmu.fetch8(0xFF40);
+	uint8_t& LY = lcdc.LY;//mmu.fetch8(0xFF44);
+	//uint8_t WY = mmu.fetch8(0xFF4A);
+	/*uint8_t LYC = mmu.fetch8(0xFF45);
 	uint8_t SCY = mmu.fetch8(0xFF42);
 	uint8_t SCX = mmu.fetch8(0xFF43);
-	int8_t WY = mmu.fetch8(0xFF4A);
-	int8_t WX = mmu.fetch8(0xFF4B) - 7;
+	uint8_t WX = mmu.fetch8(0xFF4B);*/
 	
+	// Following ;https://hacktix.github.io/GBEDG/ppu/#h-blank-mode-0
 	switch (mode) {
-	case 2: // OAM
-		while(cycle >= CyclesOam) {
-			// https://gbdev.io/pandocs/pixel_fifo.html#get-tile
-			uint16_t tileWinMapBase = lcdc.windowTileMapArea  ? 0x9C00 : 0x9800;
-			uint16_t tileBGMapBase  = lcdc.bgTileMapArea      ? 0x9C00 : 0x9800;
-			uint16_t tileBGMap      = lcdc.bgWinTileDataArea  ? 0x8000 : 0x8800;
+	case HBlank:
+		while(clock >= 204) {
+			//mmu.write8(0xFF44, ++LY);
+			LY++;
 			
-			uint8_t y;
-			uint16_t addr;
-			
-			uint16_t tileX, tileY;
-			
-			/*if(lcdc.windowEnabled)
-				mmu.write8(0xFF4B, WX + 1);
-				*/
-			
-			//int16_t winX = -(static_cast<int32_t>(WX));
-			
-			if(/*lcdc.windowEnabled &&*/ WX >= 0 && WY >= 0/*(LY >= WY) && (WX <= 166)*/) {
-				mmu.write8(0xFF4A, WY + 1);
-				
-				y = LY - WY;
-				addr = tileWinMapBase;
-				
-				tileY = (static_cast<uint16_t>(WY) >> 3) & 31;
-				tileX = (WX >> 3);
-			} else {
-				y = ((SCY) % 256) + (LY % 256);
-				addr = tileBGMapBase;
-				
-				tileY = (y >> 3);
-				tileX = (((SCX) % 256) >> 3);
-			}
-			
-			x = 0;
-			fetcher.begin(tileBGMap, addr + tileY * 32 + tileX, y % 8);
-			
-			mode = 3; // VRRAM Transfer
-			cycle -= CyclesOam;
-		}
-		
-		break;
-	case 3: { // VRAM Transfer
-		fetcher.tick();
-		
-		if(fetcher.fifo.size() <= 8)
-			return;
-		
-		uint8_t byte0 = fetcher.fifo.pop();
-		uint8_t pixelColor = (bgp >> (byte0 * 2)) & 0x03;
-		//if(pixelColor != 0)
-			updatePixel(x - 32, LY, paletteIndexToColor(pixelColor));
-		x++;
-		
-		SDL_RenderPresent(renderer);
-		
-		if(x >= 160) {
-			if(LYC == LY) {
-				interrupt |= 0x02;
-			}
-			
-			mode = 0; // HBlank
-			cycle -= CyclesTransfer;
-		}
-		
-		break;
-	}
-	
-	case 0: //HBlank
-		while(cycle >= CyclesHBlank) {
-			if(LY == 143) {
-				mode = 1; // VBLank
-			} else {
-				// Go to OAM mode
-				mode = 2;
-			}
-			
-			// Increment LY
-			mmu.write8(0xFF44, LY + 1);
-			
-			cycle -= CyclesHBlank;
-		}
-		
-		break;
-	case 1: // VBlank
-		while(cycle >= CyclesVBlank) {
 			if(LY == 144) {
-				// TODO;..
+				// VBlank interrupt
 				interrupt |= 0x01;
+				frames++;
 				
+				mode = VBlank;
 				SDL_RenderPresent(renderer);
-			}
-			
-			if(LY == 153) {
-				mmu.write8(0xFF44, 0);
-				mode = 2; // OAM
 			} else {
-				mmu.write8(0xFF44, LY + 1);
+				mode = OAMScan;
 			}
 			
-			cycle -= CyclesVBlank;
+			clock -= 204;
+		}
+		
+		break;
+	case VBlank:
+		while(clock >= 4560) {
+			test = false;
+			//mmu.write8(0xFF44, ++LY);
+			LY++;
+			
+			if(LY >= 154) {
+				//mmu.write8(0xFF44, LY = 0);
+				LY = 0;
+				mode = OAMScan;
+			}
+			
+			clock -= 4560;
+		}
+		
+		break;
+	case OAMScan:
+		//if(LY + 16 >= spriteY && LY + 16 < spriteY + spriteHeight) {}
+		
+		while(clock >= 80) {
+			fetchSprites();
+			
+			mode = VRAMTransfer;
+			clock -= 80;
+		}
+		
+		break;
+	case VRAMTransfer:
+		while(clock >= 172) {
+			drawBackground();
+			
+			/*if(LY == WY) {
+				mmu.write8(0xFF4A, 0);
+				test = true;
+			}*/
+			
+			mode = HBlank;
+			clock -= 172;
 		}
 		
 		break;
 	}
 }
 
-void PPU::fetchBackground() {
-    uint8_t LCDControl = mmu.fetch8(0xFF40);
+void PPU::drawBackground() {
     uint8_t LY = mmu.fetch8(0xFF44);
     uint8_t SCY = mmu.fetch8(0xFF42);
     uint8_t SCX = mmu.fetch8(0xFF43);
 	uint8_t WY = mmu.fetch8(0xFF4A);
 	uint8_t WX = mmu.fetch8(0xFF4B);
 	
+	uint16_t tileWinMapBase = lcdc.windowTileMapArea  ? 0x9C00 : 0x9800;
+	uint16_t tileBGMapBase  = lcdc.bgTileMapArea      ? 0x9C00 : 0x9800;
+	uint16_t tileBGMap      = lcdc.bgWinTileDataArea  ? 0x8000 : 0x8800;
 	
+	if(!lcdc.bgWindowEnabled)
+		return;
+	
+	int32_t winY = WY;
+	
+	/*if(lcdc.windowEnabled && WX <= 166) {
+		mmu.write8(0xFF4A, ++WY);
+		winY = WY;
+	} else {
+		winY = -1;
+	}*/
+	
+	uint8_t bgY = SCY + LY;
+	
+	uint16_t tilemapAddr;
+	uint16_t tileX, tileY, pY;
+	uint8_t pX;
+	
+	// 160 = Screen width
+	for(size_t x = 0; x < 160; x++) {
+		int32_t winX = (static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x);
+		uint32_t bgX = (static_cast<uint32_t>(SCX) + static_cast<uint32_t>(x)) % 256;
+		
+		if(lcdc.windowEnabled && winX >= 0 && winY >= 0) {
+			mmu.write8(0xFF4A, ++WY);
+			
+			tilemapAddr = tileWinMapBase;
+			
+			tileY = (static_cast<uint16_t>(winY) >> 3) & 31;
+			tileX = (static_cast<uint16_t>(winX) >> 3) & 31;
+			
+			pY = winY & 0x07; // % 8
+			pX = static_cast<uint8_t>(winX) & 0x07; // % 8
+		} else {
+			tilemapAddr = tileBGMapBase;
+			
+			tileY = bgY >> 3 & 31;
+			tileX = bgX >> 3 & 31;
+			
+			pY = bgY & 0x07;
+			pX = static_cast<uint8_t>(bgX) & 0x07;
+		}
+		
+		uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
+		
+		uint16_t offset;
+		
+		// https://gbdev.io/pandocs/Tile_Data.html?highlight=signed#vram-tile-data
+		
+		if(tileBGMap == 0x8000) {
+			offset = tileBGMap + (static_cast<uint16_t>(tileID)) * 16;
+		} else {
+			offset = tileBGMap + static_cast<uint16_t>(static_cast<int16_t>(static_cast<int8_t>(tileID) + 128)) * 16;
+		}
+		
+		// Tiles are flipped by default
+		pX = 7 - pX;
+		
+		uint16_t address = offset + (pY * 2);
+		uint8_t d0 = mmu.fetch8(address);
+		uint8_t d1 = mmu.fetch8(address + 1);
+		
+		uint8_t pixel = (d0 >> pX) & 1;
+		pixel |= (((d1 >> pX) & 1) << 1);
+		
+		uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
+		
+		updatePixel(static_cast<uint8_t>(x), LY, paletteIndexToColor(pixelColor));
+	}
 }
 
 void PPU::fetchSprites() {
 	uint8_t LCDControl = mmu.fetch8(0xFF40);
-    uint8_t LY = mmu.fetch8(0xFF44);
+    uint8_t LY = lcdc.LY; //mmu.fetch8(0xFF44);
 	
 	
 }
@@ -236,7 +258,7 @@ void PPU::createWindow() {
 }
 
 void PPU::updatePixel(uint8_t x, uint8_t y, uint32_t color) {
-	uint8_t scale = 2;
+	/*uint8_t scale = 1;
 	
 	x *= scale;
 	y *= scale;
@@ -245,7 +267,9 @@ void PPU::updatePixel(uint8_t x, uint8_t y, uint32_t color) {
 		for(int ny = y; ny < y + scale; ny++) {
 			setPixel(nx, ny, color);
 		}
-	}
+	}*/
+	
+	setPixel(x, y, color);
 	
 	/*SDL_RenderCopy(renderer, mainTexture, nullptr, nullptr);
 	

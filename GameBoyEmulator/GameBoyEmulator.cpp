@@ -46,8 +46,8 @@
 std::string formatCPUState(const CPU &cpu) {
     std::ostringstream oss;
     
-    oss << std::hex/* << std::uppercase*/ << std::setfill('0');
-    oss << "PC = " <<  std::setw(2) << static_cast<int>(cpu.PC) << ' ';
+    oss << std::hex << std::uppercase << std::setfill('0');
+    /*oss << "PC = " <<  std::setw(2) << static_cast<int>(cpu.PC) << ' ';
     oss << "Just executed=" <<  std::setw(1) << static_cast<int>(cpu.mmu.fetch8(cpu.PC)) << ' ';
     
     oss << "AF: " << std::setw(1) << static_cast<int>(cpu.AF.A) << ' ';
@@ -62,10 +62,10 @@ std::string formatCPUState(const CPU &cpu) {
     oss  << std::setw(2) << static_cast<int>(cpu.DE.E) << ' ';
     
     oss << "SP: " << std::setw(2) << static_cast<int>(cpu.SP) << ' ';
-    oss << " PC: " << std::setw(2) << static_cast<int>(cpu.PC);
+    oss << " PC: " << std::setw(2) << static_cast<int>(cpu.PC);*/
     
     // Format the registers and SP, PC in hex with leading zeros
-    /*oss << "A: " << std::setw(2) << static_cast<int>(cpu.AF.A) << ' ';
+    oss << "A: " << std::setw(2) << static_cast<int>(cpu.AF.A) << ' ';
     oss << "F: " << std::setw(2) << static_cast<int>(cpu.AF.F) << ' ';
     oss << "B: " << std::setw(2) << static_cast<int>(cpu.BC.B) << ' ';
     oss << "C: " << std::setw(2) << static_cast<int>(cpu.BC.C) << ' ';
@@ -88,14 +88,14 @@ std::string formatCPUState(const CPU &cpu) {
     for (int i = 0; i < 4; i++) {
         oss << std::setw(2) << static_cast<int>(mem[i]);
         if (i < 3) oss << ',';
-    }#1#
+    }*/
     
     oss << "(" << std::hex;
     for (int i = 0; i < 4; i++) {
         oss << std::setw(2) << static_cast<int>(mem[i]);
         if (i < 3) oss << ' ';
     }
-    oss << ")" << std::hex;*/
+    oss << ")" << std::hex;
     
     return oss.str();
 }
@@ -107,43 +107,24 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         throw std::runtime_error("Unable to open log file.");
     }
     
-    std::ifstream blarggFile("Roms/testRom1.txt");
+    std::ifstream blarggFile("Roms/cpu_state.txt");
     if (!blarggFile.is_open()) {
         throw std::runtime_error("Unable to open cpu_state.txt.");
     }
     
     std::vector<std::string> blarggStates;
     std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 950000) {
+    while (std::getline(blarggFile, line) && blarggStates.size() < 200) {
         blarggStates.push_back(line);
     }
     
-    uint64_t x = 0;
+    uint64_t x = 1;
     
     bool running = true;
     
     while (running) {
-        if(x == 16) {
+        if(x == 78813) {
             printf("");
-        }
-        
-        std::string formattedState = formatCPUState(cpu);
-        logFile << formattedState << '\n';
-        //std::cerr << formattedState << " - " << x << "\n";
-        
-        if (x < blarggStates.size()) {
-            const std::string &expectedState = blarggStates[x];
-            if (formattedState != expectedState) {
-                /*std::cerr << "Mismatch at iteration " << x << ":\n";
-                std::cerr << "Expected: " << expectedState << "\n";
-                std::cerr << "Actual  : " << formattedState << "\n";
-                */
-                
-                //break;
-            }
-        } else if(x > blarggStates.size()) {
-            //std::cerr << "No more expected states to compare.\n";
-            //break;
         }
         
         // https://gbdev.io/pandocs/Interrupts.html#ime-interrupt-master-enable-flag-write-only
@@ -164,6 +145,16 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
                 printf("??");
             }
             
+            // bc im too lazy
+            /*if(x == 77915 || x == 78808 || x == 82434 || x == 83327 || x == 84103
+                || x == 86936 || x == 88741 || x == 89631 || x == 91433 || x == 91525
+                || x == 91617 || x == 93082 || x == 93174)*/
+            /*if(sizeof(blarggFile) < x + 1 && blarggStates[x + 1].find("PC: 00:0048") != std::string::npos) {
+                //std::cerr << "Found at; " << blarggStates[x + 1] << "\n";
+                
+                cpu.interruptHandler.IF |= 0x02;
+            }*/
+            
             cycles = 4;
         }
         
@@ -180,6 +171,28 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         cpu.interruptHandler.IF |= ppu.interrupt;
         ppu.interrupt = 0;
         
+        std::string formattedState = formatCPUState(cpu);
+        logFile << formattedState << '\n';
+        //std::cerr << formattedState << " - " << x << "\n";
+        
+        if (x < blarggStates.size()) {
+            const std::string &expectedState = blarggStates[x];
+            if (formattedState != expectedState) {
+                /*std::cerr << "Mismatch at iteration " << x << ":\n";
+                std::cerr << "Expected: " << expectedState << "\n";
+                for(int i = 0; i < 1; i++) {
+                    std::cerr << "Expected " << std::to_string(x + i) << ": " << blarggStates[x + i] << "\n";
+                }
+                
+                std::cerr << "Actual  : " << formattedState << "\n";*/
+                
+                //break;
+            }
+        } else if(x > blarggStates.size()) {
+            //std::cerr << "No more expected states to compare.\n";
+            //break;
+        }
+        
         x++;
     }
 }
@@ -193,12 +206,14 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    std::string filename = "Roms/Tennis (World).gb";
+    //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/Tetris 2.gb";
     //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
-    //std::string filename = "Roms/dmg-acid2.gb";
+    std::string filename = "Roms/dmg-acid2.gb";
+    
     //std::string filename = "Roms/window_y_trigger.gb";
+    //std::string filename = "Roms/window_y_trigger_wx_offscreen.gb";
     
     //std::string filename = "Roms/testRom1.gb";
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed

@@ -1139,7 +1139,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * - - - -
 			 */
 			
-        	std::cerr << "HALT\n";
+        	//std::cerr << "HALT\n";
         	halted = true;
         	
         	return 4;
@@ -2317,13 +2317,16 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * - - - -
 			 */
 			
-        	uint16_t u16 = mmu.fetch16(SP);
+        	/*uint16_t u16 = mmu.fetch16(SP);
         	SP += 2;
+			
+        	PC = u16;*/
         	
-        	PC = u16;
+        	PC = popStack();
 			
         	// TODO;
         	interruptHandler.IME = true;
+			//ei = 1; // ?
         	
         	return 16;
         }
@@ -2465,8 +2468,8 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	int8_t i8 = static_cast<int8_t>(mmu.fetch8(PC++));
         	//uint16_t u8 = static_cast<uint16_t>(static_cast<int16_t>(i8));
         	
-        	//AF.setZero(false);
-        	//AF.setSubtract(false);
+        	AF.setZero(false);
+        	AF.setSubtract(false);
         	AF.setHalfCarry((SP & 0xF) + (i8 & 0xF) > 0xF);
         	AF.setCarry((SP & 0xFF) + (i8 & 0xFF) > 0xFF);
 			

@@ -65,13 +65,15 @@ void Fetcher::tick() {
 void Fetcher::fetchData(uint8_t index) {
 	uint16_t offset = 0;
 	
+	// https://gbdev.io/pandocs/Tile_Data.html?highlight=signed#vram-tile-data
+	
 	if(baseAddress == 0x8000) {
 		offset = baseAddress + (static_cast<uint16_t>(curTileID)) * 16;
 	} else {
-		offset = baseAddress + static_cast<uint16_t>(static_cast<int16_t>(static_cast<int8_t>(curTileID)) + 128) * 16;
+		offset = baseAddress + static_cast<uint16_t>(static_cast<int16_t>(static_cast<int8_t>(curTileID) + 128)) * 16;
 	}
 	
-	uint16_t address = offset + (static_cast<uint16_t>(tileLine) * 2) + index;
+	uint16_t address = offset + (tileLine * 2) + index;
 	uint8_t data = mmu.fetch8(address);
 	
 	for(uint8_t i = 0; i < 8; i++) {

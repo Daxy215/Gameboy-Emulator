@@ -21,6 +21,14 @@ class MMU;
 
 class PPU {
 public:
+	enum PPUMode {
+		HBlank       = 0,
+		VBlank		 = 1,
+		OAMScan      = 2,
+		VRAMTransfer = 3
+	};
+
+public:
 	PPU(VRAM& vram, OAM& oam, LCDC& lcdc, MMU& mmu)
 		: fetcher(mmu),
 		  vram(vram),
@@ -33,7 +41,7 @@ public:
 	void tick(const int& cycles);
 	
 	//void renderTile(const TileData& tileData, int x, int y, const uint8_t* palette);
-	void fetchBackground();
+	void drawBackground();
 	void fetchSprites();
 	
 	void write8(uint16_t address, uint8_t data);
@@ -62,14 +70,17 @@ public:
 	
 	SDL_Texture* createTexture(uint8_t width, uint8_t height);
 
+public:
+	static PPUMode mode;
+
 private:
-	uint32_t cycle;
-	uint8_t mode;
+	bool test = false;
+	uint32_t clock = 0;
+	//uint8_t mode = 0;
 	
-	uint8_t bgp;
+	uint8_t bgp = 0;
 	
-	uint8_t x = 0;
-	uint8_t y = 0;
+	uint8_t frames = 0;
 
 public:
 	uint8_t interrupt;
