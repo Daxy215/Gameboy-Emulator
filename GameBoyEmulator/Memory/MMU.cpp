@@ -62,11 +62,25 @@ uint8_t MMU::fetchIO(uint16_t address) {
         return interruptHandler.fetch8(address);
     } else if(address >= 0xFF10 && address <= 0xFF26) {
         //std::cerr << "Wave pattern\n";
+    } else if(address >= 0xFF30 && address <= 0xFF3F) {
+        //std::cerr << "Wave pattern\n";
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
         if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
             return lcdc.fetch8(address);
+        } else if(address == 0xFF46) {
+            //  $FF46	DMA	OAM DMA source address & start
+            return 0xFF;
+        } else if(address == 0xFF47) {
+            // https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
+            return ppu.fetch8(address);
+        } else if(address == 0xFF48 || address == 0xFF49) {
+            // https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
+            ppu.fetch8(address);
+        } else {
+            printf("IO Fetch Address; %x\n", address);
+            std::cerr << "";
         }
     } else if(address == 0xFF4D) {
         // TODO; This is only for CGB
@@ -85,8 +99,8 @@ uint8_t MMU::fetchIO(uint16_t address) {
         //std::cerr << "CGB WRAM Bank Select\n";
         return wramBank;
     } else {
-        //printf("IO Fetch Address; %x\n", address);
-        //std::cerr << "";
+        printf("IO Fetch Address; %x\n", address);
+        std::cerr << "";
     }
     
     return 0;

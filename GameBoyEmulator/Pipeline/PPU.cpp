@@ -330,6 +330,20 @@ void PPU::fetchSprites() {
 	}
 }
 
+uint8_t PPU::fetch8(uint16_t address) {
+	if(address == 0xFF47) {
+		// https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
+		return bgp;
+	} else if(address == 0xFF48 || address == 0xFF49) {
+		// https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
+		
+		if(address == 0xFF48)
+			return obj0;
+		else
+			return obj1;
+	}
+}
+
 void PPU::write8(uint16_t address, uint8_t data) {
 	if(address == 0xFF47) {
 		// https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
@@ -344,10 +358,13 @@ void PPU::write8(uint16_t address, uint8_t data) {
 		// https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
 		
 		for(int i = 0; i < 4; i++) {
-			if(address == 0xFF48)
+			if(address == 0xFF48) {
+				obj0 = data;
 				OBJ0Palette[i] = (data >> (i * 2)) & 0x03;
-			else
+			} else {
+				obj1 = data;
 				OBJ1Palette[i] = (data >> (i * 2)) & 0x03;
+			}
 		}
 	}
 }

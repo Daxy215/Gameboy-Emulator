@@ -44,13 +44,14 @@ public:
 	void drawBackground();
 	void fetchSprites();
 	
+	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
 	
 	void createWindow();
 	
 	void updatePixel(uint8_t x, uint8_t y, uint32_t color);
 	void setPixel(uint8_t x, uint8_t y, uint32_t color);
-	
+
 	// TODO; Remove
 	
 	const uint32_t COLOR_WHITE = 0xFFFFFF;  // White
@@ -78,8 +79,6 @@ private:
 	uint32_t clock = 0;
 	//uint8_t mode = 0;
 	
-	uint8_t bgp = 0;
-	
 	uint8_t frames = 0;
 	
 	uint8_t bgPriority[160][144] = { 0 };
@@ -99,6 +98,10 @@ private:
 	MMU& mmu;
 	
 public:
+	uint8_t bgp = 0;
+	uint8_t obj0 = 0;
+	uint8_t obj1 = 0;
+	
 	uint8_t BGPalette[4];
 	uint8_t OBJ0Palette[4];
 	uint8_t OBJ1Palette[4];

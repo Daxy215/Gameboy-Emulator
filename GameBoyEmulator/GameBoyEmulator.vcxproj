@@ -1331,6 +1331,7 @@
       <AdditionalIncludeDirectories>..\libs\glew-2.2.0\src;..\libs\glew-2.2.0\include;..\libs\SDL2-2.30.3\include;</AdditionalIncludeDirectories>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
+    <ClCompile Include="APU\APU.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPU\CPU.h" />
@@ -1353,6 +1354,10 @@
     <ClInclude Include="Pipeline\OAM.h" />
     <ClInclude Include="Pipeline\PPU.h" />
     <ClInclude Include="Pipeline\VRAM.h" />
+    <ClInclude Include="APU\Channels\NoiseChanel.h" />
+    <ClInclude Include="APU\Channels\PulseChannel.h" />
+    <ClInclude Include="APU\APU.h" />
+    <ClInclude Include="APU\Channels\WaveChannel.h" />
     <ClInclude Include="Utility\Bitwise.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
