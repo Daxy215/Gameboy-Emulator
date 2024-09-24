@@ -123,9 +123,9 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		// Window enable (Bit 5)
 		windowEnabled = check_bit(data, 5);
 		
-		if(windowEnabled || (LCDCControl & 0x20) == 0x20) {
-			printf("F");
-		}
+		/*if(windowEnabled || (LCDCControl & 0x20) == 0x20) {
+			printf("F\n");
+		}*/
 		
 		// BG & Window tile data area (Bit 4)
 		bgWinTileDataArea = check_bit(data, 4);

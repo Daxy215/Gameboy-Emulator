@@ -38,6 +38,9 @@
  * Used for debugging;
  * https://robertheaton.com/gameboy-doctor/
  * https://github.com/retrio/gb-test-roms/tree/master
+ *
+ * Other stuff;
+ * https://stackoverflow.com/questions/38730273/how-to-limit-fps-in-a-loop-with-c
  */
 
 // TODO; https://gbdev.io/pandocs/Power_Up_Sequence.html#hardware-registers
@@ -101,31 +104,14 @@ std::string formatCPUState(const CPU &cpu) {
 }
 
 void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
-    std::ofstream logFile("cpu_state_log.txt");
-    
-    if (!logFile.is_open()) {
-        throw std::runtime_error("Unable to open log file.");
-    }
-    
-    std::ifstream blarggFile("Roms/cpu_state.txt");
-    if (!blarggFile.is_open()) {
-        throw std::runtime_error("Unable to open cpu_state.txt.");
-    }
-    
-    std::vector<std::string> blarggStates;
-    std::string line;
-    while (std::getline(blarggFile, line) && blarggStates.size() < 200) {
-        blarggStates.push_back(line);
-    }
-    
-    uint64_t x = 1;
+    const std::chrono::nanoseconds targetFrameDuration(100);
+    int frameCount = 0;
+    auto lastFpsTime = std::chrono::high_resolution_clock::now();
     
     bool running = true;
     
     while (running) {
-        if(x == 78813) {
-            printf("");
-        }
+        auto start = std::chrono::high_resolution_clock::now();
         
         // https://gbdev.io/pandocs/Interrupts.html#ime-interrupt-master-enable-flag-write-only
         if(cpu.ei >= 0) cpu.ei--;
@@ -136,7 +122,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         
         uint16_t cycles = cpu.interruptHandler.handleInterrupt(cpu);
         
-        // If cycles are not 0 then an interrupt happend
+        // If cycles are not 0, then an interrupt happened
         if(!cpu.halted && cycles == 0) {
             uint16_t opcode = cpu.fetchOpCode();
             cycles = cpu.decodeInstruction(opcode);
@@ -144,16 +130,6 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             if(cycles > 0) {
                 printf("??");
             }
-            
-            // bc im too lazy
-            /*if(x == 77915 || x == 78808 || x == 82434 || x == 83327 || x == 84103
-                || x == 86936 || x == 88741 || x == 89631 || x == 91433 || x == 91525
-                || x == 91617 || x == 93082 || x == 93174)*/
-            /*if(sizeof(blarggFile) < x + 1 && blarggStates[x + 1].find("PC: 00:0048") != std::string::npos) {
-                //std::cerr << "Found at; " << blarggStates[x + 1] << "\n";
-                
-                cpu.interruptHandler.IF |= 0x02;
-            }*/
             
             cycles = 4;
         }
@@ -165,35 +141,31 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         cpu.interruptHandler.IF |= timer.interrupt;
         timer.interrupt = 0;
         
+        cpu.interruptHandler.IF |= cpu.mmu.joypad.interrupt;
+        cpu.mmu.joypad.interrupt = 0;
+        
         cpu.interruptHandler.IF |= ppu.lcdc.interrupt;
         ppu.lcdc.interrupt = 0;
         
         cpu.interruptHandler.IF |= ppu.interrupt;
         ppu.interrupt = 0;
         
-        std::string formattedState = formatCPUState(cpu);
-        logFile << formattedState << '\n';
-        //std::cerr << formattedState << " - " << x << "\n";
+        frameCount++;
         
-        if (x < blarggStates.size()) {
-            const std::string &expectedState = blarggStates[x];
-            if (formattedState != expectedState) {
-                /*std::cerr << "Mismatch at iteration " << x << ":\n";
-                std::cerr << "Expected: " << expectedState << "\n";
-                for(int i = 0; i < 1; i++) {
-                    std::cerr << "Expected " << std::to_string(x + i) << ": " << blarggStates[x + i] << "\n";
-                }
-                
-                std::cerr << "Actual  : " << formattedState << "\n";*/
-                
-                //break;
-            }
-        } else if(x > blarggStates.size()) {
-            //std::cerr << "No more expected states to compare.\n";
-            //break;
+        auto end = std::chrono::high_resolution_clock::now();
+        auto frameDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        
+        if (frameDuration < targetFrameDuration) {
+            std::this_thread::sleep_for(targetFrameDuration - frameDuration); // Sleep for the remaining time
         }
         
-        x++;
+        // FPS calculation
+        auto now = std::chrono::high_resolution_clock::now();
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastFpsTime).count() >= 1) {
+            std::cout << "FPS: " << frameCount << '\n';
+            frameCount = 0;
+            lastFpsTime = now;
+        }
     }
 }
 
@@ -391,7 +363,7 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    emulationThread.join();
+    emulationThread.detach();
     
     // Cleanup code
     SDL_DestroyWindow(ppu->window);

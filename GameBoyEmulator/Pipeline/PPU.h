@@ -81,7 +81,8 @@ private:
 	uint8_t bgp = 0;
 	
 	uint8_t frames = 0;
-
+	
+	uint8_t bgPriority[160][144] = { 0 };
 public:
 	uint8_t interrupt;
 	

@@ -21,16 +21,30 @@ class Joypad {
 public:
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
+
+	void checkForInterrupts();
 	
 	void pressButton(Buttons button);
 	void releaseButton(Buttons button);
 	void pressDpad(Dpad dpad);
 	void releaseDpad(Dpad dpad);
+
+public:
+	uint8_t interrupt;
 	
 private:
-	// All buttons pressed by default
-	uint8_t P1 = 0xFF;
+	bool up = false;
+    bool down = false;
+    bool left = false;
+    bool right = false;
+    bool a = false;
+    bool b = false;
+    bool select = false;
+    bool start = false;
 	
-	uint8_t buttonState = 0x0F;
-	uint8_t dpadState = 0x0F;
+    bool button_switch = false;
+    bool direction_switch = false;
+	
+	uint8_t prev_buttons_state = 0b1111;
+	uint8_t prev_dpad_state = 0b1111;
 };

@@ -54,7 +54,11 @@ private:
     
     // I/O
     InterruptHandler& interruptHandler;
+
+public: // TODO; Im too lazy! im sorry..
     Joypad& joypad;
+
+private:
     Serial& serial;
     Timer& timer;
     

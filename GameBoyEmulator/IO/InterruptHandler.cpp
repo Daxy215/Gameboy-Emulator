@@ -28,7 +28,7 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 			cpu.PC = 0x0050;
 		} else if(interrupt & 0x08) { // Serial interrupt
 			cpu.PC = 0x0058;
-		} else if(interrupt & 0x10) { // Joypad interrupt
+		} else if(interrupt & 0x09) { // Joypad interrupt
 			cpu.PC = 0x0060;
 		}
 		

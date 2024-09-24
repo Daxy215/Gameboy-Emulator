@@ -3,14 +3,12 @@
 #include <iostream>
 
 #include <GL/glew.h>
-#include <GL/wglew.h>
 
 #include "LCDC.h"
-#include "OAM.h"
 #include "SDL.h"
-#include "VRAM.h"
 
 #include "../Memory/MMU.h"
+#include "../Utility/Bitwise.h"
 
 const int WIDTH = 640;
 const int HEIGHT = 480;
@@ -67,8 +65,6 @@ void PPU::tick(const int& cycles = 4) {
 		
 		break;
 	case OAMScan:
-		//if(LY + 16 >= spriteY && LY + 16 < spriteY + spriteHeight) {}
-		
 		while(clock >= 80) {
 			fetchSprites();
 			
@@ -110,12 +106,12 @@ void PPU::drawBackground() {
 	
 	int32_t winY = WY;
 	
-	/*if(lcdc.windowEnabled && WX <= 166) {
+	if(lcdc.windowEnabled && WX <= 166) {
 		mmu.write8(0xFF4A, ++WY);
 		winY = WY;
 	} else {
 		winY = -1;
-	}*/
+	}
 	
 	uint8_t bgY = SCY + LY;
 	
@@ -128,13 +124,13 @@ void PPU::drawBackground() {
 		int32_t winX = (static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x);
 		uint32_t bgX = (static_cast<uint32_t>(SCX) + static_cast<uint32_t>(x)) % 256;
 		
-		if(lcdc.windowEnabled && winX >= 0 && winY >= 0) {
-			mmu.write8(0xFF4A, ++WY);
+		if(/*lcdc.windowEnabled && */winX >= 0 && winY >= 0) {
+			//mmu.write8(0xFF4A, ++WY);
 			
 			tilemapAddr = tileWinMapBase;
 			
-			tileY = (static_cast<uint16_t>(winY) >> 3) & 31;
-			tileX = (static_cast<uint16_t>(winX) >> 3) & 31;
+			tileY = (winY >> 3) & 31;
+			tileX = (winX >> 3) & 31;
 			
 			pY = winY & 0x07; // % 8
 			pX = static_cast<uint8_t>(winX) & 0x07; // % 8
@@ -172,15 +168,166 @@ void PPU::drawBackground() {
 		
 		uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
 		
+		bgPriority[x][LY] = pixelColor;
 		updatePixel(static_cast<uint8_t>(x), LY, paletteIndexToColor(pixelColor));
 	}
 }
 
 void PPU::fetchSprites() {
-	uint8_t LCDControl = mmu.fetch8(0xFF40);
-    uint8_t LY = lcdc.LY; //mmu.fetch8(0xFF44);
+	// Following; https://gbdev.io/pandocs/OAM.html
 	
+	if(!lcdc.objEnabled)
+		return;
 	
+	uint8_t LY = lcdc.LY; //mmu.fetch8(0xFF44);
+	uint8_t spriteHeight = lcdc.objSize ? 16 : 8;
+	
+	// TODO; Move this outta here
+	struct Sprite {
+		uint8_t index = 0;
+		int8_t x = 0, y = 0;
+		
+		Sprite() : index(0), x(0), y(0) {}
+		Sprite(uint8_t index, int8_t x, int8_t y) : index(index), x(x), y(y) {}
+	};
+	
+	// Only 10 sprites can e drawn at a time
+	std::vector<Sprite> spriteBuffer(10);
+	
+	/**
+	 * According to (https://gbdev.io/pandocs/OAM.html),
+	 * The PPU can render up to 40 moveble objects,
+	 * but only 10 objects can be displayed per scanline.
+	 */
+	
+	uint8_t index = 0;
+	
+	for(uint8_t i = 0; i < 40; i++) {
+		// 0xFE00 -> OAM
+		uint16_t spriteAdr = 0xFE00 + i * 4;
+		int8_t spriteY = static_cast<int8_t>(mmu.fetch8(spriteAdr + 0) - 16);
+		
+		//if(LY + 16 >= spriteY && LY + 16 < spriteY + spriteHeight) {}
+		if(LY < spriteY || LY >= spriteY + spriteHeight) {
+			continue;
+		}
+		
+		int8_t spriteX = static_cast<int8_t>(mmu.fetch8(spriteAdr + 1) - 8);
+		spriteBuffer[index++] = Sprite(i, spriteX, spriteY);
+		
+		if(index >= 10)
+			break;
+	}
+	
+	// Order sprites by their coordinates
+	/*std::sort(spriteBuffer.begin(), spriteBuffer.begin() + 10, [](const Sprite& a, const Sprite& b) {
+		// Higher x-coordinate has higher priority
+		if (a.x != b.x) {
+			return a.x > b.x; // Sort in descending order by x
+		}
+		
+		return a.index < b.index; // Sort in ascending order by index
+	});*/
+
+	for (auto sprite : spriteBuffer) {
+		if(sprite.x < -7 || sprite.x >= 160)
+			continue;
+		
+		// 0xFE00 -> OAM
+		uint16_t spriteAddr = 0xFE00 + sprite.index * 4;
+
+		// https://gbdev.io/pandocs/OAM.html#byte-3--attributesflags
+		uint16_t tileIndex = (mmu.fetch8(spriteAddr + 2) & (spriteHeight == 16 ? 0xFE : 0xFF));
+		
+		// https://gbdev.io/pandocs/OAM.html#byte-3--attributesflags
+		uint8_t flags = static_cast<uint8_t>(mmu.fetch8(spriteAddr + 3));
+		
+		/**
+		 * 0 - NO
+		 * 1 - BG and Window colors 1-3 are drawn over this obj
+		 */
+		bool priority = check_bit(flags, 7);
+		
+		/**
+		 * 0 = Normal
+		 * 1 = Entire OBJ is vertically mirrored
+		 */
+		bool flipY = check_bit(flags, 6);
+		
+		/**
+		 * 0 = Normal
+		 * 1 = Entire OBJ is horizxontally mirrored
+		 */
+		bool flipX = check_bit(flags, 5);
+		
+		/**
+		 * Non CGB Mode only
+		 *
+		 * 0 - OBP0
+		 * 1 - OBP1
+		 */
+		bool dmgPallete = check_bit(flags, 4);
+		
+		/**
+		 * CGB Mode only
+		 * 0 - Fetch from VRAM bank 0
+		 * 1 - Fetch from VRam bank 1
+		 */
+		bool bank = check_bit(flags, 3);
+		
+		/**
+		 * CGB Mode only
+		 *
+		 * Which OBP0-7 to use
+		 */
+		bool pallete = check_bit(flags, 2);
+		
+		uint16_t tileY = flipY ? (spriteHeight - 1 - (LY - sprite.y)) : (LY - sprite.y);
+		
+		/**
+		 * According to https://gbdev.io/pandocs/Tile_Data.html
+		 *
+		 * Objects always use “$8000 addressing”, but the BG and Window can use either mode, controlled by LCDC bit 4.
+		 */
+		uint16_t tileAddr = 0x8000 + tileIndex * 16 + tileY * 2;
+		
+		// TODO; For CGB check BANK
+		uint8_t d0 = mmu.fetch8(tileAddr + 0);
+		uint8_t d1 = mmu.fetch8(tileAddr + 1);
+		
+		/**
+		 * From what I understand is that the,
+		 * GameBoy PPU works in pixels rather than tiles.
+		 *
+		 * So 8 here is the width of every sprite.
+		 * As only the height changes from 8-16,
+		 * I don't need any extra checkls
+		 */
+		for(uint8_t x = 0; x < 8; x++) {
+			if (sprite.x + x < 0 || sprite.x + x >= 160)
+				continue;
+			
+			uint8_t pX = flipX ? (7 - x) : x;
+			
+			// Just copied this from 'drawBackground'
+			uint8_t pixel = (d0 >> pX) & 1;
+			pixel |= (((d1 >> pX) & 1) << 1);
+			
+			if (pixel == 0)
+				continue;
+			
+			// TODO; Do background priority! 
+			uint8_t pixelColor = dmgPallete ? OBJ1Palette[pixel] : OBJ0Palette[pixel];
+			
+			for (uint8_t y = 0; y < spriteHeight; y++) {
+				if(priority && bgPriority[(sprite.x + x)][sprite.y + y] == 0) {
+					continue;
+				}
+				
+				updatePixel(static_cast<uint8_t>(sprite.x + x), static_cast<uint8_t>(sprite.y + y), paletteIndexToColor(pixelColor));
+			}
+		}
+	}
 }
 
 void PPU::write8(uint16_t address, uint8_t data) {
