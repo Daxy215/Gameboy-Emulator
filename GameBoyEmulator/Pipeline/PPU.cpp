@@ -18,25 +18,49 @@ PPU::PPUMode PPU::mode = PPU::HBlank;
 void PPU::tick(const int& cycles = 4) {
 	this->clock += cycles;
 	
+	/*if(!lcdc.enable)
+		return;*/
+	
 	//uint8_t LCDControl = mmu.fetch8(0xFF40);
+	uint8_t LYC = mmu.fetch8(0xFF45);
 	uint8_t& LY = lcdc.LY;//mmu.fetch8(0xFF44);
-	//uint8_t WY = mmu.fetch8(0xFF4A);
-	/*uint8_t LYC = mmu.fetch8(0xFF45);
-	uint8_t SCY = mmu.fetch8(0xFF42);
 	uint8_t SCX = mmu.fetch8(0xFF43);
+	/*uint8_t WY = mmu.fetch8(0xFF4A);
+	uint8_t SCY = mmu.fetch8(0xFF42);
 	uint8_t WX = mmu.fetch8(0xFF4B);*/
+	
+	/*uint8_t HBlankCycles = 0;
+
+	switch (SCX & 7) {
+	case 0:
+		HBlankCycles = 204;
+		break;
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+		HBlankCycles = 200;
+		break;
+	case 5:
+	case 6:
+	case 7:
+		HBlankCycles = 196;
+		break;
+	default:
+		std::cerr << "BREUWH\n";
+		break;
+	}*/
 	
 	// Following ;https://hacktix.github.io/GBEDG/ppu/#h-blank-mode-0
 	switch (mode) {
 	case HBlank:
 		while(clock >= 204) {
-			//mmu.write8(0xFF44, ++LY);
 			LY++;
 			
-			if(LY == 144) {
+			if(LY >= 144) {
 				// VBlank interrupt
 				interrupt |= 0x01;
-				frames++;
+				//frames++;
 				
 				mode = VBlank;
 				SDL_RenderPresent(renderer);
@@ -50,14 +74,21 @@ void PPU::tick(const int& cycles = 4) {
 		break;
 	case VBlank:
 		while(clock >= 4560) {
-			test = false;
-			//mmu.write8(0xFF44, ++LY);
 			LY++;
 			
+			/*if(LYC == LY) {
+				interrupt |= 0x02;
+			}*/
+			
 			if(LY >= 154) {
-				//mmu.write8(0xFF44, LY = 0);
 				LY = 0;
+				//lcdc.WX = 0;
+				
 				mode = OAMScan;
+				
+				/*if(LYC == LY) {
+					interrupt |= 0x02;
+				}*/
 			}
 			
 			clock -= 4560;
@@ -77,11 +108,6 @@ void PPU::tick(const int& cycles = 4) {
 		while(clock >= 172) {
 			drawBackground();
 			
-			/*if(LY == WY) {
-				mmu.write8(0xFF4A, 0);
-				test = true;
-			}*/
-			
 			mode = HBlank;
 			clock -= 172;
 		}
@@ -91,18 +117,15 @@ void PPU::tick(const int& cycles = 4) {
 }
 
 void PPU::drawBackground() {
-    uint8_t LY = mmu.fetch8(0xFF44);
-    uint8_t SCY = mmu.fetch8(0xFF42);
-    uint8_t SCX = mmu.fetch8(0xFF43);
-	uint8_t WY = mmu.fetch8(0xFF4A);
-	uint8_t WX = mmu.fetch8(0xFF4B);
+    uint8_t LY  = lcdc.LY;//mmu.fetch8(0xFF44);
+    uint8_t SCY = lcdc.SCY;//mmu.fetch8(0xFF42);
+    uint8_t SCX = lcdc.SCX;//mmu.fetch8(0xFF43);
+	uint8_t WY  = lcdc.WY;//mmu.fetch8(0xFF4A);
+	uint8_t WX  = lcdc.WX;//mmu.fetch8(0xFF4B);
 	
 	uint16_t tileWinMapBase = lcdc.windowTileMapArea  ? 0x9C00 : 0x9800;
 	uint16_t tileBGMapBase  = lcdc.bgTileMapArea      ? 0x9C00 : 0x9800;
 	uint16_t tileBGMap      = lcdc.bgWinTileDataArea  ? 0x8000 : 0x8800;
-	
-	if(!lcdc.bgWindowEnabled)
-		return;
 	
 	int32_t winY = WY;
 	
@@ -113,7 +136,10 @@ void PPU::drawBackground() {
 		winY = -1;
 	}
 	
-	uint8_t bgY = SCY + LY;
+	if(winY < 0 && !lcdc.enable)
+		return;
+	
+	uint8_t bgY = (SCY + LY) % 256;
 	
 	uint16_t tilemapAddr;
 	uint16_t tileX, tileY, pY;
@@ -121,7 +147,7 @@ void PPU::drawBackground() {
 	
 	// 160 = Screen width
 	for(size_t x = 0; x < 160; x++) {
-		int32_t winX = (static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x);
+		int32_t winX = ((static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x)) % 256;
 		uint32_t bgX = (static_cast<uint32_t>(SCX) + static_cast<uint32_t>(x)) % 256;
 		
 		if(/*lcdc.windowEnabled && */winX >= 0 && winY >= 0) {
@@ -137,8 +163,8 @@ void PPU::drawBackground() {
 		} else {
 			tilemapAddr = tileBGMapBase;
 			
-			tileY = bgY >> 3 & 31;
-			tileX = bgX >> 3 & 31;
+			tileY = (bgY >> 3) & 31;
+			tileX = (bgX >> 3) & 31;
 			
 			pY = bgY & 0x07;
 			pX = static_cast<uint8_t>(bgX) & 0x07;
@@ -228,7 +254,7 @@ void PPU::fetchSprites() {
 		
 		return a.index < b.index; // Sort in ascending order by index
 	});*/
-
+	
 	for (auto sprite : spriteBuffer) {
 		if(sprite.x < -7 || sprite.x >= 160)
 			continue;
@@ -316,7 +342,6 @@ void PPU::fetchSprites() {
 			if (pixel == 0)
 				continue;
 			
-			// TODO; Do background priority! 
 			uint8_t pixelColor = dmgPallete ? OBJ1Palette[pixel] : OBJ0Palette[pixel];
 			
 			for (uint8_t y = 0; y < spriteHeight; y++) {
@@ -325,6 +350,7 @@ void PPU::fetchSprites() {
 				}
 				
 				updatePixel(static_cast<uint8_t>(sprite.x + x), static_cast<uint8_t>(sprite.y + y), paletteIndexToColor(pixelColor));
+				//updatePixel(static_cast<uint8_t>(sprite.x + x), static_cast<uint8_t>(sprite.y + y), 0xFFFF0000);
 			}
 		}
 	}
@@ -448,6 +474,11 @@ void PPU::setPixel(uint8_t x, uint8_t y, uint32_t color) {
 	
 	uint32_t* pixels = static_cast<uint32_t*>(surface->pixels);
 	pixels[(y * surface->w) + x] = color;
+}
+
+void PPU::reset() {
+	clock = 0;
+	//frames = 0;
 }
 
 SDL_Texture* PPU::createTexture(uint8_t width, uint8_t height) {

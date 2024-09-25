@@ -31,6 +31,9 @@
  * http://www.codeslinger.co.uk/pages/projects/gameboy/banking.html
  * https://robertovaccari.com/gameboy/memory_map.png
  * https://blog.tigris.fr/2019/09/15/writing-an-emulator-the-first-pixel/
+ * 
+ * Helped with understanding blargg's test roms:
+ * https://github.com/retrio/gb-test-roms/blob/master/
  *
  * Main guide:
  * https://gbdev.io/pandocs/Specifications.html
@@ -126,6 +129,9 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         if(!cpu.halted && cycles == 0) {
             uint16_t opcode = cpu.fetchOpCode();
             cycles = cpu.decodeInstruction(opcode);
+            
+            /*cycles += cpu.mmu.cycles;
+            cpu.mmu.cycles = 0;*/
         } else if(cpu.halted) {
             if(cycles > 0) {
                 printf("??");
@@ -162,7 +168,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         // FPS calculation
         auto now = std::chrono::high_resolution_clock::now();
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastFpsTime).count() >= 1) {
-            std::cout << "FPS: " << frameCount << '\n';
+            //std::cout << "FPS: " << frameCount << '\n';
             frameCount = 0;
             lastFpsTime = now;
         }
@@ -182,12 +188,13 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Tetris 2.gb";
     //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
-    std::string filename = "Roms/dmg-acid2.gb";
+    //std::string filename = "Roms/dmg-acid2.gb";
     
     //std::string filename = "Roms/window_y_trigger.gb";
     //std::string filename = "Roms/window_y_trigger_wx_offscreen.gb";
     
     //std::string filename = "Roms/testRom1.gb";
+    
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // Passed
@@ -203,8 +210,32 @@ int main(int argc, char* argv[]) {
     
     //std::string filename = "Roms/halt_bug.gb"; // TODO;
     //std::string filename = "Roms/instr_timing/instr_timing.gb"; // Passed
+    
+    // MEMORY TIMING
     //std::string filename = "Roms/mem_timing/mem_timing.gb"; // TODO;
-    //std::string filename = "Roms/mooneye/emulator-only/mbc1/bits_bank1.gb"; // TODO;
+    //std::string filename = "Roms/mem_timing/individual/01-read_timing.gb"; // TODO;
+    //std::string filename = "Roms/mem_timing/individual/02-write_timing.gb"; // TODO;
+    //std::string filename = "Roms/mem_timing/individual/03-modify_timing.gb"; // TODO;
+    
+    // OAM BUG
+    //std::string filename = "Roms/tests/blargg/oam_bug/oam_bug.gb"; // TODO;
+    std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/1-lcd_sync.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/2-causes.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/3-non_causes.gb"; // Passed
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/4-scanline_timing.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/5-timing_bug.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/6-timing_no_bug.gb"; // Passed
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/7-timing_effect.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/8-instr_effect.gb"; // TODO;
+    
+    // Mooneye
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TODO
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // TODO
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // TODO
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // TODO
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // TODO
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
     
@@ -366,7 +397,7 @@ int main(int argc, char* argv[]) {
     emulationThread.detach();
     
     // Cleanup code
-    SDL_DestroyWindow(ppu->window);
+    //SDL_DestroyWindow(ppu->window);
     SDL_Quit();
     
     return 0;

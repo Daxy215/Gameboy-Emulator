@@ -45,6 +45,9 @@ public:
     void write16(uint16_t address, uint16_t data);
     
     void clear();
+
+public:
+    uint16_t cycles;
     
 private:
     uint8_t wramBank = 1;

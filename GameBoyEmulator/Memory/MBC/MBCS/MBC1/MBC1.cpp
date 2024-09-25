@@ -10,9 +10,9 @@ MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
 }
 
 uint8_t MBC1::fetch8(uint16_t address) {
-	if(address <= 0x3FFF) { // bank 0 (fixed)
+	if(address < 0x4000) { // bank 0 (fixed)
 		return rom[address];
-	} else if(address >= 0x4000 && address <= 0x7FFF) {
+	} else if(address < 0x8000) {
 		// Switchable ROM bank
 		// bank 0 isn't allowed in this region
 		uint8_t bank = (curRomBank == 0) ? 1 : curRomBank;
@@ -23,7 +23,7 @@ uint8_t MBC1::fetch8(uint16_t address) {
 		// Switchable RAM bank
 		if (ramEnabled) {
 			uint16_t addr = address - 0xA000;
-			uint8_t bank = (curRamBank == 0 && bankingMode) ? 1 : curRamBank;
+			uint8_t bank = (curRomBank == 0 && bankingMode) ? 1 : curRomBank;
 			
 			return eram[addr + (bank * 0x2000)];
 		}
@@ -36,7 +36,7 @@ uint8_t MBC1::fetch8(uint16_t address) {
 
 void MBC1::write8(uint16_t address, uint8_t data) {
 	// RAM enabling (0x0000 - 0x1FFF)
-	if (address < 0x1FFF) {
+	if (address < 0x2000) {
 		/**
 		 * According to;
 		 * https://gbdev.io/pandocs/MBC1.html
@@ -46,48 +46,34 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 		 * It is unknown why $A is the value used to enable RAM.
 		 */
 		
-		uint8_t testData = data & 0xF;
-		ramEnabled = (testData == 0xA);
+		ramEnabled = (data & 0x0F) == 0xA;
 	}
 	// ROM bank switching (0x2000 - 0x3FFF)
-	else if (address >= 0x2000 && address < 0x3FFF) {
-		curRomBank &= 0xE0; // Clear lower 5 bits
-		curRomBank = (data & 0x1F); // Set new lower 5 bits
+	else if (address >= 0x2000 && address <= 0x3FFF) {
+		curRomBank = data & 0x1F;
+		 
+		if(curRomBank == 0)
+			curRomBank = 1;
 	}
 	// ROM or RAM bank switching (0x4000 - 0x5FFF)
-	else if (address >= 0x4000 && address < 0x5FFF) {
-		if (bankingMode) {
+	else if (address >= 0x4000 && address < 0x6000) {
+		if (!bankingMode) {
 			// ROM bank switching (high bits)
 			curRomBank &= 0x1F; // Clear upper bits
 			curRomBank |= ((data & 0x3) << 5); // Set upper 2 bits (5 and 6)
-			
-			if (curRomBank == 0)
-				curRomBank++; // Avoid ROM bank 0
 		} else {
 			curRamBank = data & 0x3;
 		}
 	}
 	// ROM/RAM mode selection (0x6000 - 0x7FFF)
-	else if (address >= 0x6000 && address < 0x8000) {
-		bankingMode = (data & 0x1) == 0;
-		
-		if (bankingMode) {
-			curRomBank = 1;
-		} else {
-			curRamBank = 0;
-		}
-	} else if(address >= 0xA000 && address < 0xBFFF) {
+	else if (address >= 0x6000 && address < 0x7FFF) {
+		bankingMode = data & 0x1;
+	} else if(address >= 0xA000 && address < 0xC000) {
 		if(!ramEnabled) {
 			return;
 		}
 		
 		uint16_t addr = address - 0xA000;
-		//if(bankingMode) {
 		eram[addr + (curRamBank * 0x2000)] = data;
-		/*} else {
-			eram[addr] = data;
-		}*/
-		
-		// TODO; Disable after use? Is it needed?
 	}
 }

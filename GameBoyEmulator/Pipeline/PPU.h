@@ -5,12 +5,12 @@
 
 #include "Fetcher.h"
 
-struct Pixel {
+/*struct Pixel {
 	uint8_t color;
 	uint8_t palette;
 	bool spritePriority;
 	bool bgPriority;
-};
+};*/
 
 class VRAM;
 class OAM;
@@ -51,6 +51,7 @@ public:
 	
 	void updatePixel(uint8_t x, uint8_t y, uint32_t color);
 	void setPixel(uint8_t x, uint8_t y, uint32_t color);
+	void reset();
 
 	// TODO; Remove
 	
@@ -75,11 +76,11 @@ public:
 	static PPUMode mode;
 
 private:
-	bool test = false;
+	//bool test = false;
 	uint32_t clock = 0;
 	//uint8_t mode = 0;
 	
-	uint8_t frames = 0;
+	//uint8_t frames = 0;
 	
 	uint8_t bgPriority[160][144] = { 0 };
 public:
@@ -90,10 +91,10 @@ private:
 	
 	VRAM& vram;
 	OAM& oam;
-
+	
 public:
 	LCDC& lcdc;
-
+	
 private:
 	MMU& mmu;
 	
@@ -106,7 +107,7 @@ public:
 	uint8_t OBJ0Palette[4];
 	uint8_t OBJ1Palette[4];
 	
-public:
+private:
 	SDL_Window* window;
 	SDL_GLContext sdl_context;
 	SDL_Renderer* renderer;

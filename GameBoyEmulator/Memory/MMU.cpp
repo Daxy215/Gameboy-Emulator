@@ -42,8 +42,8 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address == 0xFFFF) {
         return interruptHandler.fetch8(address);
     } else {
-        printf("Unknown fetch address %x\n", address);
-        std::cerr << "";
+        /*printf("Unknown fetch address %x\n", address);
+        std::cerr << "";*/
     }
     
     return 0xFF;
@@ -99,8 +99,8 @@ uint8_t MMU::fetchIO(uint16_t address) {
         //std::cerr << "CGB WRAM Bank Select\n";
         return wramBank;
     } else {
-        printf("IO Fetch Address; %x\n", address);
-        std::cerr << "";
+        /*printf("IO Fetch Address; %x\n", address);
+        std::cerr << "";*/
     }
     
     return 0;
@@ -135,8 +135,8 @@ void MMU::write8(uint16_t address, uint8_t data) {
     } else if (address == 0xFFFF) {
         interruptHandler.write8(address, data);
     } else {
-        printf("Unknown write address %x - %x\n", address, data);
-        std::cerr << "";
+        /*printf("Unknown write address %x - %x\n", address, data);
+        std::cerr << "";*/
     }
 }
 
@@ -159,10 +159,38 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
         if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
+            bool wasEnabled = lcdc.enable;
+            
             lcdc.write8(address, data);
+            
+            if(address == 0xFF40) {
+                /**
+                 * LCDC is being turned on
+                 */
+                if(!wasEnabled && lcdc.enable) {
+                    if(PPU::mode == PPU::VBlank) {
+                        printf("nooo...");
+                        //return;
+                    }
+                    
+                    PPU::mode = PPU::VBlank;
+                    lcdc.LY = 0;
+                    ppu.reset();
+                } else if(wasEnabled && !lcdc.enable) {
+                    ppu.reset();
+                }
+            }
+            
         } else if(address == 0xFF46) {
             //  $FF46	DMA	OAM DMA source address & start
             uint16_t u16 = (static_cast<uint16_t>(data)) << 8;
+            //uint16_t endAddr = u16 | 0x9F;
+            
+            /*for(uint16_t i = u16; i < endAddr; i++) {
+                uint16_t dif = i - u16;
+                uint8_t val = fetch8(dif);
+                write8(0xFE00 + i, val);
+            }*/
             
             for(uint16_t i = 0; i < 160; i++) {
                 uint8_t val = fetch8(u16 + i);
@@ -189,8 +217,8 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         //std::cerr << "CGB WRAM Bank Select\n";
         wramBank = (data & 0x7) == 0 ? 1 : static_cast<size_t>(data & 0x7);
     } else {
-        printf("IO Write Address; %x = %x\n", address, data);
-        std::cerr << "";
+        /*printf("IO Write Address; %x = %x\n", address, data);
+        std::cerr << "";*/
     }
 }
 

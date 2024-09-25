@@ -42,7 +42,7 @@ public: //TODO; I am too lazy.. Make this private
 	 * Controls whether LCD and PPU are active.
 	 * If not, full access to VRAM, OAM, etc. is granted.
 	 */
-	bool enable;
+	bool enable = false;
 	
 	/**
 	 * https://gbdev.io/pandocs/LCDC.html#lcdc6--window-tile-map-area

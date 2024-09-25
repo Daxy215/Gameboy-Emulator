@@ -1925,7 +1925,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 		
     	case 0xBE: {
 	        /**
-			 * CP A, (HL)
+			 * CP A, (HL) - Compare contents
 			 * 1, 8
 			 * Z 1 H C
 			 */

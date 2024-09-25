@@ -15,6 +15,14 @@ MBC::MBC(Cartridge cartridge, std::vector<uint8_t> rom) {
 		curMBC = std::make_unique<MBC1>(cartridge, rom);
 		
 		break;
+	case enums::MBC1_RAM:
+		curMBC = std::make_unique<MBC1>(cartridge, rom);
+		
+		break;
+	case enums::MBC1_RAM_BATTERY:
+		curMBC = std::make_unique<MBC1>(cartridge, rom);
+		
+		break;
 	}
 }
 
