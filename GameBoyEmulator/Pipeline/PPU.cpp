@@ -111,9 +111,9 @@ void PPU::tick(const int& cycles = 4) {
 				// VBlank interrupt
 				interrupt |= 0x01;
 				
-				if((lcdc.status & 0x40) && LYC == LY) {
+				/*if((lcdc.status & 0x40) && LYC == LY) {
 					interrupt |= 0x02;
-				}
+				}*/
 				
 				if(lcdc.status & 0x10) {
 					interrupt |= 0x02;
@@ -170,7 +170,7 @@ void PPU::drawBackground() {
 	// 160 = Screen width
 	for(size_t x = 0; x < 160; x++) {
 		int32_t winX = drawWindow ? -(static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x) : -1;
-		uint32_t bgX = static_cast<uint32_t>(SCX + x) % 256;
+		uint8_t bgX = static_cast<uint8_t>(x) + SCX;
 		
 		uint16_t tilemapAddr;
 		uint16_t tileX, tileY;
@@ -187,11 +187,11 @@ void PPU::drawBackground() {
 		} else {
 			tilemapAddr = tileBGMapBase;
 			
-			tileY = (static_cast<uint16_t>(bgY) >> 3);
-			tileX = (static_cast<uint16_t>(bgX) >> 3);
+			tileY = (bgY >> 3) & 31;
+			tileX = (bgX >> 3) & 31;
 			
 			pY = bgY & 0x07;
-			pX = static_cast<uint8_t>(bgX) & 0x07;
+			pX = 7 - (bgX & 0x07);
 		}
 		
 		uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
@@ -207,7 +207,7 @@ void PPU::drawBackground() {
 		}
 		
 		// Tiles are flipped by default
-		pX = 7 - pX;
+		//pX = 7 - pX;
 		
 		uint16_t address = offset + (pY * 2);
 		uint8_t b0 = mmu.fetch8(address);

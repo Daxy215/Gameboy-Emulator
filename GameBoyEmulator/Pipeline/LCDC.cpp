@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <string>
 
 #include "PPU.h"
 #include "../Utility/Bitwise.h"
@@ -80,7 +81,12 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		SCY = data;
 	} else if(address == 0xFF43) {
 		// $FF43	SCX	Viewport X position	R/W	All
+		if(SCX == 0 && data != 0) {
+			printf("F");
+		}
+		
 		SCX = data;
+		std::cerr << "SCX: " << std::to_string(SCX) << "\n";
 	} else if(address == 0xFF44) {
 		// https://gbdev.io/pandocs/STAT.html#ff44--ly-lcd-y-coordinate-read-only
 		// This is meant to be read only

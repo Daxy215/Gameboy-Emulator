@@ -1534,7 +1534,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 *
 			 * Z 0 1 0
 			 */
-
+			
         	// Will always result in the same value,
         	// no need to do an AND operation.
         	//AF.A &= AF.A;
@@ -1546,7 +1546,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
             
         	return 4;
 		}
-
+		
 		case 0xA8: {
 	        /**
 	         * XOR A, B

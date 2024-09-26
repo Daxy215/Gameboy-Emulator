@@ -122,7 +122,7 @@ void MMU::write8(uint16_t address, uint8_t data) {
         mbc.write(address, data);
     } else if(address >= 0x8000 && address < 0xA000) {
         vram.write8(address - 0x8000, data);
-    } else if (address >= 0xA000 && address < 0xC000) {
+    } else if (address >= 0xA000 && address < 0xBFFF) {
         mbc.write(address, data);
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         wram.write8(address - 0xC000, data);
@@ -164,6 +164,28 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         
         if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
             bool wasEnabled = lcdc.enable;
+            
+            /*
+            // SCX
+            if(address == 0xFF43 && PPU::mode == PPU::HBlank && data == 0) {
+                /**
+                 * So there really isn't any mention of this..
+                 * As I'm too lazy to debug it further (it's been 6 hours..).
+                 *
+                 * It seems while playing "Super Mario Land" for example,
+                 * that when you move to the right, it writes an opcode,
+                 * 0xE0 - LD (FF00 + U8), A.
+                 *
+                 * But the value of A is always 0, so it's kind of just,
+                 * doing this glitch where SCX is let's say 4, then it,
+                 * goes back to 0, then 4 again, then 0. Etc...
+                 *
+                 * Which causes this weird sudden change mid-scanline...
+                 *
+                 * THIS APPARENTLY DOESN'T FIX IT YAAAYY ;-;
+                 #1#
+                return;
+            }*/
             
             lcdc.write8(address, data);
             
