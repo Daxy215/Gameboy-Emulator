@@ -6,6 +6,7 @@
 #include "HRAM.h"
 #include "../Pipeline/VRAM.h"
 #include "WRAM.h"
+#include "../APU/APU.h"
 
 #include "../IO/InterrupHandler.h"
 #include "../Pipeline/LCDC.h"
@@ -63,9 +64,10 @@ uint8_t MMU::fetchIO(uint16_t address) {
         //std::cerr << "Interrupts\n";
         return interruptHandler.fetch8(address);
     } else if(address >= 0xFF10 && address <= 0xFF26) {
-        //std::cerr << "Wave pattern\n";
+        return apu.fetch8(address);
     } else if(address >= 0xFF30 && address <= 0xFF3F) {
         //std::cerr << "Wave pattern\n";
+        return apu.fetch8(address);
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
@@ -159,14 +161,18 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         interruptHandler.write8(address, data);
     } else if(address >= 0xFF10 && address <= 0xFF26) {
         //std::cerr << "Wave pattern\n";
+        apu.write8(address, data);
+    } else if(address >= 0xFF30 && address <= 0xFF3F) {
+        //std::cerr << "Wave pattern\n";
+        apu.write8(address, data);
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
         if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
             bool wasEnabled = lcdc.enable;
             
-            /*
-            // SCX
+            /* SCX ISSUE
+             * 
             if(address == 0xFF43 && PPU::mode == PPU::HBlank && data == 0) {
                 /**
                  * So there really isn't any mention of this..
@@ -186,6 +192,19 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
                  #1#
                 return;
             }*/
+            
+            /**
+             * After debugging the SCX issue further,
+             *  
+             * I have noticed that if I ignore writes of,
+             * 0 to SCX, the top winodw doesn't move alongside,
+             * the character. So it seems like it's setting it,
+             * to be 0 for the top part of the screen, then,
+             * the origianl value for the game.
+             * 
+             * But I am messeing up something somewhere,
+             * so luckily I wont have to trace a CPU isntruction!!!
+             */
             
             lcdc.write8(address, data);
             

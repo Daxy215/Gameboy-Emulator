@@ -4,6 +4,7 @@
 #include <sstream>
 #include <thread>
 
+#include "APU/APU.h"
 #include "CPU/CPU.h"
 
 #include "IO/InterrupHandler.h"
@@ -143,6 +144,9 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         timer.tick(cycles);
         ppu.tick(cycles);
         
+        // Again I'm lazy
+        cpu.mmu.apu.tick(cycles);
+        
         // Apply interrupts if any occured
         cpu.interruptHandler.IF |= timer.interrupt;
         timer.interrupt = 0;
@@ -186,10 +190,10 @@ int main(int argc, char* argv[]) {
 
     // GAMES
     
-    //std::string filename = "Roms/Tennis (World).gb";
+    std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/Tetris 2.gb";
     //std::string filename = "Roms/TETRIS.gb";
-    std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
+    //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb";
     
     // TESTS
@@ -286,9 +290,10 @@ int main(int argc, char* argv[]) {
     VRAM vram(lcdc);
     
     PPU* ppu;
+    APU apu;
     
     // Create MMU
-    MMU mmu(interruptHandler, joypad, mbc, wram, hram, vram, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), memory);
+    MMU mmu(interruptHandler, joypad, mbc, wram, hram, vram, lcdc, serial, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), apu, memory);
     
     // Listen.. I'm too lazy to deal with this crap
     ppu = &mmu.ppu;

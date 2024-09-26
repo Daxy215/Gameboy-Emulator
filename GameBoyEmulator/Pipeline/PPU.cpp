@@ -191,7 +191,7 @@ void PPU::drawBackground() {
 			tileX = (bgX >> 3) & 31;
 			
 			pY = bgY & 0x07;
-			pX = 7 - (bgX & 0x07);
+			pX =(bgX & 0x07);
 		}
 		
 		uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
@@ -207,7 +207,7 @@ void PPU::drawBackground() {
 		}
 		
 		// Tiles are flipped by default
-		//pX = 7 - pX;
+		pX = 7 - pX;
 		
 		uint16_t address = offset + (pY * 2);
 		uint8_t b0 = mmu.fetch8(address);

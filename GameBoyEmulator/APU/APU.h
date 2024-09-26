@@ -28,13 +28,20 @@
 
 class APU {
 public:
-	void tick();
+	void tick(uint32_t cycles);
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
 	
 private:
+	bool enabled = false;
+	
+	bool vinLeft = false, vinRight = false;
+	
+	uint8_t leftVolume = 0;
+	uint8_t rightVolume = 0;
+	
 	PulseChannel ch1, ch2;
 	WaveChannel ch3;
-	NoiseChanel c4;
+	NoiseChanel ch4;
 };

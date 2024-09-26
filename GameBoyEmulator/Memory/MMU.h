@@ -17,9 +17,11 @@ class LCDC;
 class VRAM;
 class OAM;
 
+class APU;
+
 class MMU {
 public:
-    MMU(InterruptHandler& interruptHandler, Joypad& joypad, MBC& mbc, WRAM& wram, HRAM& hram, VRAM& vram, LCDC& lcdc, Serial& serial, Timer& timer, OAM& oam, PPU& ppu, const std::vector<uint8_t>& memory)
+    MMU(InterruptHandler& interruptHandler, Joypad& joypad, MBC& mbc, WRAM& wram, HRAM& hram, VRAM& vram, LCDC& lcdc, Serial& serial, Timer& timer, OAM& oam, PPU& ppu, APU& apu, const std::vector<uint8_t>& memory)
         : interruptHandler(interruptHandler),
           joypad(joypad),
           serial(serial),
@@ -30,10 +32,10 @@ public:
           vram(vram),
           lcdc(lcdc),
           oam(oam),
-          ppu(ppu) {
-        
+          ppu(ppu),
+          apu(apu) {
     }
-    
+
     uint8_t fetch8(uint16_t address);
     uint8_t fetchIO(uint16_t address);
     
@@ -76,7 +78,8 @@ private:
 
 public:
     PPU& ppu;
-    
+
+    APU& apu;
 /*public:
     std::vector<uint8_t> memory;*/
 };

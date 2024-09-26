@@ -16,10 +16,12 @@ struct NoiseChanel {
 		return (bit0 ? volume : -volume);
 	}
 	
-	uint8_t volume;
+	uint8_t volume = 0;
 	
 	// Linear Feedback Shift Register
-	uint16_t lfsr;
+	uint16_t lfsr = 0;
 	
 	bool enabled;
+	bool left = false;
+	bool right = false;
 };

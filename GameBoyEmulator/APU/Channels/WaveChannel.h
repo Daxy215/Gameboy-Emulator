@@ -20,10 +20,12 @@ struct WaveChannel {
 		return volume * (sample / 15.0f);
 	}
 	
-	uint8_t frequency;
-	uint8_t volume;
+	uint8_t frequency = 0;
+	uint8_t volume = 0;
 	
-	bool enabled;
+	bool enabled = false;
+	bool left = false;
+	bool right = false;
 	
 	std::vector<uint8_t> waveform;
 };
