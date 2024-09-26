@@ -67,8 +67,7 @@ void PPU::tick(const int& cycles = 4) {
 		
 		case HBlank: {
 			if (currentDot >= SCANLINE_DOTS) {
-				drawBackground();
-				fetchSprites();
+				drawScanline();
 				
 				currentDot = 0;
 				LY = (LY + 1);
@@ -126,6 +125,15 @@ void PPU::tick(const int& cycles = 4) {
 	}
 }
 
+void PPU::drawScanline() {
+	for (bool& i : bgPriority) {
+		i = false;
+	}
+	
+	drawBackground();
+	drawSprites();
+}
+
 void PPU::drawBackground() {
     uint8_t  LY  = lcdc.LY;//mmu.fetch8(0xFF44);
     uint8_t  SCY = lcdc.SCY;//mmu.fetch8(0xFF42);
@@ -150,15 +158,14 @@ void PPU::drawBackground() {
 	
 	// 160 = Screen width
 	for(size_t x = 0; x < 160; x++) {
-        int32_t winX = drawWindow ? -(static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x) : -1;
+        int32_t winX = drawWindow ? (-(static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x)) % 256 : -1;
 		uint32_t bgX = (SCX + x) % 256;
 		
 		uint16_t tilemapAddr;
 		uint16_t tileX, tileY;
 		uint8_t pY, pX;
-		uint8_t tileID;
-		
-		if(drawWindow && winX >= 0) {
+
+        if(drawWindow && winX >= 0) {
 			tilemapAddr = tileWinMapBase;
 			
 			tileY = (static_cast<uint16_t>(winLineCounter - 1) >> 3);
@@ -166,8 +173,6 @@ void PPU::drawBackground() {
 			
 			pY = (winLineCounter - 1) & 0x07; // % 8
 			pX = static_cast<uint8_t>(winX) & 0x07; // % 8
-			
-			SDL_RenderPresent(renderer);
 		} else {
 			tilemapAddr = tileBGMapBase;
 			
@@ -178,7 +183,7 @@ void PPU::drawBackground() {
 			pX = static_cast<uint8_t>(bgX) & 0x07;
 		}
 		
-		tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
+		uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
 		
 		uint16_t offset;
 		
@@ -194,19 +199,18 @@ void PPU::drawBackground() {
 		pX = 7 - pX;
 		
 		uint16_t address = offset + (pY * 2);
-		uint8_t d0 = mmu.fetch8(address);
-		uint8_t d1 = mmu.fetch8(address + 1);
+		uint8_t b0 = mmu.fetch8(address);
+		uint8_t b1 = mmu.fetch8(address + 1);
 		
-		uint8_t pixel = ((d0 >> pX) & 1) | (((d1 >> pX) & 1) << 1);
-		
+		uint8_t pixel = ((b0 >> pX) & 1) | (((b1 >> pX) & 1) << 1);
 		uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
 		
-		bgPriority[x][LY] = pixelColor;
+		bgPriority[x] = pixelColor == 0;
 		updatePixel(static_cast<uint8_t>(x), LY, paletteIndexToColor(pixelColor));
 	}
 }
 
-void PPU::fetchSprites() {
+void PPU::drawSprites() {
 	// Following; https://gbdev.io/pandocs/OAM.html
 	
 	if(!lcdc.objEnabled)
@@ -218,10 +222,10 @@ void PPU::fetchSprites() {
 	// TODO; Move this outta here
 	struct Sprite {
 		uint8_t index = 0;
-		int8_t x = 0, y = 0;
+		int16_t x = 0, y = 0;
 		
 		Sprite() : index(0), x(0), y(0) {}
-		Sprite(uint8_t index, int8_t x, int8_t y) : index(index), x(x), y(y) {}
+		Sprite(uint8_t index, int16_t x, int16_t y) : index(index), x(x), y(y) {}
 	};
 	
 	// Only 10 sprites can e drawn at a time
@@ -238,22 +242,17 @@ void PPU::fetchSprites() {
 	for(uint8_t i = 0; i < 40; i++) {
 		// 0xFE00 -> OAM
 		uint16_t spriteAdr = 0xFE00 + i * 4;
-		int8_t spriteY = static_cast<int8_t>(mmu.fetch8(spriteAdr + 0) - 16);
+		int16_t spriteY = static_cast<int16_t>(mmu.fetch8(spriteAdr + 0) - 16);
+		int16_t spriteX = static_cast<int16_t>(mmu.fetch8(spriteAdr + 1) - 8);
 		
-		//if(LY + 16 >= spriteY && LY + 16 < spriteY + spriteHeight) {
-			if(LY < spriteY || LY >= spriteY + spriteHeight) {
-				continue;
-			}
+		if (LY < spriteY || LY >= spriteY + spriteHeight || spriteX < -7 || spriteX >= 160) {
+			continue;
+		}
 		
-			/*if(LY + 16 < spriteY || LY + 16 >= spriteY + spriteHeight)
-				continue;*/
-			
-			int8_t spriteX = static_cast<int8_t>(mmu.fetch8(spriteAdr + 1) - 8);
-			spriteBuffer[index++] = Sprite(i, spriteX, spriteY);
-			
-			if(index >= 10)
-				break;
-		//}
+		spriteBuffer[index++] = Sprite(i, spriteX, spriteY);
+		
+		if (index >= 10)
+			break;
 	}
 	
 	// Order sprites by their coordinates
@@ -266,13 +265,16 @@ void PPU::fetchSprites() {
 		return a.index < b.index; // Sort in ascending order by index
 	});*/
 	
-	for (auto sprite : spriteBuffer) {
-		if(sprite.x < -7 || sprite.x >= 160)
-			continue;
+	std::stable_sort(spriteBuffer.begin(), spriteBuffer.end(),
+	                 [](const Sprite& a, const Sprite& b) {
+		                 // If x-positions are equal, keep original order (stable sort)
+		                 if (a.x == b.x) return false;
 
-		if(sprite.y > LY || sprite.x + 8 < LY)
-			return;
-		
+		                 // Lower x-pos is on top
+		                 return a.x > b.x;
+	                 });
+	
+	for (auto sprite : spriteBuffer) {
 		// 0xFE00 -> OAM
 		uint16_t spriteAddr = 0xFE00 + sprite.index * 4;
 
@@ -329,11 +331,11 @@ void PPU::fetchSprites() {
 		 *
 		 * Objects always use “$8000 addressing”, but the BG and Window can use either mode, controlled by LCDC bit 4.
 		 */
-		uint16_t tileAddr = 0x8000 + tileIndex * 16 + tileY * 2;
+		uint16_t tileAddr = 0x8000 + (tileIndex * 16) + (tileY * 2);
 		
 		// TODO; For CGB check BANK
-		uint8_t d0 = mmu.fetch8(tileAddr + 0);
-		uint8_t d1 = mmu.fetch8(tileAddr + 1);
+		uint8_t b0 = mmu.fetch8(tileAddr + 0);
+		uint8_t b1 = mmu.fetch8(tileAddr + 1);
 		
 		/**
 		 * From what I understand is that the,
@@ -343,29 +345,26 @@ void PPU::fetchSprites() {
 		 * As only the height changes from 8-16,
 		 * I don't need any extra checkls
 		 */
-		for(uint8_t x = 0; x < 8; x++) {
-			if (sprite.x + x < 0 || sprite.x + x >= 160)
+		for(int8_t x = 0; x < 8; x++) {
+			if (sprite.x + x >= 160)
 				continue;
 			
-			uint8_t pX = !flipX ? (7 - x) : x;
+			if(!lcdc.bgWindowEnabled && priority && !bgPriority[sprite.x]) {
+				continue;
+			}
+			
+			int8_t pX = !flipX ? static_cast<int8_t>(7 - x) : x;
 			
 			// Just copied this from 'drawBackground'
-			uint8_t pixel = (d0 >> pX) & 1;
-			pixel |= (((d1 >> pX) & 1) << 1);
-			
-			if (pixel == 0)
-				continue;
+			uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
 			
 			uint8_t pixelColor = dmgPallete ? OBJ1Palette[pixel] : OBJ0Palette[pixel];
 			
-			for (uint8_t y = 0; y < spriteHeight; y++) {
-				if(priority && bgPriority[(sprite.x + x)][sprite.y + y] == 0) {
-					continue;
-				}
-				
-				updatePixel(static_cast<uint8_t>(sprite.x + x), static_cast<uint8_t>(sprite.y + y), paletteIndexToColor(pixelColor));
-				//updatePixel(static_cast<uint8_t>(sprite.x + x), static_cast<uint8_t>(sprite.y + y), 0xFFFF0000);
-			}
+			if(pixelColor == 0)
+				continue;
+			
+			
+			updatePixel(static_cast<uint8_t>(sprite.x + x), LY, paletteIndexToColor(pixelColor));
 		}
 	}
 }

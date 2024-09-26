@@ -107,7 +107,7 @@ std::string formatCPUState(const CPU &cpu) {
 }
 
 void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
-    const std::chrono::nanoseconds targetFrameDuration(1);
+    const std::chrono::nanoseconds targetFrameDuration(100);
     int frameCount = 0;
     auto lastFpsTime = std::chrono::high_resolution_clock::now();
     

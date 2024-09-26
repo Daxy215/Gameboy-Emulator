@@ -40,9 +40,9 @@ public:
 	
 	void tick(const int& cycles);
 	
-	//void renderTile(const TileData& tileData, int x, int y, const uint8_t* palette);
+	void drawScanline();
 	void drawBackground();
-	void fetchSprites();
+	void drawSprites();
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
@@ -83,7 +83,7 @@ private:
 	
 	//uint8_t frames = 0;
 	
-	uint8_t bgPriority[160][144] = { 0 };
+	bool bgPriority[160] = { 0 };
 public:
 	uint8_t interrupt;
 
