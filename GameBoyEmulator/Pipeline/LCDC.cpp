@@ -57,7 +57,7 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		status = data;
 		
 		// Check for LYC == LY interrupt (Bit 6)
-		if ((status & 0x40) && (LY == LYC)) {
+		/*if ((status & 0x40) && (LY == LYC)) {
 			interrupt |= 0x02;
 		}
 		
@@ -74,7 +74,7 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		// Check for Mode 0 (HBlank) interrupt (Bit 3)
 		if ((status & 0x08) && (PPU::mode == PPU::HBlank)) {
 			interrupt |= 0x02;
-		}
+		}*/
 	} else if(address == 0xFF42) {
 		// $FF42	SCY	Viewport Y position	R/W	All
 		SCY = data;

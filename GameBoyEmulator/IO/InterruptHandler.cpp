@@ -34,7 +34,7 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		
 		cpu.interruptHandler.IF &= ~interrupt;
 		
-		return 4;
+		return 12;
 	}
 	
 	return 0;

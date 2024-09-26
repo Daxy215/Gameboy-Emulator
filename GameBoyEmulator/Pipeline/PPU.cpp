@@ -1,6 +1,7 @@
 ﻿#include "PPU.h"
 
 #include <iostream>
+#include <string>
 
 #include <GL/glew.h>
 
@@ -16,161 +17,168 @@ const int HEIGHT = 480;
 PPU::PPUMode PPU::mode = PPU::HBlank;
 
 void PPU::tick(const int& cycles = 4) {
+	if(!lcdc.enable)
+		return;
+	
 	this->clock += cycles;
 	
-	/*if(!lcdc.enable)
-		return;*/
-	
-	//uint8_t LCDControl = mmu.fetch8(0xFF40);
 	uint8_t LYC = mmu.fetch8(0xFF45);
-	uint8_t& LY = lcdc.LY;//mmu.fetch8(0xFF44);
-	uint8_t SCX = mmu.fetch8(0xFF43);
-	/*uint8_t WY = mmu.fetch8(0xFF4A);
-	uint8_t SCY = mmu.fetch8(0xFF42);
-	uint8_t WX = mmu.fetch8(0xFF4B);*/
+	uint8_t& LY = lcdc.LY;
 	
-	/*uint8_t HBlankCycles = 0;
-
-	switch (SCX & 7) {
-	case 0:
-		HBlankCycles = 204;
-		break;
-	case 1:
-	case 2:
-	case 3:
-	case 4:
-		HBlankCycles = 200;
-		break;
-	case 5:
-	case 6:
-	case 7:
-		HBlankCycles = 196;
-		break;
-	default:
-		std::cerr << "BREUWH\n";
-		break;
-	}*/
+	/**
+	 * https://stackoverflow.com/questions/52153636/how-do-gpu-ppu-timings-work-on-the-gameboy
+	 * https://forums.nesdev.org/viewtopic.php?f=20&t=17754&p=225009#p225009
+	 * http://blog.kevtris.org/blogfiles/Nitty%20Gritty%20Gameboy%20VRAM%20Timing.txt
+	 */
 	
-	// Following ;https://hacktix.github.io/GBEDG/ppu/#h-blank-mode-0
+	static const int SCANLINE_DOTS = 456;         // Total dots per scanline
+	static const int SCANLINES = 154;             // Total scanlines per frame
+	static const int MODE_2_DOTS = 80;            // OAM search duration in dots
+	//static const int MODE_1_LINES = 10;         // VBlank scanlines
+	static const int VBLANK_START_LINE = 144;     // Start of vertical blanking
+	
+	static uint16_t currentDot = 0;
+	//uint16_t currentScanline = 0;
+	
+	currentDot += 1;
+	
 	switch (mode) {
-	case HBlank:
-		while(clock >= 204) {
-			LY++;
+		case OAMScan: {
+			if(lcdc.status & 0x20) {
+				interrupt |= 0x02;
+			}
 			
-			if(LY >= 144) {
+			if (currentDot >= MODE_2_DOTS) {
+				mode = VRAMTransfer;
+			}
+			
+			break;
+		}
+		
+		case VRAMTransfer: {
+			// TODO; 10 - Sprite count, just 10 for now..
+			int mode3_dots = 168 + (10) * 10;
+			if (currentDot >= MODE_2_DOTS + mode3_dots) {
+				mode = HBlank;
+			}
+			
+			break;
+		}
+		
+		case HBlank: {
+			if (currentDot >= SCANLINE_DOTS) {
+				drawBackground();
+				fetchSprites();
+				
+				currentDot = 0;
+				LY = (LY + 1);
+				
+				if((lcdc.status & 0x40) && LYC == LY) {
+					interrupt |= 0x02;
+				}
+				
+				if(lcdc.status & 0x08) {
+					interrupt |= 0x02;
+				}
+				
+				if (LY < VBLANK_START_LINE) {
+					mode = OAMScan;
+				} else if (LY < SCANLINES) {
+					mode = VBlank;
+				} else {
+					LY = 0;
+					
+					mode = OAMScan;
+				}
+			}
+			
+			break;
+		}
+		
+		case VBlank: {
+			if (currentDot >= SCANLINE_DOTS) {
+				currentDot = 0;
+				LY = (LY + 1);
+				
 				// VBlank interrupt
 				interrupt |= 0x01;
-				//frames++;
 				
-				mode = VBlank;
-				SDL_RenderPresent(renderer);
-			} else {
-				mode = OAMScan;
-			}
-			
-			clock -= 204;
-		}
-		
-		break;
-	case VBlank:
-		while(clock >= 4560) {
-			LY++;
-			
-			/*if(LYC == LY) {
-				interrupt |= 0x02;
-			}*/
-			
-			if(LY >= 154) {
-				LY = 0;
-				//lcdc.WX = 0;
-				
-				mode = OAMScan;
-				
-				/*if(LYC == LY) {
+				if((lcdc.status & 0x40) && LYC == LY) {
 					interrupt |= 0x02;
-				}*/
+				}
+				
+				if(lcdc.status & 0x10) {
+					interrupt |= 0x02;
+				}
+				
+				if (LY >= SCANLINES) {
+					LY = 0; // Start a new frame
+					winLineCounter = 0;
+					
+					mode = OAMScan;
+				}
+				
+				SDL_RenderPresent(renderer);
 			}
 			
-			clock -= 4560;
+			break;
 		}
-		
-		break;
-	case OAMScan:
-		while(clock >= 80) {
-			fetchSprites();
-			
-			mode = VRAMTransfer;
-			clock -= 80;
-		}
-		
-		break;
-	case VRAMTransfer:
-		while(clock >= 172) {
-			drawBackground();
-			
-			mode = HBlank;
-			clock -= 172;
-		}
-		
-		break;
 	}
 }
 
 void PPU::drawBackground() {
-    uint8_t LY  = lcdc.LY;//mmu.fetch8(0xFF44);
-    uint8_t SCY = lcdc.SCY;//mmu.fetch8(0xFF42);
-    uint8_t SCX = lcdc.SCX;//mmu.fetch8(0xFF43);
-	uint8_t WY  = lcdc.WY;//mmu.fetch8(0xFF4A);
-	uint8_t WX  = lcdc.WX;//mmu.fetch8(0xFF4B);
+    uint8_t  LY  = lcdc.LY;//mmu.fetch8(0xFF44);
+    uint8_t  SCY = lcdc.SCY;//mmu.fetch8(0xFF42);
+    uint8_t  SCX = lcdc.SCX;//mmu.fetch8(0xFF43);
+	uint8_t& WY  = lcdc.WY;//mmu.fetch8(0xFF4A);
+	uint8_t  WX  = lcdc.WX;//mmu.fetch8(0xFF4B);
 	
 	uint16_t tileWinMapBase = lcdc.windowTileMapArea  ? 0x9C00 : 0x9800;
 	uint16_t tileBGMapBase  = lcdc.bgTileMapArea      ? 0x9C00 : 0x9800;
 	uint16_t tileBGMap      = lcdc.bgWinTileDataArea  ? 0x8000 : 0x8800;
 	
-	int32_t winY = WY;
+	bool drawWindow = lcdc.windowEnabled && LY >= WY && WX <= 166;
 	
-	if(lcdc.windowEnabled && WX <= 166) {
-		mmu.write8(0xFF4A, ++WY);
-		winY = WY;
-	} else {
-		winY = -1;
-	}
-	
-	if(winY < 0 && !lcdc.enable)
+	if(!drawWindow && !lcdc.bgWindowEnabled)
 		return;
 	
-	uint8_t bgY = (SCY + LY) % 256;
+	if(drawWindow && WX <= 166) {
+		winLineCounter++;
+	}
 	
-	uint16_t tilemapAddr;
-	uint16_t tileX, tileY, pY;
-	uint8_t pX;
+	uint8_t bgY = (SCY + LY);
 	
 	// 160 = Screen width
 	for(size_t x = 0; x < 160; x++) {
-		int32_t winX = ((static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x)) % 256;
-		uint32_t bgX = (static_cast<uint32_t>(SCX) + static_cast<uint32_t>(x)) % 256;
+        int32_t winX = drawWindow ? -(static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x) : -1;
+		uint32_t bgX = (SCX + x) % 256;
 		
-		if(/*lcdc.windowEnabled && */winX >= 0 && winY >= 0) {
-			//mmu.write8(0xFF4A, ++WY);
-			
+		uint16_t tilemapAddr;
+		uint16_t tileX, tileY;
+		uint8_t pY, pX;
+		uint8_t tileID;
+		
+		if(drawWindow && winX >= 0) {
 			tilemapAddr = tileWinMapBase;
 			
-			tileY = (winY >> 3) & 31;
-			tileX = (winX >> 3) & 31;
+			tileY = (static_cast<uint16_t>(winLineCounter - 1) >> 3);
+			tileX = static_cast<uint16_t>(winX) >> 3;
 			
-			pY = winY & 0x07; // % 8
+			pY = (winLineCounter - 1) & 0x07; // % 8
 			pX = static_cast<uint8_t>(winX) & 0x07; // % 8
+			
+			SDL_RenderPresent(renderer);
 		} else {
 			tilemapAddr = tileBGMapBase;
 			
-			tileY = (bgY >> 3) & 31;
-			tileX = (bgX >> 3) & 31;
+			tileY = (static_cast<uint16_t>(bgY) >> 3);
+			tileX = (static_cast<uint16_t>(bgX) >> 3);
 			
 			pY = bgY & 0x07;
 			pX = static_cast<uint8_t>(bgX) & 0x07;
 		}
 		
-		uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
+		tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
 		
 		uint16_t offset;
 		
@@ -189,8 +197,7 @@ void PPU::drawBackground() {
 		uint8_t d0 = mmu.fetch8(address);
 		uint8_t d1 = mmu.fetch8(address + 1);
 		
-		uint8_t pixel = (d0 >> pX) & 1;
-		pixel |= (((d1 >> pX) & 1) << 1);
+		uint8_t pixel = ((d0 >> pX) & 1) | (((d1 >> pX) & 1) << 1);
 		
 		uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
 		
@@ -233,16 +240,20 @@ void PPU::fetchSprites() {
 		uint16_t spriteAdr = 0xFE00 + i * 4;
 		int8_t spriteY = static_cast<int8_t>(mmu.fetch8(spriteAdr + 0) - 16);
 		
-		//if(LY + 16 >= spriteY && LY + 16 < spriteY + spriteHeight) {}
-		if(LY < spriteY || LY >= spriteY + spriteHeight) {
-			continue;
-		}
+		//if(LY + 16 >= spriteY && LY + 16 < spriteY + spriteHeight) {
+			if(LY < spriteY || LY >= spriteY + spriteHeight) {
+				continue;
+			}
 		
-		int8_t spriteX = static_cast<int8_t>(mmu.fetch8(spriteAdr + 1) - 8);
-		spriteBuffer[index++] = Sprite(i, spriteX, spriteY);
-		
-		if(index >= 10)
-			break;
+			/*if(LY + 16 < spriteY || LY + 16 >= spriteY + spriteHeight)
+				continue;*/
+			
+			int8_t spriteX = static_cast<int8_t>(mmu.fetch8(spriteAdr + 1) - 8);
+			spriteBuffer[index++] = Sprite(i, spriteX, spriteY);
+			
+			if(index >= 10)
+				break;
+		//}
 	}
 	
 	// Order sprites by their coordinates
@@ -258,6 +269,9 @@ void PPU::fetchSprites() {
 	for (auto sprite : spriteBuffer) {
 		if(sprite.x < -7 || sprite.x >= 160)
 			continue;
+
+		if(sprite.y > LY || sprite.x + 8 < LY)
+			return;
 		
 		// 0xFE00 -> OAM
 		uint16_t spriteAddr = 0xFE00 + sprite.index * 4;
@@ -266,7 +280,7 @@ void PPU::fetchSprites() {
 		uint16_t tileIndex = (mmu.fetch8(spriteAddr + 2) & (spriteHeight == 16 ? 0xFE : 0xFF));
 		
 		// https://gbdev.io/pandocs/OAM.html#byte-3--attributesflags
-		uint8_t flags = static_cast<uint8_t>(mmu.fetch8(spriteAddr + 3));
+		uint8_t flags = mmu.fetch8(spriteAddr + 3);
 		
 		/**
 		 * 0 - NO
@@ -333,7 +347,7 @@ void PPU::fetchSprites() {
 			if (sprite.x + x < 0 || sprite.x + x >= 160)
 				continue;
 			
-			uint8_t pX = flipX ? (7 - x) : x;
+			uint8_t pX = !flipX ? (7 - x) : x;
 			
 			// Just copied this from 'drawBackground'
 			uint8_t pixel = (d0 >> pX) & 1;
@@ -448,18 +462,20 @@ void PPU::createWindow() {
 }
 
 void PPU::updatePixel(uint8_t x, uint8_t y, uint32_t color) {
-	/*uint8_t scale = 1;
+	float scale = 1.6f;
 	
-	x *= scale;
-	y *= scale;
+	int startX = static_cast<int>(x * scale);
+	int startY = static_cast<int>(y * scale);
+	int endX = static_cast<int>((x + 1) * scale);
+	int endY = static_cast<int>((y + 1) * scale);
 	
-	for(int nx = x; nx < x + scale; nx++) {
-		for(int ny = y; ny < y + scale; ny++) {
+	for(int nx = startX; nx < endX; nx++) {
+		for(int ny = startY; ny < endY; ny++) {
 			setPixel(nx, ny, color);
 		}
-	}*/
+	}
 	
-	setPixel(x, y, color);
+	//setPixel(x, y, color);
 	
 	/*SDL_RenderCopy(renderer, mainTexture, nullptr, nullptr);
 	
@@ -476,8 +492,8 @@ void PPU::setPixel(uint8_t x, uint8_t y, uint32_t color) {
 	pixels[(y * surface->w) + x] = color;
 }
 
-void PPU::reset() {
-	clock = 0;
+void PPU::reset(const uint32_t& clock) {
+	this->clock = clock;
 	//frames = 0;
 }
 

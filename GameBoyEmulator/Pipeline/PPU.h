@@ -51,7 +51,7 @@ public:
 	
 	void updatePixel(uint8_t x, uint8_t y, uint32_t color);
 	void setPixel(uint8_t x, uint8_t y, uint32_t color);
-	void reset();
+	void reset(const uint32_t& clock);
 
 	// TODO; Remove
 	
@@ -78,6 +78,7 @@ public:
 private:
 	//bool test = false;
 	uint32_t clock = 0;
+	uint32_t winLineCounter;
 	//uint8_t mode = 0;
 	
 	//uint8_t frames = 0;
@@ -85,6 +86,8 @@ private:
 	uint8_t bgPriority[160][144] = { 0 };
 public:
 	uint8_t interrupt;
+
+	//bool wyTrigger = false;
 	
 private:
 	Fetcher fetcher;

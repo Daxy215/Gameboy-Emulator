@@ -107,7 +107,7 @@ std::string formatCPUState(const CPU &cpu) {
 }
 
 void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
-    const std::chrono::nanoseconds targetFrameDuration(100);
+    const std::chrono::nanoseconds targetFrameDuration(1);
     int frameCount = 0;
     auto lastFpsTime = std::chrono::high_resolution_clock::now();
     
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Tetris 2.gb";
     //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
-    //std::string filename = "Roms/dmg-acid2.gb";
+    std::string filename = "Roms/dmg-acid2.gb";
     
     //std::string filename = "Roms/window_y_trigger.gb";
     //std::string filename = "Roms/window_y_trigger_wx_offscreen.gb";
@@ -219,7 +219,7 @@ int main(int argc, char* argv[]) {
     
     // OAM BUG
     //std::string filename = "Roms/tests/blargg/oam_bug/oam_bug.gb"; // TODO;
-    std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/1-lcd_sync.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/1-lcd_sync.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/2-causes.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/3-non_causes.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/4-scanline_timing.gb"; // TODO;

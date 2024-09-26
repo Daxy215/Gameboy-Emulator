@@ -17,5 +17,5 @@ public:
 private:
 	LCDC& lcdc;
 	
-    uint8_t RAM[0x2000] = { 0 };
+    uint8_t RAM[0x4000] = { 0 };
 };

@@ -25,14 +25,16 @@ uint8_t MMU::fetch8(uint16_t address) {
     
     if(address <= 0x7FFF) {
         return mbc.read(address);
-    } else if(address >= 0x8000 && address < 0xA000) {
-        return vram.fetch8(address);
+    } else if(address >= 0x8000 && address < 0x9FFF) {
+        return vram.fetch8(address - 0x8000);
     } else if (address >= 0xA000 && address <= 0xBFFF) {
         return mbc.read(address);
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         return wram.fetch8(address - 0xC000);
-    } else if(address >= 0xD000 && address <= 0xFDFF) {
+    } else if(address >= 0xD000 && address <= 0xDFFF) {
         return wram.fetch8((wramBank * 0x1000) | (address & 0x0FFF));
+    } else if(address >= 0xE000 && address <= 0xFDFF) {
+        return vram.fetch8(address - 0xE000);
     } else if(address >= 0xFE00 && address <= 0xFE9F) {
         return oam.fetch8(address);
     } else if(address >= 0xFF00 && address <= 0xFF7F) {
@@ -85,7 +87,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address == 0xFF4D) {
         // TODO; This is only for CGB
         //return (key1 & 0x81) | 0x7E;
-        return /*(key1 & 0xb10000001) |*/ 0b01111110;
+        return (key1 & 0xb10000001) | 0b01111110;
     } else if(address == 0xFF4F) {
         //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
@@ -124,8 +126,10 @@ void MMU::write8(uint16_t address, uint8_t data) {
         mbc.write(address, data);
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         wram.write8(address - 0xC000, data);
-    } else if(address >= 0xD000 && address <= 0xFDFF) {
+    } else if(address >= 0xD000 && address <= 0xDFFF) {
         wram.write8((wramBank * 0x1000) | (address & 0x0FFF), data);
+    } else if(address >= 0xE000 && address <= 0xFDFF) {
+        vram.write8(address - 0xE000, data);
     } else if (address >= 0xFE00 && address <= 0xFE9F) {
         oam.write8(address - 0xFE00, data);
     } else if (address >= 0xFF00 && address <= 0xFF7F) {
@@ -165,19 +169,33 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             
             if(address == 0xFF40) {
                 /**
-                 * LCDC is being turned on
-                 */
-                if(!wasEnabled && lcdc.enable) {
+                 * set_test 3,"Turning LCD on starts too early in scanline"
+                 * call disable_lcd
+                 * ld   a,$81
+                 * ldh  (LCDC-$FF00),a ; LCD on
+                 * delay 110
+                 * ldh  a,(LY-$FF00)   ; just after LY increments
+                 * cp   1
+                 * jp   nz,test_failed
+                 *
+                 * Passing test 2 correctly but stuck on test 1.
+                 * Seems the issue to be that one of my CPU instructions,
+                 * are wrongly implemented, as while it does ldh  a,(LY-$FF00),
+                 * AF.A is 0 where it's supposed to be 1? If I understood that correctly..
+               */
+                if(wasEnabled && !lcdc.enable) {
                     if(PPU::mode == PPU::VBlank) {
-                        printf("nooo...");
+                        //printf("nooo...");
                         //return;
                     }
                     
-                    PPU::mode = PPU::VBlank;
+                    PPU::mode = PPU::HBlank;
                     lcdc.LY = 0;
-                    ppu.reset();
-                } else if(wasEnabled && !lcdc.enable) {
-                    ppu.reset();
+                    //lcdc.WY = 0;
+                    ppu.reset(0);
+                } else if(!wasEnabled && lcdc.enable) {
+                    PPU::mode = PPU::OAMScan;
+                    ppu.reset(4);
                 }
             }
             
