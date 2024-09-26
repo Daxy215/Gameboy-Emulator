@@ -23,6 +23,7 @@ void PPU::tick(const int& cycles = 4) {
 	this->clock += cycles;
 	
 	uint8_t LYC = mmu.fetch8(0xFF45);
+	uint8_t WY  = mmu.fetch8(0xFF4A);
 	uint8_t& LY = lcdc.LY;
 	
 	/**
@@ -40,10 +41,11 @@ void PPU::tick(const int& cycles = 4) {
 	static uint16_t currentDot = 0;
 	//uint16_t currentScanline = 0;
 	
-	currentDot += 1;
+	currentDot += cycles;
 	
 	switch (mode) {
 		case OAMScan: {
+			// https://gbdev.io/pandocs/Scrolling.html?highlight=LY%20%3D%20WY#window
 			if(lcdc.status & 0x20) {
 				interrupt |= 0x02;
 			}
@@ -56,6 +58,11 @@ void PPU::tick(const int& cycles = 4) {
 		}
 		
 		case VRAMTransfer: {
+			if(lcdc.windowEnabled && !drawWindow && LY == WY) {
+				drawWindow = true;
+				//WY = 0;
+			}
+			
 			// TODO; 10 - Sprite count, just 10 for now..
 			int mode3_dots = 168 + (10) * 10;
 			if (currentDot >= MODE_2_DOTS + mode3_dots) {
@@ -70,7 +77,7 @@ void PPU::tick(const int& cycles = 4) {
 				drawScanline();
 				
 				currentDot = 0;
-				LY = (LY + 1);
+				LY = (LY + 1) % 154;
 				
 				if((lcdc.status & 0x40) && LYC == LY) {
 					interrupt |= 0x02;
@@ -96,6 +103,8 @@ void PPU::tick(const int& cycles = 4) {
 		
 		case VBlank: {
 			if (currentDot >= SCANLINE_DOTS) {
+				drawWindow = false;
+				
 				currentDot = 0;
 				LY = (LY + 1);
 				
@@ -126,49 +135,51 @@ void PPU::tick(const int& cycles = 4) {
 }
 
 void PPU::drawScanline() {
-	/*for (bool& i : bgPriority) {
+	for (bool& i : bgPriority) {
 		i = false;
-	}*/
+	}
 	
 	drawBackground();
 	drawSprites();
 }
 
 void PPU::drawBackground() {
-    uint8_t  LY  = lcdc.LY;//mmu.fetch8(0xFF44);
-    uint8_t  SCY = lcdc.SCY;//mmu.fetch8(0xFF42);
-    uint8_t  SCX = lcdc.SCX;//mmu.fetch8(0xFF43);
-	uint8_t& WY  = lcdc.WY;//mmu.fetch8(0xFF4A);
-	uint8_t  WX  = lcdc.WX;//mmu.fetch8(0xFF4B);
+    uint8_t LY  = mmu.fetch8(0xFF44);
+	
+	uint8_t SCY = mmu.fetch8(0xFF42);
+    uint8_t SCX = mmu.fetch8(0xFF43);
+	
+	//uint8_t WY  = mmu.fetch8(0xFF4A);
+	uint8_t WX  = mmu.fetch8(0xFF4B);
 	
 	uint16_t tileWinMapBase = lcdc.windowTileMapArea  ? 0x9C00 : 0x9800;
 	uint16_t tileBGMapBase  = lcdc.bgTileMapArea      ? 0x9C00 : 0x9800;
 	uint16_t tileBGMap      = lcdc.bgWinTileDataArea  ? 0x8000 : 0x8800;
 	
-	bool drawWindow = lcdc.windowEnabled && LY >= WY && WX <= 166;
+	//bool drawWindow = lcdc.windowEnabled && LY >= WY && WX <= 166;
 	
-	if(!drawWindow && !lcdc.bgWindowEnabled)
+	if(!lcdc.windowEnabled && !lcdc.bgWindowEnabled)
 		return;
 	
-	if(drawWindow && WX <= 166) {
+	if(lcdc.windowEnabled && drawWindow && WX <= 166) {
 		winLineCounter++;
 	}
 	
-	uint8_t bgY = (SCY + LY);
+	uint8_t bgY = SCY + LY;
 	
 	// 160 = Screen width
 	for(size_t x = 0; x < 160; x++) {
-        int32_t winX = drawWindow ? (-(static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x)) % 256 : -1;
-		uint32_t bgX = (SCX + x) % 256;
+		int32_t winX = drawWindow ? -(static_cast<int32_t>(WX) - 7) + static_cast<int32_t>(x) : -1;
+		uint32_t bgX = static_cast<uint32_t>(SCX + x) % 256;
 		
 		uint16_t tilemapAddr;
 		uint16_t tileX, tileY;
 		uint8_t pY, pX;
-
-        if(drawWindow && winX >= 0) {
+		
+        if(lcdc.windowEnabled && drawWindow && winX >= 0) {
 			tilemapAddr = tileWinMapBase;
 			
-			tileY = (static_cast<uint16_t>(winLineCounter - 1) >> 3);
+			tileY = static_cast<uint16_t>((winLineCounter - 1)) >> 3;
 			tileX = static_cast<uint16_t>(winX) >> 3;
 			
 			pY = (winLineCounter - 1) & 0x07; // % 8
@@ -242,12 +253,14 @@ void PPU::drawSprites() {
 	for(uint8_t i = 0; i < 40; i++) {
 		// 0xFE00 -> OAM
 		uint16_t spriteAdr = 0xFE00 + i * 4;
-		int16_t spriteY = static_cast<int16_t>(mmu.fetch8(spriteAdr + 0) - 16);
-		int16_t spriteX = static_cast<int16_t>(mmu.fetch8(spriteAdr + 1) - 8);
 		
-		if (LY < spriteY || LY >= spriteY + spriteHeight || spriteX < -7 || spriteX >= 160) {
+		int16_t spriteY = static_cast<int16_t>(mmu.fetch8(spriteAdr + 0) - 16);
+		
+		if (LY  < spriteY || LY >= spriteY + spriteHeight/* || spriteX < -7 || spriteX >= 160*/) {
 			continue;
 		}
+		
+		int16_t spriteX = static_cast<int16_t>(mmu.fetch8(spriteAdr + 1) - 8);
 		
 		spriteBuffer[index++] = Sprite(i, spriteX, spriteY);
 		
@@ -255,26 +268,15 @@ void PPU::drawSprites() {
 			break;
 	}
 	
-	// Order sprites by their coordinates
-	/*std::sort(spriteBuffer.begin(), spriteBuffer.begin() + 10, [](const Sprite& a, const Sprite& b) {
-		// Higher x-coordinate has higher priority
+	std::stable_sort(spriteBuffer.begin(), spriteBuffer.end(), [](const Sprite& a, const Sprite& b) {
+		// Order by x prioritization
 		if (a.x != b.x) {
-			return a.x > b.x; // Sort in descending order by x
+			return a.x > b.x;
 		}
 		
-		return a.index < b.index; // Sort in ascending order by index
-	});*/
-	
-	std::stable_sort(spriteBuffer.begin(), spriteBuffer.end(),
-	                 [](const Sprite& a, const Sprite& b) {
-		                 // If x-positions are equal, keep original order (stable sort)
-		                 if (a.x != b.x) {
-			                 return a.x > b.x;
-		                 }
-
-		                 // Lower x-pos is on top
-		                 return a.index > b.index;
-	                 });
+		// Order by OAM position
+		return a.index > b.index;
+	});
 	
 	for (auto sprite : spriteBuffer) {
 		if (sprite.x < -7 || sprite.x >= 160)
@@ -354,6 +356,7 @@ void PPU::drawSprites() {
 			if (sprite.x + x < 0 || sprite.x + x >= 160)
 				continue;
 			
+			// Priority 1 - BG and Window colors 1–3 are drawn over this OBJ
 			if(priority && !bgPriority[sprite.x + x]) {
 				continue;
 			}
@@ -483,7 +486,7 @@ void PPU::updatePixel(uint8_t x, uint8_t y, uint32_t color) {
 	/*SDL_RenderCopy(renderer, mainTexture, nullptr, nullptr);
 	
 	SDL_DestroyTexture(mainTexture);*/
-	SDL_FreeSurface(surface);
+	//SDL_FreeSurface(surface);
 }
 
 void PPU::setPixel(uint8_t x, uint8_t y, uint32_t color) {
@@ -497,6 +500,8 @@ void PPU::setPixel(uint8_t x, uint8_t y, uint32_t color) {
 
 void PPU::reset(const uint32_t& clock) {
 	this->clock = clock;
+	drawWindow = false;
+	
 	//frames = 0;
 }
 

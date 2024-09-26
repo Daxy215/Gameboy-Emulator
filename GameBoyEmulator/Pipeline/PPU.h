@@ -78,12 +78,11 @@ public:
 private:
 	//bool test = false;
 	uint32_t clock = 0;
-	uint32_t winLineCounter;
-	//uint8_t mode = 0;
+	uint32_t winLineCounter = 0;
 	
-	//uint8_t frames = 0;
+	bool drawWindow = false;
 	
-	bool bgPriority[160] = { 0 };
+	bool bgPriority[160] = { false };
 public:
 	uint8_t interrupt;
 

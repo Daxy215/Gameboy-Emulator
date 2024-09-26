@@ -183,15 +183,21 @@ std::optional<uint8_t> stdoutprinter(uint8_t value) {
 int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
+
+    // GAMES
     
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/Tetris 2.gb";
     //std::string filename = "Roms/TETRIS.gb";
-    //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
-    std::string filename = "Roms/dmg-acid2.gb";
+    std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
+    //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb";
     
-    //std::string filename = "Roms/window_y_trigger.gb";
-    //std::string filename = "Roms/window_y_trigger_wx_offscreen.gb";
+    // TESTS
+    
+    //std::string filename = "Roms/dmg-acid2.gb";
+    
+    //std::string filename = "Roms/tests/turtle-tests/window_y_trigger/window_y_trigger.gb"; // Passed
+    //lstd::string filename = "Roms/window_y_trigger_wx_offscreen.gb"; // Passed
     
     //std::string filename = "Roms/testRom1.gb";
     
@@ -210,12 +216,16 @@ int main(int argc, char* argv[]) {
     
     //std::string filename = "Roms/halt_bug.gb"; // TODO;
     //std::string filename = "Roms/instr_timing/instr_timing.gb"; // Passed
-    
+    //std::string filename = "Roms/tests/blargg/interrupt_time/interrupt_time.gb"; // TODO;
+        
     // MEMORY TIMING
     //std::string filename = "Roms/mem_timing/mem_timing.gb"; // TODO;
     //std::string filename = "Roms/mem_timing/individual/01-read_timing.gb"; // TODO;
     //std::string filename = "Roms/mem_timing/individual/02-write_timing.gb"; // TODO;
     //std::string filename = "Roms/mem_timing/individual/03-modify_timing.gb"; // TODO;
+    
+    //std::string filename = "Roms/tests/bully/bully.gb"; // TODO;
+    //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // TODO;
     
     // OAM BUG
     //std::string filename = "Roms/tests/blargg/oam_bug/oam_bug.gb"; // TODO;
