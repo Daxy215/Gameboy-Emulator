@@ -126,9 +126,9 @@ void PPU::tick(const int& cycles = 4) {
 }
 
 void PPU::drawScanline() {
-	for (bool& i : bgPriority) {
+	/*for (bool& i : bgPriority) {
 		i = false;
-	}
+	}*/
 	
 	drawBackground();
 	drawSprites();
@@ -202,10 +202,10 @@ void PPU::drawBackground() {
 		uint8_t b0 = mmu.fetch8(address);
 		uint8_t b1 = mmu.fetch8(address + 1);
 		
-		uint8_t pixel = ((b0 >> pX) & 1) | (((b1 >> pX) & 1) << 1);
+		uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
 		uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
 		
-		bgPriority[x] = pixelColor == 0;
+		bgPriority[x] = pixel == 0;
 		updatePixel(static_cast<uint8_t>(x), LY, paletteIndexToColor(pixelColor));
 	}
 }
@@ -268,16 +268,21 @@ void PPU::drawSprites() {
 	std::stable_sort(spriteBuffer.begin(), spriteBuffer.end(),
 	                 [](const Sprite& a, const Sprite& b) {
 		                 // If x-positions are equal, keep original order (stable sort)
-		                 if (a.x == b.x) return false;
+		                 if (a.x != b.x) {
+			                 return a.x > b.x;
+		                 }
 
 		                 // Lower x-pos is on top
-		                 return a.x > b.x;
+		                 return a.index > b.index;
 	                 });
 	
 	for (auto sprite : spriteBuffer) {
+		if (sprite.x < -7 || sprite.x >= 160)
+			continue;
+		
 		// 0xFE00 -> OAM
 		uint16_t spriteAddr = 0xFE00 + sprite.index * 4;
-
+		
 		// https://gbdev.io/pandocs/OAM.html#byte-3--attributesflags
 		uint16_t tileIndex = (mmu.fetch8(spriteAddr + 2) & (spriteHeight == 16 ? 0xFE : 0xFF));
 		
@@ -346,14 +351,14 @@ void PPU::drawSprites() {
 		 * I don't need any extra checkls
 		 */
 		for(int8_t x = 0; x < 8; x++) {
-			if (sprite.x + x >= 160)
+			if (sprite.x + x < 0 || sprite.x + x >= 160)
 				continue;
 			
-			if(!lcdc.bgWindowEnabled && priority && !bgPriority[sprite.x]) {
+			if(priority && !bgPriority[sprite.x + x]) {
 				continue;
 			}
 			
-			int8_t pX = !flipX ? static_cast<int8_t>(7 - x) : x;
+			int8_t pX = flipX ? x : static_cast<int8_t>(7 - x);
 			
 			// Just copied this from 'drawBackground'
 			uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
@@ -362,7 +367,6 @@ void PPU::drawSprites() {
 			
 			if(pixelColor == 0)
 				continue;
-			
 			
 			updatePixel(static_cast<uint8_t>(sprite.x + x), LY, paletteIndexToColor(pixelColor));
 		}

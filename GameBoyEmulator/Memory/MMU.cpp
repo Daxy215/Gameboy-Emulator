@@ -200,6 +200,11 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             }
             
         } else if(address == 0xFF46) {
+            // TODO;
+            /*if(cpu.halt) {
+                // NOT ALLOWED!
+            }*/
+            
             //  $FF46	DMA	OAM DMA source address & start
             uint16_t u16 = (static_cast<uint16_t>(data)) << 8;
             //uint16_t endAddr = u16 | 0x9F;
