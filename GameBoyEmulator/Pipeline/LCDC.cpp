@@ -86,7 +86,7 @@ void LCDC::write8(uint16_t address, uint8_t data) {
 		}
 		
 		//if(data != 0)
-		SCX = data;
+			SCX = data;
 		//std::cerr << "SCX: " << std::to_string(SCX) << "\n";
 	} else if(address == 0xFF44) {
 		// https://gbdev.io/pandocs/STAT.html#ff44--ly-lcd-y-coordinate-read-only

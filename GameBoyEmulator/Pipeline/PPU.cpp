@@ -147,7 +147,7 @@ void PPU::drawBackground() {
     uint8_t LY  = mmu.fetch8(0xFF44);
 	
 	uint8_t SCY = mmu.fetch8(0xFF42);
-    uint8_t SCX = mmu.fetch8(0xFF43);
+    uint8_t SCX = lcdc.SCX; //mmu.fetch8(0xFF43);
 	
 	//uint8_t WY  = mmu.fetch8(0xFF4A);
 	uint8_t WX  = mmu.fetch8(0xFF4B);
@@ -256,7 +256,7 @@ void PPU::drawSprites() {
 		
 		int16_t spriteY = static_cast<int16_t>(mmu.fetch8(spriteAdr + 0) - 16);
 		
-		if (LY  < spriteY || LY >= spriteY + spriteHeight/* || spriteX < -7 || spriteX >= 160*/) {
+		if (LY < spriteY || LY >= spriteY + spriteHeight) {
 			continue;
 		}
 		
@@ -353,7 +353,7 @@ void PPU::drawSprites() {
 		 * I don't need any extra checkls
 		 */
 		for(int8_t x = 0; x < 8; x++) {
-			if (sprite.x + x < 0 || sprite.x + x >= 160)
+			if (sprite.x + x < -7 || sprite.x + x >= 160)
 				continue;
 			
 			// Priority 1 - BG and Window colors 1–3 are drawn over this OBJ

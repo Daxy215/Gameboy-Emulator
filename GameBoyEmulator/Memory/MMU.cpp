@@ -159,10 +159,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address == 0xFF0F) {
         //std::cerr << "Interrupts\n";
         interruptHandler.write8(address, data);
-    } else if(address >= 0xFF10 && address <= 0xFF26) {
-        //std::cerr << "Wave pattern\n";
-        apu.write8(address, data);
-    } else if(address >= 0xFF30 && address <= 0xFF3F) {
+    } else if(address >= 0xFF10 && address <= 0xFF3F) {
         //std::cerr << "Wave pattern\n";
         apu.write8(address, data);
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
@@ -248,13 +245,6 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             
             //  $FF46	DMA	OAM DMA source address & start
             uint16_t u16 = (static_cast<uint16_t>(data)) << 8;
-            //uint16_t endAddr = u16 | 0x9F;
-            
-            /*for(uint16_t i = u16; i < endAddr; i++) {
-                uint16_t dif = i - u16;
-                uint8_t val = fetch8(dif);
-                write8(0xFE00 + i, val);
-            }*/
             
             for(uint16_t i = 0; i < 160; i++) {
                 uint8_t val = fetch8(u16 + i);
@@ -296,8 +286,3 @@ void MMU::clear() {
     //std::fill(std::begin(memory), std::end(memory), 0);
 }
 
-/*
-void MMU::write32(uint16_t address) {
-    
-}
-*/

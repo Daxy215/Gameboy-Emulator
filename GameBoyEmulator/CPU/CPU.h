@@ -84,8 +84,6 @@ public:
     uint16_t popStack();
     
     void reset();
-    
-    void testCases();
 
 public:
     InterruptHandler& interruptHandler;

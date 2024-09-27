@@ -8,7 +8,7 @@ void Timer::tick(uint16_t cycles) {
 	
 	/**
 	 * https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
-	 * 16384Hz which is 256t cycles
+	 * 16384Hz which is 256T cycles
 	 */
 	while (divTimer >= 256) {
 		divider++;
@@ -44,7 +44,6 @@ void Timer::tick(uint16_t cycles) {
 uint8_t Timer::fetch8(uint16_t address) {
 	if(address == 0xFF04) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
-		// As mentioned writing any value to this address resets it to 0
 		return divider;
 	} else if(address == 0xFF05) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff05--tima-timer-counter
@@ -71,6 +70,7 @@ void Timer::write8(uint16_t address, uint8_t data) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
 		// As mentioned writing any value to this address resets it to 0
 		divider = 0;
+		counterTimer = 0;
 	} else if(address == 0xFF05) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff05--tima-timer-counter
 		counter = data;

@@ -32,9 +32,13 @@
  * http://www.codeslinger.co.uk/pages/projects/gameboy/banking.html
  * https://robertovaccari.com/gameboy/memory_map.png
  * https://blog.tigris.fr/2019/09/15/writing-an-emulator-the-first-pixel/
- * 
+ * -
  * Helped with understanding blargg's test roms:
  * https://github.com/retrio/gb-test-roms/blob/master/
+ *
+ * Helped with MBCS:
+ * https://github.com/Gekkio/gb-ctr
+ * https://gekkio.fi/files/gb-docs/gbctr.pdf
  *
  * Main guide:
  * https://gbdev.io/pandocs/Specifications.html
@@ -145,7 +149,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         ppu.tick(cycles);
         
         // Again I'm lazy
-        cpu.mmu.apu.tick(cycles);
+        //cpu.mmu.apu.tick(cycles);
         
         // Apply interrupts if any occured
         cpu.interruptHandler.IF |= timer.interrupt;
@@ -187,10 +191,10 @@ std::optional<uint8_t> stdoutprinter(uint8_t value) {
 int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
-
+    
     // GAMES
     
-    std::string filename = "Roms/Tennis (World).gb";
+    //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/Tetris 2.gb";
     //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
@@ -200,11 +204,9 @@ int main(int argc, char* argv[]) {
     
     //std::string filename = "Roms/dmg-acid2.gb";
     
-    //std::string filename = "Roms/tests/turtle-tests/window_y_trigger/window_y_trigger.gb"; // Passed
-    //lstd::string filename = "Roms/window_y_trigger_wx_offscreen.gb"; // Passed
-    
     //std::string filename = "Roms/testRom1.gb";
     
+    // CPU INSTRUCTIONS
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // Passed
@@ -218,10 +220,25 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/cpu_instrs/individual/10-bit ops.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/11-op a,(hl).gb"; // Passed
     
+    // Sounds
+    //std::string filename = "Roms/tests/blargg/dmg_sound/dmg_sound.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/01-registers.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/02-len ctr.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/03-trigger.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/05-sweep details.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/06-overflow on trigger.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/07-len sweep period sync.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/08-len ctr during power.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/09-wave read while on.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/10-wave trigger while on.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/11-regs after power.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/12-wave write while on.gb"; // TODO;
+    
     //std::string filename = "Roms/halt_bug.gb"; // TODO;
     //std::string filename = "Roms/instr_timing/instr_timing.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/interrupt_time/interrupt_time.gb"; // TODO;
-        
+    
     // MEMORY TIMING
     //std::string filename = "Roms/mem_timing/mem_timing.gb"; // TODO;
     //std::string filename = "Roms/mem_timing/individual/01-read_timing.gb"; // TODO;
@@ -242,14 +259,41 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/7-timing_effect.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/8-instr_effect.gb"; // TODO;
     
+    std::string filename = "Roms/tests/mbc3-tester/mbc3-tester.gb"; // TODO; Getting a weird loading file issue??
+    
     // Mooneye
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/instr/daa.gb"; // Passed
+    
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/basic.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/reg_read.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/sources-GS.gb"; // TODO; Uses MBC5
+    
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/div_write.gb"; // Passd
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/rapid_toggle.gb"; // TODO;
+    
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TODO
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // TODO
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // TODO
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passd
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // TODO
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // TODO
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO
+    
+    //std::string filename = "Roms/tests/mooneye-test-suite/manual-only/sprite_priority.gb"; // TODO
+    
+    //std::string filename = "Roms/tests/rtc3test/rtc3test.gb"; // Uses MBC3
+    
+    //std::string filename = "Roms/tests/scribbltests/lycscx/lycscx.gb"; // Passed
+    //std::string filename = "Roms/tests/scribbltests/lycscy/lycscy.gb"; // Passed
+    //std::string filename = "Roms/tests/scribbltests/palettely/palettely.gb"; // Passed
+    //std::string filename = "Roms/tests/scribbltests/scxly/scxly.gb"; // Passed
+    //std::string filename = "Roms/tests/scribbltests/statcount/statcount.gb"; // TODO??
+    //std::string filename = "Roms/tests/scribbltests/winpos/winpos.gb"; // Idk?
+    
+    //std::string filename = "Roms/tests/strikethrough/strikethrough.gb"; // Passed
+    
+    //std::string filename = "Roms/tests/turtle-tests/window_y_trigger/window_y_trigger.gb"; // Passed
+    //std::string filename = "Roms/tests/turtle-tests/window_y_trigger_wx_offscreen/window_y_trigger_wx_offscreen.gb"; // Passed
     
     ifstream stream(filename.c_str(), ios::binary | ios::ate);
     
@@ -260,7 +304,7 @@ int main(int argc, char* argv[]) {
     auto fileSize = stream.tellg();
     stream.seekg(0, ios::beg);
     
-    std::vector<uint8_t> memory(/*fileSize*/ 2 * 1024 * 1024);
+    std::vector<uint8_t> memory(fileSize/* 2 * 1024 * 1024*/);
     
     if (!stream.read(reinterpret_cast<char*>(memory.data()), fileSize)) {
         std::cerr << "Error reading file!" << '\n';

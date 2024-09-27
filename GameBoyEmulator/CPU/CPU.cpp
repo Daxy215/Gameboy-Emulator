@@ -1,7 +1,5 @@
 ﻿#include "CPU.h"
 
-#include <cassert>
-
 #include "../IO/InterrupHandler.h"
 #include "../Memory/Cartridge.h"
 
@@ -6527,26 +6525,4 @@ void CPU::reset() {
     SP = 0xFFFE;
 	
     mmu.clear();
-}
-
-void CPU::testCases() {
-     // Helper to reset CPU state
-    auto resetCPU = [&]() {
-        reset();
-        PC = 0x1000; // Set the initial program counter to a test address
-        mmu.clear();     // Clear memory
-    };
-    
-    // Helper to check register values
-    auto checkRegisters = [&](uint8_t expectedA, uint8_t expectedF, uint8_t expectedB, uint8_t expectedC, uint8_t expectedD, uint8_t expectedE, uint8_t expectedH, uint8_t expectedL, uint16_t expectedHL, uint16_t expectedSP) {
-        assert(AF.A == expectedA);
-        assert(AF.F == expectedF);
-        assert(BC.B == expectedB);
-        assert(BC.C == expectedC);
-        assert(DE.D == expectedD);
-        assert(DE.E == expectedE);
-        assert(HL.H == expectedH);
-        assert(HL.L == expectedL);
-        assert(SP == expectedSP);
-    };
 }

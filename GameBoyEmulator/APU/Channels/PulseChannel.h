@@ -8,7 +8,7 @@
 // https://en.wikipedia.org/wiki/Pulse-width_modulation
 
 struct PulseChannel {
-	uint8_t sample(uint8_t cycles) {
+	uint8_t sample(uint32_t cycles) {
 		// https://en.wikipedia.org/wiki/Pulse-width_modulation
 		
 		if (!enabled || lengthTimer == 0) {
