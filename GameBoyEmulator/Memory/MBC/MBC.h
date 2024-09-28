@@ -21,6 +21,9 @@ protected:
 	virtual void write8(uint16_t address, uint8_t data);
 
 protected:
+	uint8_t romSize = 0;
+	uint8_t ramSize = 0;
+	
 	std::vector<uint8_t> rom;
 	std::vector<uint8_t> eram;
 

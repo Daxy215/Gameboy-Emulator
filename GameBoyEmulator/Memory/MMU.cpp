@@ -89,7 +89,8 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address == 0xFF4D) {
         // TODO; This is only for CGB
         //return (key1 & 0x81) | 0x7E;
-        return (key1 & 0xb10000001) | 0b01111110;
+        //return (key1 & 0xb10000001) | 0b01111110;
+        return 0b01111110 | (doubleSpeed ? 0x80 : 0) | (switchArmed ? 1 : 0);
     } else if(address == 0xFF4F) {
         //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
@@ -258,7 +259,14 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             ppu.write8(address, data);
         }
     } else if(address == 0xFF4D) {
-        key1 = (key1 & 0x80) | (data & 0x01); // Preserve current speed (bit 7) and `only` update switch armed (bit 0)
+        //key1 = (key1 & 0x80) | (data & 0x01); // Preserve current speed (bit 7) and `only` update switch armed (bit 0)
+        //key1 = data;
+        
+        // Bit 7 - Current Speed
+        doubleSpeed = check_bit(data, 7);
+        
+        // Bit 0 - Switch armed
+        switchArmed = check_bit(data, 0);
     } else if(address == 0xFF4F) {
         //std::cerr << "CGB VRAM Bank Select\n";
     } else if(address == 0xFF50) {
@@ -279,6 +287,14 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
 void MMU::write16(uint16_t address, uint16_t data) {
     write8(address, data & 0xFF);
     write8(address + 1, (data >> 8) & 0xFF);
+}
+
+void MMU::switchSpeed() {
+    if(switchArmed) {
+        doubleSpeed = !doubleSpeed;
+    }
+    
+    switchArmed = false;
 }
 
 void MMU::clear() {

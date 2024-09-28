@@ -279,9 +279,10 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * 1, 4
 			 * - - - -
 			 */
-
-        	// TODO;
-        	stop = true;
+			
+        	// TODO; https://gbdev.io/pandocs/CGB_Registers.html#ff4d--key1-cgb-mode-only-prepare-speed-switch
+        	mmu.switchSpeed();
+			//stop = true;
         	
         	return 4;
         }

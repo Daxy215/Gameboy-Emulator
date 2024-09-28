@@ -1,5 +1,6 @@
 #include "MBCS/MBC0/MBC0.h"
 #include "MBCS/MBC1/MBC1.h"
+#include "MBCS/MBC3/MBC3.h"
 
 MBC::MBC() {
 	
@@ -21,6 +22,22 @@ MBC::MBC(Cartridge cartridge, std::vector<uint8_t> rom) {
 		break;
 	case enums::MBC1_RAM_BATTERY:
 		curMBC = std::make_unique<MBC1>(cartridge, rom);
+		
+		break;
+	case enums::MBC3:
+		curMBC = std::make_unique<MBC3>(cartridge, rom);
+		
+		break;
+	case enums::MBC3_RAM_BATTERY:
+		curMBC = std::make_unique<MBC3>(cartridge, rom);
+		
+		break;
+	case enums::MBC3_TIMER_BATTERY:
+		curMBC = std::make_unique<MBC3>(cartridge, rom);
+		
+		break;
+	case enums::MBC3_TIMER_RAM_BATTERY:
+		curMBC = std::make_unique<MBC3>(cartridge, rom);
 		
 		break;
 	}

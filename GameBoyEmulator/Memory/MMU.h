@@ -35,6 +35,7 @@ public:
           ppu(ppu),
           apu(apu) {
     }
+    
 
     uint8_t fetch8(uint16_t address);
     uint8_t fetchIO(uint16_t address);
@@ -46,6 +47,7 @@ public:
     
     void write16(uint16_t address, uint16_t data);
     
+    void switchSpeed();
     void clear();
 
 public:
@@ -56,15 +58,26 @@ private:
     
     // Prepare speed switch thingies
     uint8_t key1;
+
+public:
+    /**
+     * false - Normal
+     * true - Double
+     */
+    bool doubleSpeed = false;
     
+    bool switchArmed = false;
+
+private:
     // I/O
     InterruptHandler& interruptHandler;
 
 public: // TODO; Im too lazy! im sorry..
     Joypad& joypad;
-
-private:
+    
     Serial& serial;
+    
+private:
     Timer& timer;
     
     // Memories

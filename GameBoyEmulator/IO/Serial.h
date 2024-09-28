@@ -22,11 +22,13 @@ public:
     static std::optional<uint8_t> noop(uint8_t) {
         return std::nullopt;
     }
+
+public:
+    uint8_t interrupt;
     
 private:
-    uint8_t transferData;
-    uint8_t transferControl;
+    uint8_t transferData = 0;
+    uint8_t transferControl = 0;
     
-    uint8_t interrupt;
     SerialCallback callback;
 };
