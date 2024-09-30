@@ -27,13 +27,13 @@ public:
     
     int jpc(uint16_t& address);
     int jpnc(uint16_t& address);
-
+    
     int callc(uint16_t& address);
     int callnc(uint16_t& address);
     
     int jrz(int8_t& offset);
     int jrnz(int8_t& offset);
-
+    
     int jpz(uint16_t& address);
     int jpnz(uint16_t& address);
     

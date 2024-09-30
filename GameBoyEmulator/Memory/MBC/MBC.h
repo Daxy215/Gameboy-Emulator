@@ -28,6 +28,8 @@ protected:
 	std::vector<uint8_t> eram;
 
 private:
+	std::vector<uint8_t> data;
+	
 	/**
 	 * Current active MBC.
 	 * 

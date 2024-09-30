@@ -4,18 +4,32 @@
 #include "InterrupHandler.h"
 
 uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
-	if(cpu.interruptHandler.IME || cpu.halted) {
-		uint8_t interrupt = cpu.interruptHandler.IF & cpu.interruptHandler.IE;
+	if(IME || cpu.halted) {
+		uint8_t interrupt = IF & IE;
 		
 		if(interrupt == 0)
 			return 0;
 		
-		cpu.halted = false;
-		if(cpu.interruptHandler.IME == false) {
+		/*std::cerr << "PC: " << std::hex << cpu.PC 
+		  << " IME: " << std::hex << cpu.interruptHandler.IME
+		  << " IF: " << std::hex << (int)cpu.interruptHandler.IF 
+		  << " IE: " << std::hex << (int)cpu.interruptHandler.IE 
+		  << " halted: " << cpu.halted << '\n';*/
+		
+		if(cpu.halted) {
+			// TODO; Halt bug
+			if(!IME && interrupt != 0x0) {
+				cpu.halted = false;
+				
+				return 0;
+			}
+		}
+		
+		if(IME == false) {
 			return 0;
 		}
 		
-		cpu.interruptHandler.IME = false;
+		IME = false;
 		
 		cpu.pushToStack(cpu.PC);
 		
@@ -28,11 +42,12 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 			cpu.PC = 0x0050;
 		} else if(interrupt & 0x08) { // Serial interrupt
 			cpu.PC = 0x0058;
-		} else if(interrupt & 0x09) { // Joypad interrupt
+		} else if(interrupt & 0x10) { // Joypad interrupt
 			cpu.PC = 0x0060;
 		}
 		
-		cpu.interruptHandler.IF &= ~interrupt;
+		IF &= ~interrupt;
+		cpu.halted = false;
 		
 		return 12;
 	}

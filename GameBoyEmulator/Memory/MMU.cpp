@@ -45,8 +45,8 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address == 0xFFFF) {
         return interruptHandler.fetch8(address);
     } else {
-        /*printf("Unknown fetch address %x\n", address);
-        std::cerr << "";*/
+        printf("Unknown fetch address %x\n", address);
+        std::cerr << "";
     }
     
     return 0xFF;
@@ -58,19 +58,17 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         return serial.fetch8(address);
     } else if(address >= 0xFF04 && address <= 0xFF07) {
-        //std::cerr << "Timer and divider\n";
         return timer.fetch8(address);
     } else if(address == 0xFF0F) {
-        //std::cerr << "Interrupts\n";
         return interruptHandler.fetch8(address);
     } else if(address >= 0xFF10 && address <= 0xFF26) {
         return apu.fetch8(address);
     } else if(address >= 0xFF30 && address <= 0xFF3F) {
-        //std::cerr << "Wave pattern\n";
         return apu.fetch8(address);
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
+        // TODO; Please clean this..
         if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
             return lcdc.fetch8(address);
         } else if(address == 0xFF46) {
@@ -90,25 +88,37 @@ uint8_t MMU::fetchIO(uint16_t address) {
         // TODO; This is only for CGB
         //return (key1 & 0x81) | 0x7E;
         //return (key1 & 0xb10000001) | 0b01111110;
+        
+        // CGB Mode only
+        if(Cartridge::mode != Color) return 0xFF;
+        
         return 0b01111110 | (doubleSpeed ? 0x80 : 0) | (switchArmed ? 1 : 0);
     } else if(address == 0xFF4F) {
-        //std::cerr << "CGB VRAM Bank Select\n";
+        return vram.fetch8(address);
     } else if(address == 0xFF50) {
         //std::cerr << "Set to non-zero to disable boot ROM\n";
         return 1;
     } else if(address >= 0xFF51 && address <= 0xFF55) {
-        //std::cerr << "CGB VRAM DMA\n";
+        std::cerr << "CGB VRAM HDMA\n";
     } else if(address >= 0xFF68 && address <= 0xFF6B) {
-        //std::cerr << "CGB BG / OBJ Pallets\n";
+        return ppu.fetch8(address);
     } else if(address == 0xFF70) {
-        //std::cerr << "CGB WRAM Bank Select\n";
+        if(Cartridge::mode != Color) return 0xFF;
+        
         return wramBank;
-    } else {
-        /*printf("IO Fetch Address; %x\n", address);
-        std::cerr << "";*/
     }
     
-    return 0;
+    // TODO; Addresses that doesn't exist
+    else if(address != 0xFF03 && address != 0xFF08 && address != 0xFF09 && address != 0xFF0A &&
+            address != 0xFF0B && address != 0xFF0C && address != 0xFF0D &&
+            address != 0xFF0E && address != 0xFF27 && address != 0xFF28 && address != 0xFF29 &&
+            address != 0xFF2A && address != 0xFF2B && address != 0xFF2C &&
+            address != 0xFF2D && address != 0xFF2E && address != 0xFF2F) {
+        printf("IO Fetch Address; %x\n", address);
+        std::cerr << "";
+    }
+    
+    return 0xFF;
 }
 
 uint16_t MMU::fetch16(uint16_t address) {
@@ -125,7 +135,7 @@ void MMU::write8(uint16_t address, uint8_t data) {
         mbc.write(address, data);
     } else if(address >= 0x8000 && address < 0xA000) {
         vram.write8(address - 0x8000, data);
-    } else if (address >= 0xA000 && address < 0xBFFF) {
+    } else if (address >= 0xA000 && address <= 0xBFFF) {
         mbc.write(address, data);
     } else if(address >= 0xC000 && address <= 0xCFFF) {
         wram.write8(address - 0xC000, data);
@@ -142,8 +152,8 @@ void MMU::write8(uint16_t address, uint8_t data) {
     } else if (address == 0xFFFF) {
         interruptHandler.write8(address, data);
     } else {
-        /*printf("Unknown write address %x - %x\n", address, data);
-        std::cerr << "";*/
+        printf("Unknown write address %x - %x\n", address, data);
+        std::cerr << "";
     }
 }
 
@@ -155,13 +165,10 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address >= 0xFF01 && address <= 0xFF02) {
         serial.write8(address, data);
     } else if(address >= 0xFF04 && address <= 0xFF07) {
-        //std::cerr << "Timer and divider\n";
         timer.write8(address, data);
     } else if(address == 0xFF0F) {
-        //std::cerr << "Interrupts\n";
         interruptHandler.write8(address, data);
     } else if(address >= 0xFF10 && address <= 0xFF3F) {
-        //std::cerr << "Wave pattern\n";
         apu.write8(address, data);
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
@@ -202,6 +209,8 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
              * 
              * But I am messeing up something somewhere,
              * so luckily I wont have to trace a CPU isntruction!!!
+             *
+             * OK so in the end it was just.. a halt issue :DDDDDDDDDDDD
              */
             
             lcdc.write8(address, data);
@@ -251,16 +260,16 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
                 uint8_t val = fetch8(u16 + i);
                 write8(0xFE00 + i, val);
             }
-        } else if(address == 0xFF47) {
+        } else if(address >= 0xFF47 && address <= 0xFF49) {
             // https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
-            ppu.write8(address, data);
-        } else if(address == 0xFF48 || address == 0xFF49) {
             // https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
             ppu.write8(address, data);
         }
     } else if(address == 0xFF4D) {
         //key1 = (key1 & 0x80) | (data & 0x01); // Preserve current speed (bit 7) and `only` update switch armed (bit 0)
-        //key1 = data;
+
+        // CGB Mode only
+        if(Cartridge::mode != Color) return;
         
         // Bit 7 - Current Speed
         doubleSpeed = check_bit(data, 7);
@@ -268,19 +277,27 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         // Bit 0 - Switch armed
         switchArmed = check_bit(data, 0);
     } else if(address == 0xFF4F) {
-        //std::cerr << "CGB VRAM Bank Select\n";
+       vram.write8(address, data);
     } else if(address == 0xFF50) {
         //std::cerr << "Set to non-zero to disable boot ROM\n";
     } else if(address >= 0xFF51 && address <= 0xFF55) {
-        std::cerr << "CGB VRAM DMA\n";
-    } else if(address >= 0xFF68 && address <= 0xFF6B) {
-        //std::cerr << "CGB BG / OBJ Pallets\n";
+        std::cerr << "CGB VRAM HDMA\n";
+    } else if(address >= 0xFF68 && address <= 0xFF6C) {
+        ppu.write8(address, data);
     } else if(address == 0xFF70) {
-        //std::cerr << "CGB WRAM Bank Select\n";
+        if(Cartridge::mode != Color) return;
+        
         wramBank = (data & 0x7) == 0 ? 1 : static_cast<size_t>(data & 0x7);
-    } else {
-        /*printf("IO Write Address; %x = %x\n", address, data);
-        std::cerr << "";*/
+    }
+    
+    // TODO; Addresses that doesn't exist
+    else if(address != 0xFF03 && address != 0xFF08 && address != 0xFF0A &&
+            address != 0xFF0B && address != 0xFF0C && address != 0xFF0D &&
+            address != 0xFF0E && address != 0xFF27 && address != 0xFF28 &&
+            address != 0xFF2A && address != 0xFF2B && address != 0xFF2C &&
+            address != 0xFF2D && address != 0xFF2E && address != 0xFF2F) {
+        printf("IO Write Address; %x = %x\n", address, data);
+        std::cerr << "";
     }
 }
 

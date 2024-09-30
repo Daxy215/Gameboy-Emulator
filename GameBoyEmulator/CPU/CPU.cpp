@@ -386,7 +386,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
              * JR i8
              * 2, 12
              */
-            
+			
             int8_t i8 = static_cast<int8_t>(mmu.fetch8(PC));
 			jr(i8);
         	
@@ -2406,7 +2406,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 		
 		case 0xE2: {
         	/**
-        	 * LD (DFF00,C), A
+        	 * LD (FF00, C), A
         	 * 1, 8
         	 * - - - -
         	 */
@@ -2681,7 +2681,6 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			/**
 			 * CP A, u8
 			 * 2, 8
-			 *
 			 * Z 1 H C
 			 */
 			
@@ -2689,8 +2688,6 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			uint8_t A = AF.A;
 			uint8_t result = A - u8;
         	
-			//AF.A = A;
-			
         	AF.setZero(result == 0);
         	AF.setSubtract(true);
         	AF.setHalfCarry((A & 0xF) < (u8 & 0xF));
@@ -6045,7 +6042,11 @@ void CPU::popReg(uint8_t& high, uint8_t& low) {
 }
 
 void CPU::jr(int8_t& offset) {
+	//int8_t n = static_cast<int8_t>(mmu.fetch8(PC++));
 	PC += offset + 1; // For the byte
+	//PC = static_cast<uint16_t>(static_cast<int32_t>(PC) + static_cast<int32_t>(n));
+	
+	//PC = static_cast<uint16_t>(static_cast<uint32_t>(static_cast<int32_t>(PC)) + (static_cast<int32_t>(offset)));
 }
 
 int CPU::jrc(int8_t& offset) {

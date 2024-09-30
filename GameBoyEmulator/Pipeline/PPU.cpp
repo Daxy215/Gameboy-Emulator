@@ -7,20 +7,20 @@
 
 #include "LCDC.h"
 #include "SDL.h"
+#include "VRAM.h"
+#include "../Memory/Cartridge.h"
 
 #include "../Memory/MMU.h"
 #include "../Utility/Bitwise.h"
 
-const int WIDTH = 640;
-const int HEIGHT = 480;
+const int WIDTH = 160 * 4;
+const int HEIGHT = 144 * 4;
 
 PPU::PPUMode PPU::mode = PPU::HBlank;
 
 void PPU::tick(const int& cycles = 4) {
 	if(!lcdc.enable)
 		return;
-	
-	this->clock += cycles;
 	
 	uint8_t LYC = mmu.fetch8(0xFF45);
 	uint8_t WY  = mmu.fetch8(0xFF4A);
@@ -35,10 +35,9 @@ void PPU::tick(const int& cycles = 4) {
 	static const int SCANLINE_DOTS = 456;         // Total dots per scanline
 	static const int SCANLINES = 154;             // Total scanlines per frame
 	static const int MODE_2_DOTS = 80;            // OAM search duration in dots
-	//static const int MODE_1_LINES = 10;         // VBlank scanlines
 	static const int VBLANK_START_LINE = 144;     // Start of vertical blanking
 	
-	static uint16_t currentDot = 0;
+	//static uint16_t currentDot = 0;
 	//uint16_t currentScanline = 0;
 	
 	currentDot += cycles;
@@ -92,6 +91,7 @@ void PPU::tick(const int& cycles = 4) {
 				} else if (LY < SCANLINES) {
 					mode = VBlank;
 				} else {
+					// LY 154 reached
 					LY = 0;
 					
 					mode = OAMScan;
@@ -111,16 +111,18 @@ void PPU::tick(const int& cycles = 4) {
 				// VBlank interrupt
 				interrupt |= 0x01;
 				
-				/*if((lcdc.status & 0x40) && LYC == LY) {
+				if((lcdc.status & 0x40) && LYC == LY) {
 					interrupt |= 0x02;
-				}*/
+				}
 				
 				if(lcdc.status & 0x10) {
 					interrupt |= 0x02;
 				}
 				
 				if (LY >= SCANLINES) {
-					LY = 0; // Start a new frame
+					// LY 154 reached
+					
+					LY = 0;
 					winLineCounter = 0;
 					
 					mode = OAMScan;
@@ -135,8 +137,8 @@ void PPU::tick(const int& cycles = 4) {
 }
 
 void PPU::drawScanline() {
-	for (bool& i : bgPriority) {
-		i = false;
+	for (BGPriority& i : bgPriority) {
+		i = Zero;
 	}
 	
 	drawBackground();
@@ -176,7 +178,7 @@ void PPU::drawBackground() {
 		uint16_t tileX, tileY;
 		uint8_t pY, pX;
 		
-        if(lcdc.windowEnabled && drawWindow && winX >= 0) {
+        if(lcdc.windowEnabled && drawWindow && winX >= 0 && lcdc.WY < 140) {
 			tilemapAddr = tileWinMapBase;
 			
 			tileY = static_cast<uint16_t>((winLineCounter - 1)) >> 3;
@@ -194,7 +196,39 @@ void PPU::drawBackground() {
 			pX =(bgX & 0x07);
 		}
 		
-		uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
+		//uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
+		uint8_t tileID = mmu.vram.RAM[(tilemapAddr + tileY * 32 + tileX) & 0x1FFF];
+		
+		// https://gbdev.io/pandocs/Tile_Maps.html#bg-map-attributes-cgb-mode-only
+		bool priority = false;
+		bool yFlip = false;
+		bool xFlip = false;
+		bool bank = false;
+		uint8_t colorPalette = 0;
+		
+		if(Cartridge::mode == Color) {
+			uint8_t flags = mmu.vram.RAM[0x2000 + ((tilemapAddr + tileY * 32 + tileX) & 0x1FFF)];
+			
+			/**
+			 * Bit 7 - Priority
+			 *
+			 * 0 = No
+			 * 1 = Colors 1-3 are drawn over OBJ
+			 */
+			priority = check_bit(flags, 7);
+			
+			// Bit 6 - YFlip
+			yFlip = check_bit(flags, 6);
+			
+			// Bit 5 - XFlip
+			xFlip = check_bit(flags, 5);
+			
+			// Bit 3 - Bank
+			bank = check_bit(flags, 3);
+			
+			// Bit 2 - 0 - Colour pallete
+			colorPalette = flags & 0b00000111;
+		}
 		
 		uint16_t offset;
 		
@@ -207,17 +241,32 @@ void PPU::drawBackground() {
 		}
 		
 		// Tiles are flipped by default
-		pX = 7 - pX;
+		pX = xFlip ? pX : 7 - pX;
 		
-		uint16_t address = offset + (pY * 2);
-		uint8_t b0 = mmu.fetch8(address);
-		uint8_t b1 = mmu.fetch8(address + 1);
+		uint16_t address = yFlip ? offset + (14 - (pY * 2)) : offset + (pY * 2);
+		
+		uint8_t b0 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[(address & 0x1FFF) + 0x2000] : mmu.vram.RAM[(address & 0x1FFF)];
+		uint8_t b1 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[((address & 0x1FFF) + 0x2000) + 1] : mmu.vram.RAM[(address & 0x1FFF) + 1];
 		
 		uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
-		uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
+		bgPriority[x] = pixel == 0 ? Zero : (priority ? Priority : None);
 		
-		bgPriority[x] = pixel == 0;
-		updatePixel(static_cast<uint8_t>(x), LY, paletteIndexToColor(pixelColor));
+		if(Cartridge::mode == DMG) {
+			uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
+			
+			updatePixel(static_cast<uint8_t>(x), LY, paletteIndexToColor(pixelColor));
+		} else if(Cartridge::mode == Color) {
+			uint8_t lsb = CBGPalette[(colorPalette * 8) + (pixel * 2)];
+			uint8_t msb = CBGPalette[(colorPalette * 8) + (pixel * 2) + 1];
+			
+			uint16_t color = static_cast<uint16_t>(msb << 8) | lsb;
+			
+			uint32_t s = convertRGB555ToSDL(color);
+			
+			updatePixel(static_cast<uint8_t>(x), LY, s);
+		}
+		
+		//SDL_RenderPresent(renderer);
 	}
 }
 
@@ -268,15 +317,27 @@ void PPU::drawSprites() {
 			break;
 	}
 	
-	std::stable_sort(spriteBuffer.begin(), spriteBuffer.end(), [](const Sprite& a, const Sprite& b) {
-		// Order by x prioritization
-		if (a.x != b.x) {
-			return a.x > b.x;
-		}
-		
-		// Order by OAM position
-		return a.index > b.index;
-	});
+	// https://gbdev.io/pandocs/OAM.html#drawing-priority
+	
+	if(Cartridge::mode == Color) {
+	//if(opri) {
+		// CGB Mode
+		std::stable_sort(spriteBuffer.begin(), spriteBuffer.end(), [](const Sprite& a, const Sprite& b) {
+			// Order by OAM position
+			return a.index > b.index;
+		});
+	} else {
+		// DMG Mode
+		std::stable_sort(spriteBuffer.begin(), spriteBuffer.end(), [](const Sprite& a, const Sprite& b) {
+			// Order by x prioritization
+			if (a.x != b.x) {
+				return a.x > b.x;
+			}
+			
+			// Order by OAM position
+			return a.index > b.index;
+		});
+	}
 	
 	for (auto sprite : spriteBuffer) {
 		if (sprite.x < -7 || sprite.x >= 160)
@@ -329,7 +390,7 @@ void PPU::drawSprites() {
 		 *
 		 * Which OBP0-7 to use
 		 */
-		bool pallete = check_bit(flags, 2);
+		uint8_t palette = flags & 0b00000111;
 		
 		uint16_t tileY = flipY ? (spriteHeight - 1 - (LY - sprite.y)) : (LY - sprite.y);
 		
@@ -340,9 +401,8 @@ void PPU::drawSprites() {
 		 */
 		uint16_t tileAddr = 0x8000 + (tileIndex * 16) + (tileY * 2);
 		
-		// TODO; For CGB check BANK
-		uint8_t b0 = mmu.fetch8(tileAddr + 0);
-		uint8_t b1 = mmu.fetch8(tileAddr + 1);
+		uint8_t b0 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[(tileAddr & 0x1FFF) + 0x2000] : mmu.vram.RAM[(tileAddr & 0x1FFF)];
+		uint8_t b1 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[((tileAddr & 0x1FFF) + 0x2000) + 1] : mmu.vram.RAM[(tileAddr & 0x1FFF) + 1];
 		
 		/**
 		 * From what I understand is that the,
@@ -350,28 +410,49 @@ void PPU::drawSprites() {
 		 *
 		 * So 8 here is the width of every sprite.
 		 * As only the height changes from 8-16,
-		 * I don't need any extra checkls
+		 * I don't need any extra checks
 		 */
 		for(int8_t x = 0; x < 8; x++) {
-			if (sprite.x + x < -7 || sprite.x + x >= 160)
+			if (sprite.x + x < 0 || sprite.x + x >= 160)
 				continue;
 			
-			// Priority 1 - BG and Window colors 1–3 are drawn over this OBJ
-			if(priority && !bgPriority[sprite.x + x]) {
-				continue;
+			// Priority 1 - BG and Window colours 1–3 are drawn over this OBJ
+			
+			if(Cartridge::mode == DMG) {
+				if(priority && bgPriority[sprite.x + x] != Zero) {
+					continue;
+				}
+			} else if(Cartridge::mode == Color) {
+				if (lcdc.enable &&
+					(bgPriority[sprite.x + x] == Priority || (priority && bgPriority[sprite.x + x] != Zero))) {
+					continue;
+				}
 			}
 			
-			int8_t pX = flipX ? x : static_cast<int8_t>(7 - x);
+			int8_t pX = (flipX ? x : static_cast<int8_t>(7 - x));
 			
 			// Just copied this from 'drawBackground'
 			uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
 			
-			uint8_t pixelColor = dmgPallete ? OBJ1Palette[pixel] : OBJ0Palette[pixel];
+			uint32_t color = 0;
 			
-			if(pixelColor == 0)
-				continue;
+			if(Cartridge::mode == DMG) {
+				uint8_t pixelColor = dmgPallete ? OBJ1Palette[pixel] : OBJ0Palette[pixel];
+				
+				if(pixelColor == 0)
+					continue;
+				
+				color = paletteIndexToColor(pixelColor);
+			} else if(Cartridge::mode == Color) {
+				uint8_t lsb = CBGPalette[(palette * 8) + (pixel * 2)];
+				uint8_t msb = CBGPalette[(palette * 8) + (pixel * 2) + 1];
+				
+				uint16_t rgb = static_cast<uint16_t>(msb << 8) | lsb;
+				
+				color = convertRGB555ToSDL(rgb);
+			}
 			
-			updatePixel(static_cast<uint8_t>(sprite.x + x), LY, paletteIndexToColor(pixelColor));
+			updatePixel(static_cast<uint8_t>(sprite.x + x), LY, color);
 		}
 	}
 }
@@ -387,7 +468,58 @@ uint8_t PPU::fetch8(uint16_t address) {
 			return obj0;
 		else
 			return obj1;
+	} else if(address == 0xFF68) {
+		// https://gbdev.io/pandocs/Palettes.html#ff68--bcpsbgpi-cgb-mode-only-background-color-palette-specification--background-palette-index
+		
+		uint8_t data = 0;
+		
+		data |= (autoIncrementBG & 0b10000000);
+		data |= (bgIndex & 0b00111111);
+		
+		return data;
+	} else if(address == 0xFF69) {
+		// https://gbdev.io/pandocs/Palettes.html#ff69--bcpdbgpd-cgb-mode-only-background-color-palette-data--background-palette-data
+
+		if(mode == VRAMTransfer) {
+			return 0xFF;
+		}
+		
+		uint8_t data = CBGPalette[bgIndex];
+		
+		if(autoIncrementBG) {
+			bgIndex = (bgIndex + 1) & 0x3F; // Keep in range of 0-63
+		}
+		
+		return data;
+	} else if(address == 0xFF6A) {
+		uint8_t data = 0;
+		
+		data |= (autoIncrementOBJ & 0b10000000);
+		data |= (objIndex & 0b00111111);
+		
+		return data;
+	} else if(address == 0xFF6B) {
+		if(mode == VRAMTransfer) {
+			return 0xFF;
+		}
+		
+		uint8_t data = COBJPalette[bgIndex];
+		
+		if(autoIncrementOBJ) {
+			objIndex = (objIndex + 1) & 0x3F; // Keep in range of 0-63
+		}
+		
+		return data;
+	} else if(address == 0xFF6C) {
+		// https://gbdev.io/pandocs/CGB_Registers.html#ff6c--opri-cgb-mode-only-object-priority-mode
+        
+		return opri;
 	}
+	
+	printf("Unhandled PPU address: %d", address);
+	std::cerr << "";
+	
+	return 0xFF;
 }
 
 void PPU::write8(uint16_t address, uint8_t data) {
@@ -412,6 +544,59 @@ void PPU::write8(uint16_t address, uint8_t data) {
 				OBJ1Palette[i] = (data >> (i * 2)) & 0x03;
 			}
 		}
+	} else if(address == 0xFF68) {
+		// https://gbdev.io/pandocs/Palettes.html#ff68--bcpsbgpi-cgb-mode-only-background-color-palette-specification--background-palette-index
+		
+		/**
+		 * Bit 7 - Auto-increment
+		 *
+		 * 0 = Disabled
+		 * 1 = Increment
+		 */
+		autoIncrementBG = check_bit(data, 7);
+		
+		// Bit 5 through 0 = Address
+		bgIndex = data & 0b00111111;
+	} else if(address == 0xFF69) {
+		// https://gbdev.io/pandocs/Palettes.html#ff69--bcpdbgpd-cgb-mode-only-background-color-palette-data--background-palette-data
+		if(mode == VRAMTransfer) {
+			return;
+		}
+		
+		CBGPalette[bgIndex] = data;
+		
+		if(autoIncrementBG) {
+			bgIndex = (bgIndex + 1) & 0x3F; // Keep in range of 0-63
+		}
+	} else if(address == 0xFF6A) {
+		// https://gbdev.io/pandocs/Palettes.html#ff6aff6b--ocpsobpi-ocpdobpd-cgb-mode-only-obj-color-palette-specification--obj-palette-index-obj-color-palette-data--obj-palette-data
+		
+		// Bit 7 - Auto-increment
+		autoIncrementOBJ = check_bit(data, 7);
+		
+		// Bit 5 through 0 - Address for OBJ palette
+		objIndex = data & 0b00111111;
+	} else if(address == 0xFF6B) {
+		// https://gbdev.io/pandocs/Palettes.html#ff6aff6b--ocpsobpi-ocpdobpd-cgb-mode-only-obj-color-palette-specification--obj-palette-index-obj-color-palette-data--obj-palette-data
+		if(mode == VRAMTransfer) {
+			return;
+		}
+		
+		COBJPalette[objIndex] = data;
+		
+		if(autoIncrementOBJ) {
+			objIndex = (objIndex + 1) & 0x3F; // Keep in range of 0-63
+		}
+	} else if(address == 0xFF6C) {
+		// https://gbdev.io/pandocs/CGB_Registers.html#ff6c--opri-cgb-mode-only-object-priority-mode
+        
+		/**
+		 * Bit 0 - Priority mode
+		 * 
+		 * 0 = CGB-Style prioirty
+		 * 1 = DMG-Style prioirty
+		 */
+		opri = check_bit(data, 0);
 	}
 }
 
@@ -447,8 +632,9 @@ void PPU::createWindow() {
         std::cerr << "GLEW initialization failed: " << glewGetErrorString(err) << '\n';
         return;
     }
-    
+	
 	surface = SDL_GetWindowSurface(window);
+	//surface = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 	if (!surface) {
 		std::cerr << "SDL_CreateRGBSurface Error: " << SDL_GetError() << '\n';
 	}
@@ -460,15 +646,15 @@ void PPU::createWindow() {
 	
 	for(int x = 0; x < surface->w; x++) {
 		for(int y = 0; y < surface->h; y++) {
-			updatePixel(x, y, 0xFFFF0000);
+			setPixel(x, y, 0xFFFF0000);
 		}
 	}
 	
 	SDL_RenderPresent(renderer);
 }
 
-void PPU::updatePixel(uint8_t x, uint8_t y, uint32_t color) {
-	float scale = 1.6f;
+void PPU::updatePixel(uint32_t x, uint32_t y, uint32_t color) {
+	float scale = 4;
 	
 	int startX = static_cast<int>(x * scale);
 	int startY = static_cast<int>(y * scale);
@@ -489,17 +675,19 @@ void PPU::updatePixel(uint8_t x, uint8_t y, uint32_t color) {
 	//SDL_FreeSurface(surface);
 }
 
-void PPU::setPixel(uint8_t x, uint8_t y, uint32_t color) {
+void PPU::setPixel(uint32_t x, uint32_t y, uint32_t color) {
 	if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) {
 		return;
 	}
 	
+	//((uint16_t*)surface->pixels)[y * surface->w + x] = color;
 	uint32_t* pixels = static_cast<uint32_t*>(surface->pixels);
 	pixels[(y * surface->w) + x] = color;
 }
 
 void PPU::reset(const uint32_t& clock) {
-	this->clock = clock;
+	//this->clock = clock;
+	this->currentDot = clock;
 	drawWindow = false;
 	
 	//frames = 0;

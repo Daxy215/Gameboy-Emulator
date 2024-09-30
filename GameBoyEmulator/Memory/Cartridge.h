@@ -5,7 +5,8 @@
 #include "enums/CartridgeTypes.h"
 
 enum Mode {
-    Classic,
+    //Classic,
+    DMG,
     Color
 };
 

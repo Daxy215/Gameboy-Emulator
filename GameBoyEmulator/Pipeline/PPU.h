@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <cstdint>
+#include <iostream>
 #include <SDL_render.h>
 #include <SDL_video.h>
 
@@ -28,6 +29,12 @@ public:
 		VRAMTransfer = 3
 	};
 
+	enum BGPriority {
+		None,
+		Priority,
+		Zero
+	};
+
 public:
 	PPU(VRAM& vram, OAM& oam, LCDC& lcdc, MMU& mmu)
 		: fetcher(mmu),
@@ -49,11 +56,24 @@ public:
 	
 	void createWindow();
 	
-	void updatePixel(uint8_t x, uint8_t y, uint32_t color);
-	void setPixel(uint8_t x, uint8_t y, uint32_t color);
+	void updatePixel(uint32_t x, uint32_t y, uint32_t color);
+	void setPixel(uint32_t x, uint32_t y, uint32_t color);
 	void reset(const uint32_t& clock);
-
+	
 	// TODO; Remove
+	
+	uint32_t convertRGB555ToSDL(uint16_t color) {
+		uint8_t r = (color >> 0) & 0x1F;         // 0-4   - Red
+		uint8_t g = (color >> 5) & 0x1F;         // 5-9   - Green
+		uint8_t b = (color >> 10) & 0x1F;        // 10-14 - Blue
+		
+		r = (r * 255) / 31;
+		g = (g * 255) / 31;
+		b = (b * 255) / 31;
+		
+		// Return combined 32-bit color
+		return (static_cast<uint32_t>(0xFF) << 24) | (r << 16) | (g << 8) | b;
+	}
 	
 	const uint32_t COLOR_WHITE = 0xFFFFFF;  // White
 	const uint32_t COLOR_LIGHT_GRAY = 0xAAAAAA;  // Light Gray
@@ -77,15 +97,15 @@ public:
 
 private:
 	//bool test = false;
-	uint32_t clock = 0;
+	uint32_t currentDot = 0;
 	uint32_t winLineCounter = 0;
 	
 	bool drawWindow = false;
 	
-	bool bgPriority[160] = { false };
+	BGPriority bgPriority[160] = { Zero };
 public:
 	uint8_t interrupt;
-
+	
 	//bool wyTrigger = false;
 	
 private:
@@ -109,9 +129,31 @@ public:
 	uint8_t OBJ0Palette[4];
 	uint8_t OBJ1Palette[4];
 	
+	// CGB
+	
+	// Background
+	uint8_t CBGPalette[64];
+	uint8_t bgIndex = 0;
+	
+	// Sprite
+	uint8_t COBJPalette[64];
+	uint8_t objIndex = 0;
+	
+	// BCPS/BGPI
+	
+	/**
+	 * 0 = Disabled
+	 * 1 = Increment after writing to GCPD / 0CPD
+	 */
+	bool autoIncrementBG = false;
+	bool autoIncrementOBJ = false;
+	
+	bool opri = false;
 private:
 	SDL_Window* window;
 	SDL_GLContext sdl_context;
 	SDL_Renderer* renderer;
 	SDL_Surface* surface;
+	
+	SDL_Texture* texture;
 };

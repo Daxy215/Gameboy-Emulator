@@ -56,8 +56,6 @@ uint8_t Joypad::fetch8(uint16_t address) {
 		buttons = set_bit_to(buttons, 2, !select);
 		buttons = set_bit_to(buttons, 3, !start);
 	}
-
-	checkForInterrupts();
 	
 	buttons = set_bit_to(buttons, 4, !direction_switch);
 	buttons = set_bit_to(buttons, 5, !button_switch);
@@ -92,17 +90,16 @@ void Joypad::checkForInterrupts() {
 		current_dpad_state |= (!right ? 8 : 0);
 	}
 	
-	// Check for transitions in buttons
 	for (int i = 0; i < 4; ++i) {
 		if ((current_buttons_state & (1 << i)) == 0 && (prev_buttons_state & (1 << i)) != 0) {
-			interrupt |= 0x09;
+			interrupt |= 0x10;
 		}
 	}
 	
 	// Check for transitions in D-pad
 	for (int i = 0; i < 4; ++i) {
 		if ((current_dpad_state & (1 << i)) == 0 && (prev_dpad_state & (1 << i)) != 0) {
-			interrupt |= 0x09;
+			interrupt |= 0x10;
 		}
 	}
 	

@@ -137,6 +137,9 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             uint16_t opcode = cpu.fetchOpCode();
             cycles = cpu.decodeInstruction(opcode);
             
+            /*std::string format = formatCPUState(cpu);
+            std::cerr << format << " Opcode: " << std::hex << opcode << "\n";*/
+            
             /*cycles += cpu.mmu.cycles;
             cpu.mmu.cycles = 0;*/
         } else if(cpu.halted) {
@@ -159,6 +162,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
         }
         
+        cpu.mmu.joypad.checkForInterrupts();
         ppu.tick(cycles);
         
         // Again I'm lazy
@@ -208,28 +212,44 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
+    //std::string filename = "Roms/bootroms/dmg_boot.bin";
+    
     // GAMES
     
     // Games that works
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/TETRIS.gb";
-    //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb"; // TODO; Scrolling is bugged
+    //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     
     // Games that don't work :(
+    //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb"; // Idek man
+    //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
+    //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
+    //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     
     /*
      * TODO; I believe they require speed switch IRQ
      * Future me - It isn't the issue after all. Idk y it'd be xD
      */
+    
+    /*
+     * Ok I think the issue is the halt bug..
+     * Which I can find little resources of ;)
+     */
     //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
+    //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb"; // Just gets stuck?
     
     // TESTS
     
     //std::string filename = "Roms/dmg-acid2.gb"; // Passed
+    //std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO;
+    
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
+    
+    //std::string filename = "Roms/tests/age-test-roms/vram/vram-read-cgbBCE.gb"; // TODO: ?
     
     // CPU INSTRUCTIONS
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
@@ -271,11 +291,12 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/mem_timing/individual/03-modify_timing.gb"; // TODO;
     
     //std::string filename = "Roms/tests/bully/bully.gb"; // TODO;
-    //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // TODO;
+    
+    //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // Passed
     
     // OAM BUG
     //std::string filename = "Roms/tests/blargg/oam_bug/oam_bug.gb"; // TODO;
-    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/1-lcd_sync.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/1-lcd_sync.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/2-causes.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/3-non_causes.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/4-scanline_timing.gb"; // TODO;
@@ -292,7 +313,7 @@ int main(int argc, char* argv[]) {
     // Mooneye
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/instr/daa.gb"; // Passed
     
-    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/basic.gb"; // Passed
+    // std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/basic.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/reg_read.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/sources-GS.gb"; // TODO; Uses MBC5
     
@@ -304,7 +325,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO;
-    std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO;
     

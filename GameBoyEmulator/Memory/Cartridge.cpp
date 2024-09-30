@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-Mode Cartridge::mode;
+Mode Cartridge::mode = DMG;
 
 void Cartridge::decode(const std::vector<uint8_t>& data) {
     // From 0x100 - 0x014F

@@ -51,15 +51,17 @@ public:
     void clear();
 
 public:
-    uint16_t cycles;
+    uint16_t cycles = 0;
     
 private:
     uint8_t wramBank = 1;
     
     // Prepare speed switch thingies
-    uint8_t key1;
+    uint8_t key1 = 0;
 
 public:
+    // CGB Registes
+    
     /**
      * false - Normal
      * true - Double
@@ -67,7 +69,7 @@ public:
     bool doubleSpeed = false;
     
     bool switchArmed = false;
-
+    
 private:
     // I/O
     InterruptHandler& interruptHandler;
@@ -77,7 +79,7 @@ public: // TODO; Im too lazy! im sorry..
     
     Serial& serial;
     
-private:
+public:
     Timer& timer;
     
     // Memories
@@ -91,8 +93,6 @@ private:
 
 public:
     PPU& ppu;
-
+    
     APU& apu;
-/*public:
-    std::vector<uint8_t> memory;*/
 };
