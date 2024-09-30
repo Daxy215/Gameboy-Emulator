@@ -219,7 +219,7 @@ int main(int argc, char* argv[]) {
     // Games that works
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/TETRIS.gb";
-    std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
+    //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     
     // Games that don't work :(
     //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb"; // Idek man
@@ -245,7 +245,7 @@ int main(int argc, char* argv[]) {
     // TESTS
     
     //std::string filename = "Roms/dmg-acid2.gb"; // Passed
-    //std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO;
+    std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO;
     
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
     
@@ -325,7 +325,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // TODO; Imma cry
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO;
     

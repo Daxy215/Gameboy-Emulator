@@ -250,6 +250,7 @@ void PPU::drawBackground() {
 		
 		uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
 		bgPriority[x] = pixel == 0 ? Zero : (priority ? Priority : None);
+		//bgPriority[x] = priority ? Priority : (pixel == 0 ? Zero : None);
 		
 		if(Cartridge::mode == DMG) {
 			uint8_t pixelColor = (bgp >> (pixel * 2)) & 0x03;
@@ -434,6 +435,9 @@ void PPU::drawSprites() {
 			// Just copied this from 'drawBackground'
 			uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
 			
+			if(pixel == 0)
+				continue;
+			
 			uint32_t color = 0;
 			
 			if(Cartridge::mode == DMG) {
@@ -444,8 +448,8 @@ void PPU::drawSprites() {
 				
 				color = paletteIndexToColor(pixelColor);
 			} else if(Cartridge::mode == Color) {
-				uint8_t lsb = CBGPalette[(palette * 8) + (pixel * 2)];
-				uint8_t msb = CBGPalette[(palette * 8) + (pixel * 2) + 1];
+				uint8_t lsb = COBJPalette[(palette * 8) + (pixel * 2)];
+				uint8_t msb = COBJPalette[(palette * 8) + (pixel * 2) + 1];
 				
 				uint16_t rgb = static_cast<uint16_t>(msb << 8) | lsb;
 				

@@ -38,6 +38,8 @@ uint8_t MMU::fetch8(uint16_t address) {
         return vram.fetch8(address - 0xE000);
     } else if(address >= 0xFE00 && address <= 0xFE9F) {
         return oam.fetch8(address);
+    } else if(address >= 0xFEA0 && address <= 0xFEFF) {
+        // Not usable
     } else if(address >= 0xFF00 && address <= 0xFF7F) {
         return fetchIO(address);
     } else if(address >= 0xFF80 && address <= 0xFFFE) {
@@ -145,6 +147,8 @@ void MMU::write8(uint16_t address, uint8_t data) {
         vram.write8(address - 0xE000, data);
     } else if (address >= 0xFE00 && address <= 0xFE9F) {
         oam.write8(address - 0xFE00, data);
+    } else if(address >= 0xFEA0 && address <= 0xFEFF) {
+        // Not usable
     } else if (address >= 0xFF00 && address <= 0xFF7F) {
         writeIO(address, data);
     } else if (address >= 0xFF80 && address <= 0xFFFE) {
