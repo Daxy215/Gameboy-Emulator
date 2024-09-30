@@ -26,7 +26,7 @@ uint8_t MMU::fetch8(uint16_t address) {
     
     if(address <= 0x7FFF) {
         return mbc.read(address);
-    } else if(address >= 0x8000 && address < 0x9FFF) {
+    } else if(address >= 0x8000 && address <= 0x9FFF) {
         return vram.fetch8(address - 0x8000);
     } else if (address >= 0xA000 && address <= 0xBFFF) {
         return mbc.read(address);
@@ -133,7 +133,7 @@ uint16_t MMU::fetch16(uint16_t address) {
 void MMU::write8(uint16_t address, uint8_t data) {
     if (address < 0x8000) {
         mbc.write(address, data);
-    } else if(address >= 0x8000 && address < 0xA000) {
+    } else if(address >= 0x8000 && address <= 0x9FFF) {
         vram.write8(address - 0x8000, data);
     } else if (address >= 0xA000 && address <= 0xBFFF) {
         mbc.write(address, data);

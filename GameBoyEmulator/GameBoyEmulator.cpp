@@ -219,7 +219,7 @@ int main(int argc, char* argv[]) {
     // Games that works
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/TETRIS.gb";
-    //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
+    std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     
     // Games that don't work :(
     //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb"; // Idek man
@@ -238,7 +238,7 @@ int main(int argc, char* argv[]) {
      * Ok I think the issue is the halt bug..
      * Which I can find little resources of ;)
      */
-    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
+   // std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
     //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb"; // Just gets stuck?
     
