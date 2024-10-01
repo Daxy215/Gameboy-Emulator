@@ -80,6 +80,11 @@ public:
 	const uint32_t COLOR_DARK_GRAY = 0x505050;  // Dark Gray
 	const uint32_t COLOR_BLACK = 0x000000;  // Black
 	
+	/*const uint32_t COLOR_WHITE = 0x9A9E3F;  // White
+	const uint32_t COLOR_LIGHT_GRAY = 0x496B22;  // Light Gray
+	const uint32_t COLOR_DARK_GRAY = 0x0E450B;  // Dark Gray
+	const uint32_t COLOR_BLACK = 0x1B2A09;  // Black*/
+	
 	uint32_t paletteIndexToColor(uint8_t index) {
 		switch (index) {
 		case 0: return COLOR_WHITE;

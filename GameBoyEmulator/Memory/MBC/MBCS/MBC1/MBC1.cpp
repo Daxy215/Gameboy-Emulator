@@ -3,11 +3,14 @@
 MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
 	this->rom = rom;
 	
-	this->romSize = cartridge.romSize;
-	this->ramSize = cartridge.ramSize;
+	/*this->romSize = cartridge.romSize;
+	this->ramSize = cartridge.ramSize;*/
+	
+	this->romBanks = cartridge.romBanks;
+	this->ramBanks = cartridge.ramSize;
 	
 	//eram.resize(static_cast<size_t>(cartridge.romSize) * 1024);
-	eram.resize(static_cast<size_t>((cartridge.ramSize + 1) * 2) * 1024);
+	eram.resize(static_cast<size_t>(cartridge.ramSize) * 1024);
 }
 
 uint8_t MBC1::fetch8(uint16_t address) {
@@ -20,7 +23,8 @@ uint8_t MBC1::fetch8(uint16_t address) {
 		// Switchable ROM bank
 		// bank 0 isn't allowed in this region
 		//uint8_t bank = (curRomBank == 0) ? 1 : curRomBank;
-		uint8_t bank = (curRomBank & 0x1F);
+		uint8_t bank = /*(bankingMode ? static_cast<uint8_t>(curRamBank << 5) : 0) + */(curRomBank & 0x1F);
+		//uint8_t bank = (curRomBank & 0x1F);
 		
 		if(bank == 0)
 			bank = 1;
@@ -61,15 +65,16 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 	// ROM bank switching (0x2000 - 0x3FFF)
 	else if (address >= 0x2000 && address <= 0x3FFF) {
 		data &= 0x1F;
-
+		
 		if(data == 0)
 			data = 1;
 		
-		curRomBank = data;
+		curRomBank = data/* & (1 << romBanks)*/;
 		
-		/*if(data == 0xE1) {
+		// writing $E1 (binary 11100001) to this register would select bank $01.
+		if(data == 0xE1) {
 			curRomBank = 1;	
-		}*/
+		}
 		
 		/**
 		 * According to: https://gbdev.io/pandocs/MBC1.html#20003fff--rom-bank-number-write-only

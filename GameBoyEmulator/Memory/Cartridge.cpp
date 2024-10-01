@@ -73,14 +73,19 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
             /**
              * https://gbdev.io/pandocs/The_Cartridge_Header.html#0143--cgb-flag
              * CGB flag
-             *
+             * 
              * 80 - Game supports CGB though can work with Game Boy
              * C0 - Only CGB
-             *
+             * 
              * Igoring PGB Mode
              */
             if((data[i] & 0x80) == 0x80) {
                 mode = Color;
+                std::cerr << "Color/Normal mode\n";
+            } else if((data[i] & 0xC0) == 0xC0) {
+                std::cerr << "Color only mode\n";
+            } else {
+                std::cerr << "Normal mode\n";
             }
         }
         
@@ -110,6 +115,29 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
             // https://gbdev.io/pandocs/The_Cartridge_Header.html#0148--rom-size
             
             romSize = static_cast<uint8_t>(32 * (1 << data[i]));
+            
+            switch (data[i]) {
+                case 0: romBanks = 2; break; // No banking
+                case 1: romBanks = 4; break;
+                case 2: romBanks = 8; break;
+                case 3: romBanks = 16; break;
+                case 4: romBanks = 32; break;
+                case 5: romBanks = 64; break;
+                case 6: romBanks = 128; break;
+                case 7: romBanks = 256; break;
+                case 8: romBanks = 512; break;
+                
+                /**
+                 * These values are most inaccurate..
+                 * Most likely as they are unknown.
+                 *
+                 * According to: https://gbdev.io/pandocs/The_Cartridge_Header.html#weird_rom_sizes
+                 */
+                /*case 52: romBanks = 72; break;
+                case 53: romBanks = 80; break;
+                case 54: romBanks = 96; break;*/
+                default: std::cerr << "Unknown ROM Size of: " << std::hex << std::to_string(data[i]) << "\n"; break;
+            }
         }
         
         if(i == 0x0149) {
@@ -118,7 +146,17 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
             
             // TODO; If data[i] == 0 - Unused aka NO RAM.
             
-            ramSize = 8 * (data[i]);
+            ramSize = 0;
+            
+            switch (data[i]) {
+                case 0: ramBanks = 0;                  break; // No RAM
+                case 1: ramBanks = 0;                  break; // Unused
+                case 2: ramBanks = 1;  ramSize = 8;    break;
+                case 3: ramBanks = 4;  ramSize = 32;   break;
+                case 4: ramBanks = 16; ramBanks = 128; break;
+                case 5: ramBanks = 8;  ramSize = 64;   break;
+                default: std::cerr << "Unknown RAM Size of: " << std::hex << std::to_string(data[i]) << "\n"; break;
+            }
         }
     }
 }

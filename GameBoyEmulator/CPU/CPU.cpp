@@ -146,7 +146,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	uint8_t value = AF.A;
         	
         	uint8_t bit7 = (value >> 7) & 1;
-        	value = (value << 1) | bit7;
+        	value = static_cast<uint8_t>(value << 1) | bit7;
 			
         	AF.A = value;
 			
@@ -154,7 +154,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	AF.setSubtract(false);
         	AF.setHalfCarry(false);
         	AF.setCarry(bit7 == 1);
-
+			
         	return 4;
         }
 		
@@ -166,11 +166,9 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	uint16_t u16 = mmu.fetch16(PC);
-        	
-        	// TODO; Maybe use push to stack??
-        	mmu.write8(u16, SP & 0xFF);
-        	mmu.write8(u16 + 1, (SP >> 8) & 0xFF);
 			
+        	mmu.write16(u16, SP);
+        	
         	PC += 2;
         	
         	return 20;
@@ -185,9 +183,9 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			
         	uint16_t hl = HL.get();
         	uint16_t bc = BC.get();
+        	
         	add(hl, bc);
 			
-        	// TODO; ..
         	HL = hl;
         	BC = bc;
         	
@@ -280,7 +278,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * - - - -
 			 */
 			
-        	// TODO; https://gbdev.io/pandocs/CGB_Registers.html#ff4d--key1-cgb-mode-only-prepare-speed-switch
+        	// https://gbdev.io/pandocs/CGB_Registers.html#ff4d--key1-cgb-mode-only-prepare-speed-switch
         	mmu.switchSpeed();
 			//stop = true;
         	
@@ -2323,7 +2321,6 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	
         	PC = popStack();
 			
-        	// TODO;
         	interruptHandler.IME = true;
 			//ei = 1; // ?
         	
@@ -2687,6 +2684,10 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	uint8_t u8 = mmu.fetch8(PC++);
 			uint8_t A = AF.A;
 			uint8_t result = A - u8;
+
+        	if(result == 0) {
+				printf("");
+        	}
         	
         	AF.setZero(result == 0);
         	AF.setSubtract(true);
@@ -6491,9 +6492,9 @@ void CPU::sra(uint8_t& reg) {
 
 void CPU::pushToStack(uint16_t value) {
 	/*mmu.write8(--SP, value & 0xFF);
-    mmu.write8(--SP, (value >> 8) /*should I & 0xFF?#1#);
+    mmu.write8(--SP, (value >> 8) & 0xFF);
     */
-	
+    
 	SP -= 2;
     mmu.write16(SP, value);
 }

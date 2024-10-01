@@ -26,5 +26,8 @@ public:
     uint8_t romSize = 0;
     uint8_t ramSize = 0;
     
+    uint16_t romBanks = 0;
+    uint16_t ramBanks = 0;
+    
     enums::CartridgeType type = enums::UNKNOWN_CARTRIDGE;
 };

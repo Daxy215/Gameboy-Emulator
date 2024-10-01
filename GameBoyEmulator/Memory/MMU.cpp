@@ -18,6 +18,10 @@
 #include "../Utility/Bitwise.h"
 #include "MBC/MBC.h"
 
+void MMU::tick() {
+    joypad.checkForInterrupts();
+}
+
 uint8_t MMU::fetch8(uint16_t address) {
     /**
      * Information of memory map is taken from;
@@ -64,9 +68,9 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address == 0xFF0F) {
         return interruptHandler.fetch8(address);
     } else if(address >= 0xFF10 && address <= 0xFF26) {
-        return apu.fetch8(address);
+        //return apu.fetch8(address);
     } else if(address >= 0xFF30 && address <= 0xFF3F) {
-        return apu.fetch8(address);
+        //return apu.fetch8(address);
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
@@ -75,7 +79,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
             return lcdc.fetch8(address);
         } else if(address == 0xFF46) {
             //  $FF46	DMA	OAM DMA source address & start
-            return 0xFF;
+            return lastDma;
         } else if(address == 0xFF47) {
             // https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
             return ppu.fetch8(address);
@@ -100,9 +104,32 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address == 0xFF50) {
         //std::cerr << "Set to non-zero to disable boot ROM\n";
         return 1;
-    } else if(address >= 0xFF51 && address <= 0xFF55) {
-        std::cerr << "CGB VRAM HDMA\n";
-    } else if(address >= 0xFF68 && address <= 0xFF6B) {
+    }/* else if(address >= 0xFF51) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff51ff52--hdma1-hdma2-cgb-mode-only-vram-dma-source-high-low-write-only
+        if(Cartridge::mode != Color) return 0xFF;
+        
+        return (source & 0xFF00) >> 8;
+    } else if(address >= 0xFF52) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff51ff52--hdma1-hdma2-cgb-mode-only-vram-dma-source-high-low-write-only
+        if(Cartridge::mode != Color) return 0xFF;
+        
+        return source & 0xFF;
+    } else if(address >= 0xFF53) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff53ff54--hdma3-hdma4-cgb-mode-only-vram-dma-destination-high-low-write-only
+        if(Cartridge::mode != Color) return 0xFF;
+        
+        return (dest & 0xFF00) >> 8;
+    } else if(address >= 0xFF54) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff53ff54--hdma3-hdma4-cgb-mode-only-vram-dma-destination-high-low-write-only
+        if(Cartridge::mode != Color) return 0xFF;
+        
+        return dest & 0xFF;
+    } else if(address >= 0xFF55) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff55--hdma5-cgb-mode-only-vram-dma-lengthmodestart
+        if(Cartridge::mode != Color) return 0xFF;
+        
+        return (enabled ? 0 : 0x80) | length;
+    }*/ else if(address >= 0xFF68 && address <= 0xFF6B) {
         return ppu.fetch8(address);
     } else if(address == 0xFF70) {
         if(Cartridge::mode != Color) return 0xFF;
@@ -173,7 +200,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address == 0xFF0F) {
         interruptHandler.write8(address, data);
     } else if(address >= 0xFF10 && address <= 0xFF3F) {
-        apu.write8(address, data);
+        //apu.write8(address, data);
     } else if(address >= 0xFF40 && address <= 0xFF4B) {
         //std::cerr << "LCD Control, Status, Position, Scrolling, and Palettes\n";
         
@@ -258,6 +285,8 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             }*/
             
             //  $FF46	DMA	OAM DMA source address & start
+            lastDma = data;
+            
             uint16_t u16 = (static_cast<uint16_t>(data)) << 8;
             
             for(uint16_t i = 0; i < 160; i++) {
@@ -284,9 +313,53 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
        vram.write8(address, data);
     } else if(address == 0xFF50) {
         //std::cerr << "Set to non-zero to disable boot ROM\n";
-    } else if(address >= 0xFF51 && address <= 0xFF55) {
-        std::cerr << "CGB VRAM HDMA\n";
-    } else if(address >= 0xFF68 && address <= 0xFF6C) {
+    }/* else if(address >= 0xFF51) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff51ff52--hdma1-hdma2-cgb-mode-only-vram-dma-source-high-low-write-only
+        if(Cartridge::mode != Color) return;
+        
+        source = (source & 0xFF) | static_cast<uint8_t>(data << 8);
+    } else if(address >= 0xFF52) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff51ff52--hdma1-hdma2-cgb-mode-only-vram-dma-source-high-low-write-only
+        if(Cartridge::mode != Color) return;
+        
+        source = (source & 0xFF00) | (data);
+    } else if(address >= 0xFF53) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff53ff54--hdma3-hdma4-cgb-mode-only-vram-dma-destination-high-low-write-only
+        if(Cartridge::mode != Color) return;
+
+        dest = (dest & 0xFF) | static_cast<uint8_t>(data << 8);
+    } else if(address >= 0xFF54) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff53ff54--hdma3-hdma4-cgb-mode-only-vram-dma-destination-high-low-write-only
+        if(Cartridge::mode != Color) return;
+        
+        dest = (dest & 0xFF00) | data;
+    } else if(address >= 0xFF55) {
+        // https://gbdev.io/pandocs/CGB_Registers.html#ff55--hdma5-cgb-mode-only-vram-dma-lengthmodestart
+        if(Cartridge::mode != Color) return;
+        
+        if(lcdc.enable) {
+            notifyHBlank = PPU::mode == PPU::HBlank;
+        } else {
+            notifyHBlank = true;
+        }
+
+        mode = (data & 0x80) >> 7;
+        length = (data & 0x7F) + 1;
+        
+        if(!enabled) {
+            enabled = true;
+            active = (mode == 0);
+        } else if((data & 0x80) == 0) {
+            enabled = false;
+            active = false;
+        }
+        
+        destIndex = (dest & 0x1FF0) | static_cast<uint8_t>(0x8000);
+        sourceIndex = source & 0xFFF0;
+        lastLY = 250;
+        
+        tillNextByte = doubleSpeed ? 2 : 1;
+    }*/ else if(address >= 0xFF68 && address <= 0xFF6C) {
         ppu.write8(address, data);
     } else if(address == 0xFF70) {
         if(Cartridge::mode != Color) return;
