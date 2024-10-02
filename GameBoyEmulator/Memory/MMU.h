@@ -21,7 +21,7 @@ class APU;
 
 class MMU {
 public:
-    MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC& mbc, WRAM& wram, HRAM& hram, VRAM& vram, LCDC& lcdc, Timer& timer, OAM& oam, PPU& ppu, APU& apu, const std::vector<uint8_t>& memory)
+    MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC& mbc, WRAM& wram, HRAM& hram, VRAM& vram, LCDC& lcdc, Timer& timer, OAM& oam, PPU& ppu, APU& apu, const std::vector<uint8_t>& bootRom, const std::vector<uint8_t>& memory)
         : interruptHandler(interruptHandler),
           serial(serial),
           joypad(joypad),
@@ -33,11 +33,13 @@ public:
           lcdc(lcdc),
           oam(oam),
           ppu(ppu),
-          apu(apu) {
+          apu(apu),
+          bootRom(bootRom) {
+        
     }
-
+    
     void tick();
-
+    
     uint8_t fetch8(uint16_t address);
     uint8_t fetchIO(uint16_t address);
     
@@ -50,13 +52,15 @@ public:
     
     void switchSpeed();
     void clear();
-
+    
 public:
     uint16_t cycles = 0;
+
+    bool bootRomActive = false;
     
 private:
     uint8_t wramBank = 1;
-
+    
     uint8_t lastDma = 0;
     
     // Prepare speed switch thingies
@@ -111,9 +115,11 @@ public:
     
     LCDC& lcdc;
     OAM& oam;
-
+    
 public:
     PPU& ppu;
     
     APU& apu;
+    
+    std::vector<uint8_t> bootRom;
 };

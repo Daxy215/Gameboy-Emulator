@@ -58,24 +58,6 @@ std::string formatCPUState(const CPU &cpu) {
     std::ostringstream oss;
     
     oss << std::hex << std::uppercase << std::setfill('0');
-    /*oss << "PC = " <<  std::setw(2) << static_cast<int>(cpu.PC) << ' ';
-    oss << "Just executed=" <<  std::setw(1) << static_cast<int>(cpu.mmu.fetch8(cpu.PC)) << ' ';
-    
-    oss << "AF: " << std::setw(1) << static_cast<int>(cpu.AF.A) << ' ';
-    oss  << std::setw(2) << static_cast<int>(cpu.AF.F) << ' ';
-    
-    oss << "BC: " << std::setw(1) << static_cast<int>(cpu.BC.B) << ' ';
-    oss  << std::setw(2) << static_cast<int>(cpu.BC.C) << ' ';
-    
-    oss << "HL: " << std::setw(2) << static_cast<int>(cpu.HL.get()) << ' ';
-    
-    oss << "DE: " << std::setw(1) << static_cast<int>(cpu.DE.D) << ' ';
-    oss  << std::setw(2) << static_cast<int>(cpu.DE.E) << ' ';
-    
-    oss << "SP: " << std::setw(2) << static_cast<int>(cpu.SP) << ' ';
-    oss << " PC: " << std::setw(2) << static_cast<int>(cpu.PC);*/
-    
-    // Format the registers and SP, PC in hex with leading zeros
     oss << "A: " << std::setw(2) << static_cast<int>(cpu.AF.A) << ' ';
     oss << "F: " << std::setw(2) << static_cast<int>(cpu.AF.F) << ' ';
     oss << "B: " << std::setw(2) << static_cast<int>(cpu.BC.B) << ' ';
@@ -94,12 +76,6 @@ std::string formatCPUState(const CPU &cpu) {
     for (uint16_t i = 0; i < 4; i++) {
         mem[i] = cpu.mmu.fetch8(pc + i);
     }
-    
-    /*oss << "PCMEM:" << std::hex;
-    for (int i = 0; i < 4; i++) {
-        oss << std::setw(2) << static_cast<int>(mem[i]);
-        if (i < 3) oss << ',';
-    }*/
     
     oss << "(" << std::hex;
     for (int i = 0; i < 4; i++) {
@@ -122,7 +98,8 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     
     while (running) {
         auto start = std::chrono::high_resolution_clock::now();
-        
+
+        // TODO; Move this to CPU.tick..
         // https://gbdev.io/pandocs/Interrupts.html#ime-interrupt-master-enable-flag-write-only
         if(cpu.ei >= 0) cpu.ei--;
         
@@ -136,6 +113,10 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         if(!cpu.halted && !cpu.stop && cycles == 0) {
             uint16_t opcode = cpu.fetchOpCode();
             cycles = cpu.decodeInstruction(opcode);
+            
+            if(cpu.PC >= 0x100) {
+                cpu.mmu.bootRomActive = false;
+            }
             
             /*std::string format = formatCPUState(cpu);
             std::cerr << format << " Opcode: " << std::hex << opcode << "\n";*/
@@ -212,8 +193,6 @@ int main(int argc, char* argv[]) {
     using std::ifstream;
     using std::ios;
     
-    //std::string filename = "Roms/bootroms/dmg_boot.bin";
-    
     // GAMES
     
     // Games that works
@@ -255,7 +234,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/age-test-roms/vram/vram-read-cgbBCE.gb"; // TODO: ?
     
     // CPU INSTRUCTIONS
-    //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
+    std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb"; // Passed
@@ -342,9 +321,9 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tima_reload.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tima_write_reloading.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tma_write_reloading.gb"; // TODO;
-        
+    
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // Passed
-    std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO;
@@ -389,6 +368,46 @@ int main(int argc, char* argv[]) {
         
         return 1;
     }
+
+    // TODO; Make a class for this
+    /*std::string booRom = "Roms/bootroms/dmg0_boot.bin";
+    
+    ifstream bootStream(filename.c_str(), ios::binary | ios::ate);
+    
+    if (!bootStream.good()) {
+        std::cerr << "Cannot read from file: " << booRom << '\n';
+    }
+    
+    auto size = bootStream.tellg();
+    bootStream.seekg(0, ios::beg);
+    
+    std::vector<uint8_t> bootRom(size);
+    
+    if (!bootStream.read(reinterpret_cast<char*>(bootRom.data()), size)) {
+        std::cerr << "Error reading file!" << '\n';
+        
+        return 1;
+    }*/
+    
+    // From GearBoy
+    std::vector<uint8_t> bootDMG = {
+        0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
+        0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
+        0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
+        0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
+        0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
+        0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
+        0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
+        0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
+        0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
+        0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
+        0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9, 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
+        0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
+        0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
+        0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C,
+        0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
+        0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
+    };
     
     Cartridge cartridge;
     
@@ -415,7 +434,7 @@ int main(int argc, char* argv[]) {
     APU apu;
     
     // Create MMU
-    MMU mmu(interruptHandler, serial, joypad, mbc, wram, hram, vram, lcdc, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), apu, memory);
+    MMU mmu(interruptHandler, serial, joypad, mbc, wram, hram, vram, lcdc, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), apu, bootDMG, memory);
     
     // Listen.. I'm too lazy to deal with this crap
     ppu = &mmu.ppu;
@@ -438,6 +457,11 @@ int main(int argc, char* argv[]) {
     //runEmulation(cpu, *ppu);
     
     std::thread emulationThread(runEmulation, std::ref(cpu), std::ref(*ppu), std::ref(timer));
+
+    // Boot rom
+    for(int i = 0; i < 100; i++) {
+        
+    }
     
     bool running = true;
     const int targetFPS = 60;

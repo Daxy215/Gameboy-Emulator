@@ -11,11 +11,11 @@ class CPU {
 public:
     CPU(InterruptHandler& interruptHandler, MMU& mmu);
     
+    void bootRom();
+    
     uint16_t fetchOpCode();
     uint16_t decodeInstruction(uint16_t opcode);
     uint16_t decodePrefix(uint16_t opcode);
-
-    void bootRom();
     
     void popReg(uint8_t& reg);
     void popReg(uint8_t& high, uint8_t& low);

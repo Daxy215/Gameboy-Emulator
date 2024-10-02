@@ -28,6 +28,10 @@ uint8_t MMU::fetch8(uint16_t address) {
      * https://gbdev.io/pandocs/Memory_Map.html
      */
     
+    if(bootRomActive && address < 0x100) {
+        return bootRom[address];
+    }
+    
     if(address <= 0x7FFF) {
         return mbc.read(address);
     } else if(address >= 0x8000 && address <= 0x9FFF) {

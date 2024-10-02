@@ -41,11 +41,23 @@ CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
     HL.H = 0x01;
     HL.L = 0x4D;*/
 	
-    PC = 0x0100;
+    PC = mmu.bootRomActive ? 0x0000 : 0x0100;
     SP = 0xFFFE;
 	
-	bootRom();
+	//bootRom();
 }
+
+/*
+void CPU::bootRom() {
+	while(PC < 0x100) {
+		uint16_t opcode = fetchOpCode();
+		
+		decodeInstruction(opcode);
+	}
+	
+	printf("Completed");
+}
+*/
 
 uint16_t CPU::fetchOpCode() {
     uint16_t opcode = mmu.fetch8(PC++);
@@ -5987,6 +5999,7 @@ uint16_t CPU::decodePrefix(uint16_t opcode) {
 	}
 }
 
+/*
 void CPU::bootRom() {
 	// https://gbdev.io/pandocs/Power_Up_Sequence.html#hardware-registers
 
@@ -6032,6 +6045,7 @@ void CPU::bootRom() {
 	mmu.write8(0xFF4A, 0x00);
 	mmu.write8(0xFF4B, 0x00);
 }
+*/
 
 void CPU::popReg(uint8_t& reg) {
 	reg = mmu.fetch8(SP++);
