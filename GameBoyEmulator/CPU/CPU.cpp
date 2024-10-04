@@ -75,21 +75,7 @@ CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
 	mmu.write8(0xFF49, 0xFF);
 	mmu.write8(0xFF4A, 0x00);
 	mmu.write8(0xFF4B, 0x00);
-	
-	//bootRom();
 }
-
-/*
-void CPU::bootRom() {
-	while(PC < 0x100) {
-		uint16_t opcode = fetchOpCode();
-		
-		decodeInstruction(opcode);
-	}
-	
-	printf("Completed");
-}
-*/
 
 uint16_t CPU::fetchOpCode() {
     uint16_t opcode = mmu.fetch8(PC++);
@@ -1571,7 +1557,6 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	/**
 			 * AND A, A
 			 * 1, 4
-			 *
 			 * Z 0 1 0
 			 */
 			
@@ -2727,15 +2712,15 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			
         	uint8_t u8 = mmu.fetch8(PC++);
 			uint8_t A = AF.A;
-			uint8_t result = A - u8;
-
+        	int16_t result = static_cast<int16_t>(A) - static_cast<int16_t>(u8);
+			
         	if(result == 0) {
 				printf("");
         	}
         	
         	AF.setZero(result == 0);
         	AF.setSubtract(true);
-        	AF.setHalfCarry((A & 0xF) < (u8 & 0xF));
+        	AF.setHalfCarry((A & 0x0F) < (u8 & 0x0F));
         	AF.setCarry(A < u8);
 			
         	return 8;

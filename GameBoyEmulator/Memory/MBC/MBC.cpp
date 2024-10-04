@@ -51,9 +51,6 @@ MBC::MBC(Cartridge cartridge, std::vector<uint8_t> rom) : data(rom) {
 }
 
 uint8_t MBC::read(uint16_t address) {
-	if(curMBC == nullptr)
-		return data[address];
-	
 	return curMBC->fetch8(address);
 }
 

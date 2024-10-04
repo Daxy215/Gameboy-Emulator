@@ -79,13 +79,17 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
              * 
              * Igoring PGB Mode
              */
-            if((data[i] & 0x80) == 0x80) {
-                mode = Color;
-                std::cerr << "Color/Normal mode\n";
-            } else if((data[i] & 0xC0) == 0xC0) {
-                std::cerr << "Color only mode\n";
+            if (data[i] >= 0x80) {
+                if ((data[i] & 0xC0) == 0xC0) {
+                    std::cerr << "Color only mode\n";
+                    mode = Color;
+                } else {
+                    std::cerr << "Color/Normal mode\n";
+                    //mode = Color;
+                }
             } else {
                 std::cerr << "Normal mode\n";
+                mode = DMG;
             }
         }
         
@@ -149,7 +153,7 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
             ramSize = 0;
             
             switch (data[i]) {
-                case 0: ramBanks = 0;                  break; // No RAM
+                case 0: ramBanks = 0;  ramSize = 0; break; // No RAM
                 case 1: ramBanks = 0;                  break; // Unused
                 case 2: ramBanks = 1;  ramSize = 8;    break;
                 case 3: ramBanks = 4;  ramSize = 32;   break;

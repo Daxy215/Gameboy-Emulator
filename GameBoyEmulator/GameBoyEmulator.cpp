@@ -102,6 +102,8 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
     // Time tracking variables
     auto lastFrameTime = std::chrono::high_resolution_clock::now();
 
+    uint32_t x = 0;
+
     while (running) {
         double cyclesPerFrame = cpu.mmu.doubleSpeed ? CLOCK_SPEED_DOUBLE / FPS : CLOCK_SPEED_NORMAL / FPS;
         
@@ -140,6 +142,8 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             } else {
                 timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
             }
+            
+            x++;
             
             cpu.mmu.tick();
             ppu.tick(cycles);
@@ -186,7 +190,7 @@ int main(int argc, char* argv[]) {
     
     // GAMES
     
-    // Games that works
+    // Games that work
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
@@ -198,7 +202,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
     
-    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // Up arrow stuck??
+    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck??
     //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Tennis (U) [C][!].gbc"; // Uses MBC5
@@ -320,21 +324,21 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tima_write_reloading.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tma_write_reloading.gb"; // TODO;
     
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TOOD; It passed but doesn't show up?
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // TODO; Imma cry
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_2Mb.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_4Mb.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_8Mb.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_16Mb.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_512kb.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO; Stuck
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_2Mb.gb"; // TODO; Stuck
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_4Mb.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_8Mb.gb"; // TODO; Wrong bank number
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_16Mb.gb"; // TODO;  Wrong bank number
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_512kb.gb"; // TODO; Stuck
     
-    //std::string filename = "Roms/tests/mooneye-test-suite/manual-only/sprite_priority.gb"; // TODO; Almost
+    //std::string filename = "Roms/tests/mooneye-test-suite/manual-only/sprite_priority.gb"; // Passed
     
     // An MBC3 Test for the real time clock
     //std::string filename = "Roms/tests/rtc3test/rtc3test.gb"; // Uses MBC3
@@ -408,32 +412,22 @@ int main(int argc, char* argv[]) {
         0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
     };
     
-    /*std::vector<uint8_t> bootDMG = {
-        0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
-        0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
-        0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
-        0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
-        0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
-        0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
-        0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
-        0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
-        0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
-        0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
-        0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9,
+    ifstream boot("Roms/bootroms/cgb_boot.bin", ios::binary | ios::ate);
+     
+    if (!boot.good()) {
+        std::cerr << "Cannot read from file: Roms/bootroms/cgb_boot.bin \n";
+    }
+    
+    auto f = boot.tellg();
+    boot.seekg(0, ios::beg);
+    
+    std::vector<uint8_t> bootCGB(f);
+    
+    if (!boot.read(reinterpret_cast<char*>(bootCGB.data()), f)) {
+        std::cerr << "Error reading file!" << '\n';
         
-        // New "Not Nintendo" tile data
-        0x00, 0x00, 0x7E, 0x81, 0x95, 0xA1, 0x81, 0x7E,  // N
-        0x00, 0x00, 0x3E, 0x41, 0x41, 0x41, 0x41, 0x3E,  // O
-        0x00, 0x00, 0x7F, 0x08, 0x08, 0x08, 0x08, 0x7F,  // T
-        0x00, 0x00, 0x3E, 0x41, 0x49, 0x49, 0x49, 0x30,  // N
-        0x00, 0x00, 0x7F, 0x48, 0x78, 0x48, 0x48, 0x7F,  // I
-        0x00, 0x00, 0x7F, 0x48, 0x48, 0x48, 0x48, 0x7F,  // N
-        0x00, 0x00, 0x3E, 0x41, 0x49, 0x49, 0x49, 0x30,  // T
-        0x00, 0x00, 0x7F, 0x08, 0x08, 0x08, 0x08, 0x7F,  // E
-        0x00, 0x00, 0x7F, 0x49, 0x49, 0x49, 0x49, 0x7F,  // N
-        0x00, 0x00, 0x7F, 0x48, 0x48, 0x48, 0x48, 0x7F,  // D
-        0x00, 0x00, 0x3E, 0x41, 0x41, 0x41, 0x41, 0x3E,  // O
-    };*/
+        return 1;
+    }
     
     Cartridge cartridge;
     

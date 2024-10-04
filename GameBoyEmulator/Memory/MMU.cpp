@@ -95,10 +95,6 @@ uint8_t MMU::fetchIO(uint16_t address) {
             std::cerr << "";
         }
     } else if(address == 0xFF4D) {
-        // TODO; This is only for CGB
-        //return (key1 & 0x81) | 0x7E;
-        //return (key1 & 0xb10000001) | 0b01111110;
-        
         // CGB Mode only
         if(Cartridge::mode != Color) return 0xFF;
         
@@ -138,7 +134,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
     } else if(address == 0xFF70) {
         if(Cartridge::mode != Color) return 0xFF;
         
-        return wramBank;
+        return wramBank & 0x7;
     }
     
     // TODO; Addresses that doesn't exist
@@ -307,8 +303,6 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             ppu.write8(address, data);
         }
     } else if(address == 0xFF4D) {
-        //key1 = (key1 & 0x80) | (data & 0x01); // Preserve current speed (bit 7) and `only` update switch armed (bit 0)
-
         // CGB Mode only
         if(Cartridge::mode != Color) return;
         
@@ -372,7 +366,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
     } else if(address == 0xFF70) {
         if(Cartridge::mode != Color) return;
         
-        wramBank = (data & 0x7) == 0 ? 1 : static_cast<size_t>(data & 0x7);
+        wramBank = (data & 0x7) == 0 ? 1 : static_cast<uint8_t>(data & 0x7);
     }
     
     // TODO; Addresses that doesn't exist
