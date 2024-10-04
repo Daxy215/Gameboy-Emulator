@@ -3,6 +3,8 @@
 #include <SDL.h>
 #include <sstream>
 #include <thread>
+#include <chrono>
+#include <thread>
 
 #include "APU/APU.h"
 #include "CPU/CPU.h"
@@ -68,6 +70,7 @@ std::string formatCPUState(const CPU &cpu) {
     oss << "L: " << std::setw(2) << static_cast<int>(cpu.HL.L) << ' ';
     oss << "SP: " << std::setw(4) << static_cast<int>(cpu.SP) << ' ';
     oss << "PC: 00:" << std::setw(4) << static_cast<int>(cpu.PC) << ' ';
+    oss << "IME: " << (cpu.interruptHandler.IME ? "true" : "false") ;
     
     // Fetch the memory around the PC
     uint16_t pc = cpu.PC;
@@ -88,99 +91,87 @@ std::string formatCPUState(const CPU &cpu) {
 }
 
 void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
-    const std::chrono::nanoseconds targetFrameDuration(100);
-    int frameCount = 0;
-    auto lastFpsTime = std::chrono::high_resolution_clock::now();
-    
     uint32_t stopCycles = 0;
     
     bool running = true;
     
-    while (running) {
-        auto start = std::chrono::high_resolution_clock::now();
+    const double CLOCK_SPEED_NORMAL = 4194304; // 4.194304 MHz
+    const double CLOCK_SPEED_DOUBLE = 8388608; // 8.388608 MHz
+    const int FPS = 60; // Frames per second
+    
+    // Time tracking variables
+    auto lastFrameTime = std::chrono::high_resolution_clock::now();
 
-        // TODO; Move this to CPU.tick..
-        // https://gbdev.io/pandocs/Interrupts.html#ime-interrupt-master-enable-flag-write-only
-        if(cpu.ei >= 0) cpu.ei--;
+    while (running) {
+        double cyclesPerFrame = cpu.mmu.doubleSpeed ? CLOCK_SPEED_DOUBLE / FPS : CLOCK_SPEED_NORMAL / FPS;
         
-        if(cpu.ei == 0) {
-            cpu.interruptHandler.IME = true;
-        }
+        // Track the total cycles executed this frame
+        uint64_t totalCyclesThisFrame = 0;
         
-        uint16_t cycles = cpu.interruptHandler.handleInterrupt(cpu);
-        
-        // If cycles are not 0, then an interrupt happened
-        if(!cpu.halted && !cpu.stop && cycles == 0) {
-            uint16_t opcode = cpu.fetchOpCode();
-            cycles = cpu.decodeInstruction(opcode);
+        while (totalCyclesThisFrame < cyclesPerFrame) {
+            if(cpu.ei >= 0) cpu.ei--;
             
-            if(cpu.PC >= 0x100) {
-                cpu.mmu.bootRomActive = false;
+            if(cpu.ei == 0) {
+                cpu.interruptHandler.IME = true;
             }
             
-            /*std::string format = formatCPUState(cpu);
-            std::cerr << format << " Opcode: " << std::hex << opcode << "\n";*/
+            uint16_t cycles = cpu.interruptHandler.handleInterrupt(cpu);
             
-            /*cycles += cpu.mmu.cycles;
-            cpu.mmu.cycles = 0;*/
-        } else if(cpu.halted) {
-            if(cycles > 0) {
-                printf("??");
+            if (!cpu.halted && !cpu.stop && cycles == 0) {
+                uint16_t opcode = cpu.fetchOpCode();
+                cycles = cpu.decodeInstruction(opcode);
+                
+                if (cpu.PC >= 0x0100) {
+                    cpu.mmu.bootRomActive = false;
+                }
+            } else if (cpu.halted) {
+                if (cycles > 0) {
+                    printf("??");
+                }
+                cycles = 4;
             }
             
-            cycles = 4;
-        }
-        
-        if(cpu.stop) {
-            stopCycles += cycles == 0 ? 4 : cycles;
-            
-            // CPU will pause for 8200 T cycles
-            if(stopCycles >= 8200) {
-                stopCycles = 0;
-                cpu.stop = false;
+            if (cpu.stop) {
+                stopCycles += (cycles == 0) ? 4 : cycles;
+                if (stopCycles >= 8200) {
+                    stopCycles = 0;
+                    cpu.stop = false;
+                }
+            } else {
+                timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
             }
-        } else {
-            timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
+            
+            cpu.mmu.tick();
+            ppu.tick(cycles);
+            
+            cpu.interruptHandler.IF |= timer.interrupt;
+            timer.interrupt = 0;
+            
+            cpu.interruptHandler.IF |= cpu.mmu.joypad.interrupt;
+            cpu.mmu.joypad.interrupt = 0;
+            
+            cpu.interruptHandler.IF |= ppu.interrupt;
+            ppu.interrupt = 0;
+            
+            cpu.interruptHandler.IF |= cpu.mmu.serial.interrupt;
+            cpu.mmu.serial.interrupt = 0;
+            
+            totalCyclesThisFrame += cycles;
         }
         
-        cpu.mmu.tick();
-        ppu.tick(cycles);
-        
-        // Again I'm lazy
-        //cpu.mmu.apu.tick(cycles);
-        
-        // Apply interrupts if any occured
-        cpu.interruptHandler.IF |= timer.interrupt;
-        timer.interrupt = 0;
-        
-        cpu.interruptHandler.IF |= cpu.mmu.joypad.interrupt;
-        cpu.mmu.joypad.interrupt = 0;
-        
-        cpu.interruptHandler.IF |= ppu.lcdc.interrupt;
-        ppu.lcdc.interrupt = 0;
-        
-        cpu.interruptHandler.IF |= ppu.interrupt;
-        ppu.interrupt = 0;
-        
-        cpu.interruptHandler.IF |= cpu.mmu.serial.interrupt;
-        cpu.mmu.serial.interrupt = 0;
-        
-        frameCount++;
-        
-        auto end = std::chrono::high_resolution_clock::now();
-        auto frameDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        
-        if (frameDuration < targetFrameDuration) {
-            std::this_thread::sleep_for(targetFrameDuration - frameDuration); // Sleep for the remaining time
-        }
-        
-        // FPS calculation
+        // Calculate how much time should have passed for this frame
         auto now = std::chrono::high_resolution_clock::now();
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastFpsTime).count() >= 1) {
-            //std::cout << "FPS: " << frameCount << '\n';
-            frameCount = 0;
-            lastFpsTime = now;
+        auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFrameTime).count();
+        
+        // Frame time should be 1000 / FPS milliseconds (16.67 ms at 60 FPS)
+        double targetFrameTime = 1000.0 / FPS;
+        
+        // Sleep to limit frame rate if we are running too fast
+        if (frameTime < targetFrameTime) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(targetFrameTime - frameTime)));
         }
+        
+        lastFrameTime = now;
     }
 }
 
@@ -199,12 +190,16 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Tennis (World).gb";
     //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
+    //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb";
+    //std::string filename = "Roms/Mario & Yoshi (E) [!].gb";
     
     // Games that don't work :(
-    //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb"; // Idek man
     //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
+    
+    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // Up arrow stuck??
+    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Tennis (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
@@ -217,24 +212,27 @@ int main(int argc, char* argv[]) {
     /*
      * Ok I think the issue is the halt bug..
      * Which I can find little resources of ;)
-     *
+     * 
      * Or maybe HDMA?
+     * 
+     * Turns out it was the MBC1 :D
+     * Still a bit glitchy
      */
-    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
+    std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
-    //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb"; // Just gets stuck?
+    //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb";
     
     // TESTS
     
     //std::string filename = "Roms/dmg-acid2.gb"; // Passed
-    //std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO;
+    //std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO; Nose not showing
     
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
     
     //std::string filename = "Roms/tests/age-test-roms/vram/vram-read-cgbBCE.gb"; // TODO: ?
     
     // CPU INSTRUCTIONS
-    std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
+    //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/01-special.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/02-interrupts.gb"; // Passed
     //std::string filename = "Roms/cpu_instrs/individual/03-op sp,hl.gb"; // Passed
@@ -322,10 +320,10 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tima_write_reloading.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tma_write_reloading.gb"; // TODO;
     
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // TODO; Imma cry
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // TODO;
@@ -334,10 +332,11 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_4Mb.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_8Mb.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_16Mb.gb"; // TODO;
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_512kb.gb"; // Passed
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_512kb.gb"; // TODO;
     
     //std::string filename = "Roms/tests/mooneye-test-suite/manual-only/sprite_priority.gb"; // TODO; Almost
     
+    // An MBC3 Test for the real time clock
     //std::string filename = "Roms/tests/rtc3test/rtc3test.gb"; // Uses MBC3
     
     //std::string filename = "Roms/tests/scribbltests/lycscx/lycscx.gb"; // Passed
@@ -408,6 +407,33 @@ int main(int argc, char* argv[]) {
         0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
         0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
     };
+    
+    /*std::vector<uint8_t> bootDMG = {
+        0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
+        0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
+        0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
+        0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
+        0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
+        0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
+        0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
+        0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
+        0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
+        0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
+        0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9,
+        
+        // New "Not Nintendo" tile data
+        0x00, 0x00, 0x7E, 0x81, 0x95, 0xA1, 0x81, 0x7E,  // N
+        0x00, 0x00, 0x3E, 0x41, 0x41, 0x41, 0x41, 0x3E,  // O
+        0x00, 0x00, 0x7F, 0x08, 0x08, 0x08, 0x08, 0x7F,  // T
+        0x00, 0x00, 0x3E, 0x41, 0x49, 0x49, 0x49, 0x30,  // N
+        0x00, 0x00, 0x7F, 0x48, 0x78, 0x48, 0x48, 0x7F,  // I
+        0x00, 0x00, 0x7F, 0x48, 0x48, 0x48, 0x48, 0x7F,  // N
+        0x00, 0x00, 0x3E, 0x41, 0x49, 0x49, 0x49, 0x30,  // T
+        0x00, 0x00, 0x7F, 0x08, 0x08, 0x08, 0x08, 0x7F,  // E
+        0x00, 0x00, 0x7F, 0x49, 0x49, 0x49, 0x49, 0x7F,  // N
+        0x00, 0x00, 0x7F, 0x48, 0x48, 0x48, 0x48, 0x7F,  // D
+        0x00, 0x00, 0x3E, 0x41, 0x41, 0x41, 0x41, 0x3E,  // O
+    };*/
     
     Cartridge cartridge;
     

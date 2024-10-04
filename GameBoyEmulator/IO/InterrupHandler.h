@@ -12,13 +12,13 @@ public:
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
-
+	
 public:
 	/**
 	 * Interrupt Master Enable. A flag that is used to determine,
 	 * whether interrupts can occur.
 	 */
-	bool IME = false;
+	bool IME = true;
 	
 	uint8_t IE = 0;
 	uint8_t IF = 0;

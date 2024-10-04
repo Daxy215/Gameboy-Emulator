@@ -12,7 +12,7 @@ public:
 
 public:
 	// To send an interrupt if it occours
-	uint8_t interrupt;
+	uint8_t interrupt = 0;
 	
 private:
 	uint8_t divider = 0;

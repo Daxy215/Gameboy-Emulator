@@ -30,7 +30,7 @@ public:
 	void releaseDpad(Dpad dpad);
 
 public:
-	uint8_t interrupt;
+	uint8_t interrupt = 0;
 	
 private:
 	bool up = false;
@@ -45,6 +45,6 @@ private:
     bool button_switch = false;
     bool direction_switch = false;
 	
-	uint8_t prev_buttons_state = 0b1111;
-	uint8_t prev_dpad_state = 0b1111;
+	uint8_t prev_buttons_state = 0x0F;
+	uint8_t prev_dpad_state = 0x0F;
 };

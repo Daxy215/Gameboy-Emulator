@@ -2,10 +2,10 @@
 
 #include "../../MBC.h"
 
-class MBC1 : public MBC {
+class MBC5 : public MBC {
 public:
-	MBC1() = default;
-	MBC1(Cartridge cartridge, std::vector<uint8_t> rom);
+	MBC5() = default;
+	MBC5(Cartridge cartridge, std::vector<uint8_t> rom);
 	
 	uint8_t fetch8(uint16_t address) override;
 	void write8(uint16_t address, uint8_t data) override;

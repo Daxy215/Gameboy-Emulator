@@ -164,6 +164,10 @@ uint16_t MMU::fetch16(uint16_t address) {
 }
 
 void MMU::write8(uint16_t address, uint8_t data) {
+    if(address == 0x7D19) {
+        printf("");
+    }
+    
     if (address < 0x8000) {
         mbc.write(address, data);
     } else if(address >= 0x8000 && address <= 0x9FFF) {
@@ -291,7 +295,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             //  $FF46	DMA	OAM DMA source address & start
             lastDma = data;
             
-            uint16_t u16 = (static_cast<uint16_t>(data)) << 8;
+            uint16_t u16 = static_cast<uint16_t>(data) << 8;
             
             for(uint16_t i = 0; i < 160; i++) {
                 uint8_t val = fetch8(u16 + i);

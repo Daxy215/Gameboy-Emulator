@@ -73,7 +73,7 @@ void Joypad::write8(uint16_t address, uint8_t data) {
 void Joypad::checkForInterrupts() {
 	uint8_t current_buttons_state = 0;
 	uint8_t current_dpad_state = 0;
-
+	
 	// Get current button states
 	if (button_switch) {
 		current_buttons_state |= (!a ? 1 : 0);
@@ -81,7 +81,7 @@ void Joypad::checkForInterrupts() {
 		current_buttons_state |= (!select ? 4 : 0);
 		current_buttons_state |= (!start ? 8 : 0);
 	}
-
+	
 	// Get current D-pad states
 	if (direction_switch) {
 		current_dpad_state |= (!up ? 1 : 0);
@@ -90,18 +90,23 @@ void Joypad::checkForInterrupts() {
 		current_dpad_state |= (!right ? 8 : 0);
 	}
 	
+	bool inter = false;
+	
 	for (int i = 0; i < 4; ++i) {
 		if ((current_buttons_state & (1 << i)) == 0 && (prev_buttons_state & (1 << i)) != 0) {
-			interrupt |= 0x10;
+			inter = true;
 		}
 	}
 	
 	// Check for transitions in D-pad
 	for (int i = 0; i < 4; ++i) {
 		if ((current_dpad_state & (1 << i)) == 0 && (prev_dpad_state & (1 << i)) != 0) {
-			interrupt |= 0x10;
+			inter = true;
 		}
 	}
+	
+	if(inter)
+		interrupt |= 0x10;
 	
 	// Update previous states for next check
 	prev_buttons_state = current_buttons_state;

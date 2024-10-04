@@ -1,6 +1,6 @@
-#include "MBC1.h"
+#include "MBD5.h"
 
-MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
+MBC5::MBC5(Cartridge cartridge, std::vector<uint8_t> rom) {
 	this->rom = rom;
 	
 	this->romBanks = cartridge.romBanks;
@@ -10,19 +10,19 @@ MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
 	eram.resize(static_cast<size_t>((cartridge.ramSize + 1) * 4) * 1024);
 }
 
-uint8_t MBC1::fetch8(uint16_t address) {
+uint8_t MBC5::fetch8(uint16_t address) {
 	if (address >= 0xA000 && address < 0xBFFF) {
 		if(!ramEnabled)
 			return 0xFF;
 		
-		uint8_t bank = bankingMode ? curRamBank : 0;
+		uint8_t bank = curRamBank;
 		
 		return eram[(bank * 0x2000) | (address & 0x1FFF)];
 	} else {
 		size_t bank;
 		
 		if(address < 0x4000) {
-			bank = bankingMode ? (curRomBank & 0xE0) : 0;
+			bank = 0;
 		} else {
 			bank = curRomBank;
 		}
@@ -32,33 +32,23 @@ uint8_t MBC1::fetch8(uint16_t address) {
 	}
 }
 
-void MBC1::write8(uint16_t address, uint8_t data) {
+void MBC5::write8(uint16_t address, uint8_t data) {
 	if(address < 0x1FFF) {
 		ramEnabled = (data & 0xF) == 0xA;
+	} else if(address <= 0x2FFF) {
+		curRomBank = ((curRomBank & 0x100) | (data)) % romBanks;
 	} else if(address <= 0x3FFF) {
-		uint8_t lowerBits = (data & 0x1F);
-		
-		if(lowerBits == 0)
-			lowerBits = 1;
-		
-		curRomBank = ((curRomBank & 0x60) | lowerBits) % romBanks;
+		curRomBank = ((curRomBank & 0x0FF) | (data & 0x1) << 8) % romBanks;
 	} else if(address >= 0x4000 && address < 0x5FFF) {
-		if(romBanks > 0x20) {
-			uint16_t upperBits = (data & 0x03) % (romBanks >> 5);
-			curRomBank = (curRomBank & 0x1F) | (upperBits << 5);
-		}
-		
-		if(ramBanks > 1) {
-			curRamBank = data & 0x03;
-		}
+		curRomBank = ((data & 0x0F)) % ramBanks;
 	} else if(address >= 0x6000 && address < 0x7FFF) {
-		bankingMode = data & 0x01;
+		
 	} else if(address >= 0xA000 && address <= 0xBFFF) {
 		if(!ramEnabled) {
 			return;
 		}
 		
-		uint8_t bank = bankingMode ? (curRamBank) : 0;
+		uint8_t bank = curRamBank;
 		
 		eram[(address & 0x1FFF) + (bank * 0x2000)] = data;
 	}

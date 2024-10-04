@@ -17,10 +17,7 @@ uint8_t MBC0::fetch8(uint16_t address) {
 }
 
 void MBC0::write8(uint16_t address, uint8_t data) {
-	/*if(address <= 0x7FFF)
-		
-		//rom[address] = data;
-	else */if (address >= 0xA000 && address <= 0xBFFF) {
+	if (address >= 0xA000 && address <= 0xBFFF) {
 		eram[address - 0xA000] = data;
 	}
 }

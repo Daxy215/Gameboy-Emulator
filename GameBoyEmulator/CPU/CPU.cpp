@@ -44,6 +44,38 @@ CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
     PC = mmu.bootRomActive ? 0x0000 : 0x0100;
     SP = 0xFFFE;
 	
+	// TODO; Remove
+	mmu.write8(0xFF05, 0x00);
+	mmu.write8(0xFF06, 0x00);
+	mmu.write8(0xFF07, 0x00);
+	mmu.write8(0xFF10, 0x80);
+	mmu.write8(0xFF11, 0xBF);
+	mmu.write8(0xFF12, 0xF3);
+	mmu.write8(0xFF14, 0xBF);
+	mmu.write8(0xFF16, 0x3F);
+	mmu.write8(0xFF17, 0x00);
+	mmu.write8(0xFF19, 0xBF);
+	mmu.write8(0xFF1A, 0x7F);
+	mmu.write8(0xFF1B, 0xFF);
+	mmu.write8(0xFF1C, 0x9F);
+	mmu.write8(0xFF1E, 0xFF);
+	mmu.write8(0xFF20, 0xFF);
+	mmu.write8(0xFF21, 0x00);
+	mmu.write8(0xFF22, 0x00);
+	mmu.write8(0xFF23, 0xBF);
+	mmu.write8(0xFF24, 0x77);
+	mmu.write8(0xFF25, 0xF3);
+	mmu.write8(0xFF26, 0xF1);
+	mmu.write8(0xFF40, 0x91);
+	mmu.write8(0xFF42, 0x00);
+	mmu.write8(0xFF43, 0x00);
+	mmu.write8(0xFF45, 0x00);
+	mmu.write8(0xFF47, 0xFC);
+	mmu.write8(0xFF48, 0xFF);
+	mmu.write8(0xFF49, 0xFF);
+	mmu.write8(0xFF4A, 0x00);
+	mmu.write8(0xFF4B, 0x00);
+	
 	//bootRom();
 }
 
@@ -379,14 +411,14 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	bool carry = AF.getCarry();
-        	bool msb = (AF.A & 0x80) != 0;
+        	bool msb = (AF.A & 0x80) == 0x80;
 			
-        	AF.A = (AF.A << 1) | (carry ? 1 : 0);
+        	AF.A = static_cast<uint8_t>(AF.A << 1) | static_cast<uint8_t>(carry ? 1 : 0);
 			
-        	AF.setCarry(msb);
         	AF.setZero(false);
         	AF.setSubtract(false);
         	AF.setHalfCarry(false);
+        	AF.setCarry(msb);
         	
         	return 4;
         }
@@ -982,13 +1014,12 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			/**
 			 * CCF (Complement Carry Flag)
 			 * 1, 4
-			 * - 0 0 -
+			 * - 0 0 C
 			 */
-			
-        	AF.setCarry(!AF.getCarry());
-			
+        	
         	AF.setSubtract(false);
         	AF.setHalfCarry(false);
+        	AF.setCarry(!AF.getCarry());
         	
         	return 4;
         }
@@ -2055,7 +2086,8 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 		case 0xC5: {
 			/**
 			 * PUSH BC
-			 * 1, 16			 * - - - -
+			 * 1, 16
+			 * - - - -
 			 */
 			
         	pushToStack(BC.get());
@@ -6505,12 +6537,17 @@ void CPU::sra(uint8_t& reg) {
 }
 
 void CPU::pushToStack(uint16_t value) {
+	SP--;
+	mmu.write8(SP, (value >> 8));
+	SP--;
+	mmu.write8(SP, static_cast<uint8_t>(value));
+	
 	/*mmu.write8(--SP, value & 0xFF);
     mmu.write8(--SP, (value >> 8) & 0xFF);
     */
     
-	SP -= 2;
-    mmu.write16(SP, value);
+	/*SP -= 2;
+    mmu.write16(SP, value);*/
 }
 
 uint16_t CPU::popStack() {

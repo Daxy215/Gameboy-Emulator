@@ -55,8 +55,8 @@ public:
     
 public:
     uint16_t cycles = 0;
-
-    bool bootRomActive = false;
+    
+    bool bootRomActive = true;
     
 private:
     uint8_t wramBank = 1;

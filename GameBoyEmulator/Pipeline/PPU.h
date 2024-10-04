@@ -46,6 +46,7 @@ public:
 	}
 	
 	void tick(const int& cycles);
+	void updateMode(PPUMode mode);
 	
 	void drawScanline();
 	void drawBackground();
@@ -53,6 +54,8 @@ public:
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
+	
+	void checkLYCInterrupt();
 	
 	void createWindow();
 	
@@ -109,7 +112,7 @@ private:
 	
 	BGPriority bgPriority[160] = { Zero };
 public:
-	uint8_t interrupt;
+	uint8_t interrupt = 0;
 	
 	//bool wyTrigger = false;
 	

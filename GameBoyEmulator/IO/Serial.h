@@ -24,7 +24,7 @@ public:
     }
 
 public:
-    uint8_t interrupt;
+    uint8_t interrupt = 0;
     
 private:
     uint8_t transferData = 0;

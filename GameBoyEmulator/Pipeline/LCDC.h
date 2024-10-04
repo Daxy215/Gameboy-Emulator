@@ -20,7 +20,11 @@ public:
 	uint8_t LCDCControl = 0;
 	
 	// Status Registers
-	uint8_t status = 0;
+	//uint8_t status = 0;
+	bool lycInc = false;
+	bool mode0 = false;
+	bool mode1 = false;
+	bool mode2 = false;
 	
 	// Viewport Y position
 	uint8_t SCY = 0;

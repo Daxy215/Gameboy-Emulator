@@ -11,19 +11,9 @@ uint8_t LCDC::fetch8(uint16_t address) {
 	if(address == 0xFF40) {
 		return LCDCControl;
 	} else if(address == 0xFF41) {
-		// Update LYC == LY flag (Bit 2)
-		if (LY == LYC) {
-			status |= 0x04; // Set bit 2
-		} else {
-			status &= ~0x04; // Clear bit 2
-		}
-		
-		// Update PPU mode (Bits 1-0)
-		status &= ~0x03; // Clear the current mode bits
-		status |= PPU::mode; // Set the PPU mode based on the current mode
-		
 		// https://gbdev.io/pandocs/STAT.html#ff41--stat-lcd-status
-		return status;
+		
+		return 0x80 | (lycInc ? 0x40 : 0) | (mode2 ? 0x20 : 0) | (mode1 ? 0x10 : 0) | (mode0 ? 0x08 : 0) | ((LY == LYC) ? 0x04 : 0) | PPU::mode;
 	} else if(address == 0xFF42) {
 		// $FF42	SCY	Viewport Y position	R/W	All
 		return SCY;
@@ -55,7 +45,12 @@ uint8_t LCDC::fetch8(uint16_t address) {
 void LCDC::write8(uint16_t address, uint8_t data) {
 	if(address == 0xFF41) {
 		// https://gbdev.io/pandocs/STAT.html#ff41--stat-lcd-status
-		status = data;
+		//status = data;
+		
+		lycInc = (data & 0x40) == 0x40;
+		mode2  = (data & 0x20) == 0x20;
+		mode1  = (data & 0x10) == 0x10;
+		mode0  = (data & 0x08) == 0x08;
 		
 		// Check for LYC == LY interrupt (Bit 6)
 		/*if ((status & 0x40) && (LY == LYC)) {

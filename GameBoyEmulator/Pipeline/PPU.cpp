@@ -1,7 +1,6 @@
 ﻿#include "PPU.h"
 
 #include <iostream>
-#include <string>
 
 #include <GL/glew.h>
 
@@ -13,8 +12,8 @@
 #include "../Memory/MMU.h"
 #include "../Utility/Bitwise.h"
 
-const int WIDTH = 160 * 4;
-const int HEIGHT = 144 * 4;
+constexpr int WIDTH = 160 * 4;
+constexpr int HEIGHT = 144 * 4;
 
 PPU::PPUMode PPU::mode = PPU::HBlank;
 
@@ -32,20 +31,131 @@ void PPU::tick(const int& cycles = 4) {
 	 * http://blog.kevtris.org/blogfiles/Nitty%20Gritty%20Gameboy%20VRAM%20Timing.txt
 	 */
 	
-	static const int SCANLINE_DOTS = 456;         // Total dots per scanline
-	static const int SCANLINES = 154;             // Total scanlines per frame
-	static const int MODE_2_DOTS = 80;            // OAM search duration in dots
-	static const int VBLANK_START_LINE = 144;     // Start of vertical blanking
+	/*
+	static constexpr int SCANLINE_DOTS = 456;         // Total dots per scanline
+	static constexpr int SCANLINES = 154;             // Total scanlines per frame
+	static constexpr int MODE_2_DOTS = 80;            // OAM search duration in dots
+	static constexpr int VBLANK_START_LINE = 144;     // Start of vertical blanking
+	*/
+	
+	currentDot += cycles;
 	
 	//static uint16_t currentDot = 0;
 	//uint16_t currentScanline = 0;
 	
-	currentDot += cycles;
+	//uint32_t ticksLeft = cycles;
 	
-	switch (mode) {
+	//while(ticksLeft > 0) {
+		/*uint32_t curticks = ticksLeft >= 80 ? 80 : ticksLeft;
+		currentDot += curticks;
+		ticksLeft -= curticks;
+		*/
+		
+		//std::cerr << "Ticks; " << std::to_string(currentDot) << "\n";
+		
+		if(currentDot >= 456) {
+			currentDot -= 456;
+			LY = (LY + 1);
+			checkLYCInterrupt();
+			
+			if(LY >= 144 && mode != VBlank) {
+				updateMode(VBlank);
+			}
+		}
+		
+		if(LY < 144) {
+			if(currentDot <= 80) {
+				if(mode != OAMScan) updateMode(OAMScan);
+			} else if(currentDot <= (80 + 172)) {
+				if(mode != VRAMTransfer) updateMode(VRAMTransfer);
+			} else {
+				if(mode != HBlank) updateMode(HBlank);
+			}
+		}
+	//}
+	
+	/*switch (mode) {
+	case OAMScan:
+		if(currentDot >= 80) {
+			currentDot %= 80;
+
+			drawScanline();
+			
+			if(lcdc.mode2) {
+				interrupt |= 0x02;
+			}
+			
+			mode = VRAMTransfer;
+		}
+		break;
+	case VRAMTransfer:
+		if(currentDot >= 172 + 80) {
+			if(lcdc.windowEnabled && !drawWindow && LY == WY) {
+				drawWindow = true;
+				winLineCounter = 0;
+			}
+			
+			currentDot %= (172 + 80);
+			mode = HBlank;
+		}
+		
+		break;
+	case HBlank:
+		if(currentDot >= 204) {
+			currentDot %= 204;
+			
+			LY = (LY + 1);
+			
+			if(lcdc.lycInc && LYC == LY) {
+				interrupt |= 0x02;
+			}
+			
+			if(lcdc.mode0) {
+				interrupt |= 0x02;
+			}
+			
+			if(LY == 144) {
+				mode = VBlank;
+			} else {
+				mode = OAMScan;
+			}
+		}
+		
+		break;
+	case VBlank:
+		if(currentDot >= 456) {
+			drawWindow = false;
+			
+			currentDot %= 456;
+			LY = (LY + 1);
+			
+			if(lcdc.lycInc && LYC == LY) {
+				interrupt |= 0x02;
+			}
+			
+			// VBlank interrupt
+			interrupt |= 0x01;
+			
+			if(lcdc.mode1) {
+				interrupt |= 0x02;
+			}
+			
+			if(LY == 154) {
+				LY = 0;
+				winLineCounter = 0;
+				
+				mode = OAMScan;
+				SDL_RenderPresent(renderer);
+			}
+		}
+		
+		break;
+	}*/
+	
+	/*switch (mode) {
 		case OAMScan: {
 			// https://gbdev.io/pandocs/Scrolling.html?highlight=LY%20%3D%20WY#window
-			if(lcdc.status & 0x20) {
+			if(lcdc.mode2) {
 				interrupt |= 0x02;
 			}
 			
@@ -59,11 +169,11 @@ void PPU::tick(const int& cycles = 4) {
 		case VRAMTransfer: {
 			if(lcdc.windowEnabled && !drawWindow && LY == WY) {
 				drawWindow = true;
-				//WY = 0;
+				winLineCounter = 0;
 			}
 			
 			// TODO; 10 - Sprite count, just 10 for now..
-			int mode3_dots = 168 + (10) * 10;
+			uint32_t mode3_dots = 168 + (10) * 10;
 			if (currentDot >= MODE_2_DOTS + mode3_dots) {
 				mode = HBlank;
 			}
@@ -76,13 +186,13 @@ void PPU::tick(const int& cycles = 4) {
 				drawScanline();
 				
 				currentDot = 0;
-				LY = (LY + 1) % 154;
+				LY = (LY + 1);
 				
-				if((lcdc.status & 0x40) && LYC == LY) {
+				if(lcdc.lycInc && LYC == LY) {
 					interrupt |= 0x02;
 				}
 				
-				if(lcdc.status & 0x08) {
+				if(lcdc.mode0) {
 					interrupt |= 0x02;
 				}
 				
@@ -111,11 +221,11 @@ void PPU::tick(const int& cycles = 4) {
 				// VBlank interrupt
 				interrupt |= 0x01;
 				
-				if((lcdc.status & 0x40) && LYC == LY) {
+				/*if(lcdc.lycInc && LYC == LY) {
 					interrupt |= 0x02;
-				}
+				}#1#
 				
-				if(lcdc.status & 0x10) {
+				if(lcdc.mode1) {
 					interrupt |= 0x02;
 				}
 				
@@ -123,12 +233,59 @@ void PPU::tick(const int& cycles = 4) {
 					// LY 154 reached
 					
 					LY = 0;
-					winLineCounter = 0;
 					
 					mode = OAMScan;
 				}
 				
 				SDL_RenderPresent(renderer);
+			}
+			
+			break;
+		}
+	}*/
+}
+
+void PPU::updateMode(PPUMode mode) {
+	this->mode = mode;
+
+	switch(this->mode) {
+		case HBlank: {
+			drawScanline();
+			
+			if(lcdc.mode0) {
+				interrupt |= 0x02;
+			}
+			
+			break;
+		}
+		
+		case VBlank: {
+			drawWindow = false;
+			
+			interrupt |= 0x01;
+			
+			if(lcdc.mode1) {
+				interrupt |= 0x02;
+			}
+			
+			SDL_RenderPresent(renderer);
+			
+			break;
+		}
+		
+		case OAMScan: {
+			if(lcdc.mode2) {
+				interrupt |= 0x02;
+			}
+			
+			break;
+		}
+		
+		case VRAMTransfer: {
+			if(lcdc.windowEnabled && !drawWindow && lcdc.LY == lcdc.WY) {
+				drawWindow = true;
+				winLineCounter = 0;
+				//WY = 0;
 			}
 			
 			break;
@@ -143,6 +300,8 @@ void PPU::drawScanline() {
 	
 	drawBackground();
 	drawSprites();
+	
+	//SDL_RenderPresent(renderer);
 }
 
 void PPU::drawBackground() {
@@ -289,16 +448,13 @@ void PPU::drawSprites() {
 		Sprite(uint8_t index, int16_t x, int16_t y) : index(index), x(x), y(y) {}
 	};
 	
-	// Only 10 sprites can e drawn at a time
-	std::vector<Sprite> spriteBuffer(10);
+	std::vector<Sprite> spriteBuffer;
 	
 	/**
 	 * According to (https://gbdev.io/pandocs/OAM.html),
 	 * The PPU can render up to 40 moveble objects,
 	 * but only 10 objects can be displayed per scanline.
 	 */
-	
-	uint8_t index = 0;
 	
 	for(uint8_t i = 0; i < 40; i++) {
 		// 0xFE00 -> OAM
@@ -312,11 +468,16 @@ void PPU::drawSprites() {
 		
 		int16_t spriteX = static_cast<int16_t>(mmu.fetch8(spriteAdr + 1) - 8);
 		
-		spriteBuffer[index++] = Sprite(i, spriteX, spriteY);
+		if (spriteX < -7 || spriteX >= 160) {
+			continue;
+		}
 		
-		if (index >= 10)
-			break;
+		spriteBuffer.emplace_back(i, spriteX, spriteY);
+		if (spriteBuffer.size() >= 10) break;
 	}
+	
+	if (spriteBuffer.empty())
+		return;
 	
 	// https://gbdev.io/pandocs/OAM.html#drawing-priority
 	
@@ -400,7 +561,7 @@ void PPU::drawSprites() {
 		 *
 		 * Objects always use “$8000 addressing”, but the BG and Window can use either mode, controlled by LCDC bit 4.
 		 */
-		uint16_t tileAddr = 0x8000 + (tileIndex * 16) + (tileY * 2);
+		uint16_t tileAddr = 0x8000 + tileIndex * 16 + tileY * 2;
 		
 		uint8_t b0 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[(tileAddr & 0x1FFF) + 0x2000] : mmu.vram.RAM[(tileAddr & 0x1FFF)];
 		uint8_t b1 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[((tileAddr & 0x1FFF) + 0x2000) + 1] : mmu.vram.RAM[(tileAddr & 0x1FFF) + 1];
@@ -413,8 +574,8 @@ void PPU::drawSprites() {
 		 * As only the height changes from 8-16,
 		 * I don't need any extra checks
 		 */
-		for(int8_t x = 0; x < 8; x++) {
-			if (sprite.x + x < 0 || sprite.x + x >= 160)
+		for(uint16_t x = 0; x < 8; x++) {
+			if ((sprite.x + x) < 0 || sprite.x + x >= 160)
 				continue;
 			
 			// Priority 1 - BG and Window colours 1–3 are drawn over this OBJ
@@ -430,7 +591,7 @@ void PPU::drawSprites() {
 				}
 			}
 			
-			int8_t pX = (flipX ? x : static_cast<int8_t>(7 - x));
+			int16_t pX = static_cast<int16_t>(flipX ? x : static_cast<int16_t>(7 - x));
 			
 			// Just copied this from 'drawBackground'
 			uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);
@@ -443,9 +604,6 @@ void PPU::drawSprites() {
 			if(Cartridge::mode == DMG) {
 				uint8_t pixelColor = dmgPallete ? OBJ1Palette[pixel] : OBJ0Palette[pixel];
 				
-				if(pixelColor == 0)
-					continue;
-				
 				color = paletteIndexToColor(pixelColor);
 			} else if(Cartridge::mode == Color) {
 				uint8_t lsb = COBJPalette[(palette * 8) + (pixel * 2)];
@@ -456,7 +614,7 @@ void PPU::drawSprites() {
 				color = convertRGB555ToSDL(rgb);
 			}
 			
-			updatePixel(static_cast<uint8_t>(sprite.x + x), LY, color);
+			updatePixel(sprite.x + x, LY, color);
 		}
 	}
 }
@@ -475,6 +633,8 @@ uint8_t PPU::fetch8(uint16_t address) {
 	} else if(address == 0xFF68) {
 		// https://gbdev.io/pandocs/Palettes.html#ff68--bcpsbgpi-cgb-mode-only-background-color-palette-specification--background-palette-index
 		
+		if(Cartridge::mode != Color) return 0xFF;
+		
 		uint8_t data = 0;
 		
 		data |= (autoIncrementBG & 0b10000000);
@@ -483,7 +643,9 @@ uint8_t PPU::fetch8(uint16_t address) {
 		return data;
 	} else if(address == 0xFF69) {
 		// https://gbdev.io/pandocs/Palettes.html#ff69--bcpdbgpd-cgb-mode-only-background-color-palette-data--background-palette-data
-
+		
+		if(Cartridge::mode != Color) return 0xFF;
+		
 		if(mode == VRAMTransfer) {
 			return 0xFF;
 		}
@@ -496,6 +658,8 @@ uint8_t PPU::fetch8(uint16_t address) {
 		
 		return data;
 	} else if(address == 0xFF6A) {
+		if(Cartridge::mode != Color) return 0xFF;
+		
 		uint8_t data = 0;
 		
 		data |= (autoIncrementOBJ & 0b10000000);
@@ -503,6 +667,8 @@ uint8_t PPU::fetch8(uint16_t address) {
 		
 		return data;
 	} else if(address == 0xFF6B) {
+		if(Cartridge::mode != Color) return 0xFF;
+		
 		if(mode == VRAMTransfer) {
 			return 0xFF;
 		}
@@ -516,6 +682,8 @@ uint8_t PPU::fetch8(uint16_t address) {
 		return data;
 	} else if(address == 0xFF6C) {
 		// https://gbdev.io/pandocs/CGB_Registers.html#ff6c--opri-cgb-mode-only-object-priority-mode
+		
+		if(Cartridge::mode != Color) return 0xFF;
         
 		return opri;
 	}
@@ -551,6 +719,8 @@ void PPU::write8(uint16_t address, uint8_t data) {
 	} else if(address == 0xFF68) {
 		// https://gbdev.io/pandocs/Palettes.html#ff68--bcpsbgpi-cgb-mode-only-background-color-palette-specification--background-palette-index
 		
+		if(Cartridge::mode != Color) return;
+		
 		/**
 		 * Bit 7 - Auto-increment
 		 *
@@ -563,6 +733,8 @@ void PPU::write8(uint16_t address, uint8_t data) {
 		bgIndex = data & 0b00111111;
 	} else if(address == 0xFF69) {
 		// https://gbdev.io/pandocs/Palettes.html#ff69--bcpdbgpd-cgb-mode-only-background-color-palette-data--background-palette-data
+		if(Cartridge::mode != Color) return;
+		
 		if(mode == VRAMTransfer) {
 			return;
 		}
@@ -574,6 +746,7 @@ void PPU::write8(uint16_t address, uint8_t data) {
 		}
 	} else if(address == 0xFF6A) {
 		// https://gbdev.io/pandocs/Palettes.html#ff6aff6b--ocpsobpi-ocpdobpd-cgb-mode-only-obj-color-palette-specification--obj-palette-index-obj-color-palette-data--obj-palette-data
+		if(Cartridge::mode != Color) return;
 		
 		// Bit 7 - Auto-increment
 		autoIncrementOBJ = check_bit(data, 7);
@@ -582,6 +755,8 @@ void PPU::write8(uint16_t address, uint8_t data) {
 		objIndex = data & 0b00111111;
 	} else if(address == 0xFF6B) {
 		// https://gbdev.io/pandocs/Palettes.html#ff6aff6b--ocpsobpi-ocpdobpd-cgb-mode-only-obj-color-palette-specification--obj-palette-index-obj-color-palette-data--obj-palette-data
+		if(Cartridge::mode != Color) return;
+				
 		if(mode == VRAMTransfer) {
 			return;
 		}
@@ -593,7 +768,8 @@ void PPU::write8(uint16_t address, uint8_t data) {
 		}
 	} else if(address == 0xFF6C) {
 		// https://gbdev.io/pandocs/CGB_Registers.html#ff6c--opri-cgb-mode-only-object-priority-mode
-        
+		if(Cartridge::mode != Color) return;
+		
 		/**
 		 * Bit 0 - Priority mode
 		 * 
@@ -601,6 +777,12 @@ void PPU::write8(uint16_t address, uint8_t data) {
 		 * 1 = DMG-Style prioirty
 		 */
 		opri = check_bit(data, 0);
+	}
+}
+
+void PPU::checkLYCInterrupt() {
+	if(lcdc.lycInc && lcdc.LY == lcdc.LYC) {
+		interrupt |= 0x02;
 	}
 }
 
@@ -680,7 +862,7 @@ void PPU::updatePixel(uint32_t x, uint32_t y, uint32_t color) {
 }
 
 void PPU::setPixel(uint32_t x, uint32_t y, uint32_t color) {
-	if (x < 0 || y < 0 || x >= surface->w || y >= surface->h) {
+	if (x < 0 || y < 0 || x >= static_cast<uint32_t>(surface->w) || y >= static_cast<uint32_t>(surface->h)) {
 		return;
 	}
 	
