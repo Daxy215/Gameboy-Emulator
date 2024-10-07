@@ -85,7 +85,7 @@ void Cartridge::decode(const std::vector<uint8_t>& data) {
                     mode = Color;
                 } else {
                     std::cerr << "Color/Normal mode\n";
-                    //mode = Color;
+                    mode = Color;
                 }
             } else {
                 std::cerr << "Normal mode\n";

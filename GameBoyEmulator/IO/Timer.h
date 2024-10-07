@@ -15,7 +15,7 @@ public:
 	uint8_t interrupt = 0;
 	
 private:
-	uint8_t divider = 0;
+	uint8_t divider = 0xAD;
 	uint8_t counter = 0;
 	uint8_t modulo = 0;
 	uint8_t control = 0;

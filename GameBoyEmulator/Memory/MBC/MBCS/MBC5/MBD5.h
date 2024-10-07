@@ -18,6 +18,6 @@ private:
 	bool bankingMode = false;
 	bool ramEnabled = false;
 	
-	uint8_t curRomBank = 0;
+	uint8_t curRomBank = 1;
 	uint8_t curRamBank = 0;
 };

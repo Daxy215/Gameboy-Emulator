@@ -45,7 +45,7 @@ public:
 		
 	}
 	
-	void tick(const int& cycles);
+	void tick(int cycles);
 	void updateMode(PPUMode mode);
 	
 	void drawScanline();

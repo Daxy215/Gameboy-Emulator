@@ -35,17 +35,46 @@ struct PulseChannel {
 		
 		// Generate the waveform (high for dutyCycle, low otherwise)
 		bool isHigh = positionInWave < (dutyCycle * period / 8);
-
+		
 		// Adjust volume with the envelope
 		uint8_t volume = initialVolume;
+		
 		if (envDir) {
 			volume += sweepPace;  // Volume increases
 		} else {
 			volume -= sweepPace;  // Volume decreases
 		}
-
+		
 		// Return the sample value scaled by volume
 		return isHigh ? volume : 0;
+	}
+	
+	void reset() {
+		// NR10
+		pace = 0;
+		direction = false;
+		individualStep = 0;
+		
+		// NR11
+		waveDuty = 0;
+		lengthTimer = 0;
+		
+		// NR12
+		initialVolume = 0;
+		envDir = false;
+		sweepPace = 0;
+		
+		// NR13
+		periodLow = 0;
+		
+		// NR14
+		trigger = false;
+		lengthEnable = false;
+		periodHigh = 0;
+		
+		enabled = false;
+		left = false;
+		right = false;
 	}
 	
 	// NR10
@@ -59,16 +88,16 @@ struct PulseChannel {
 	
 	// NR12
 	uint8_t initialVolume = 0;
-	bool envDir = 0;
+	bool envDir = false;
 	uint8_t sweepPace = 0;
 	
 	// NR13
 	uint8_t periodLow = 0;
 	
 	// NR14
-	bool trigger;
-	bool lengthEnable;
-	uint8_t periodHigh;
+	bool trigger = false;
+	bool lengthEnable = false;
+	uint8_t periodHigh = 0;
 	
 	bool enabled = false;
 	bool left = false;

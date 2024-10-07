@@ -17,6 +17,29 @@ struct NoiseChanel {
 		
 		return 0;
 	}
+
+	void reset() {
+		// NR41
+		lengthTimer = 0;
+		
+		// NR42
+		initialVolume = 0;
+		envDir = 0;
+		sweepPace = 0;
+		
+		// NR43
+		clockShift = 0;
+		lsfrWidth = 0;
+		clockDivider = 0;
+		
+		// NR44
+		trigger = false;
+		lengthEnable = false;
+		
+		enabled = false;
+		left = false;
+		right = false;
+	}
 	
 	// NR41
 	uint8_t lengthTimer = 0;
@@ -33,7 +56,7 @@ struct NoiseChanel {
 	 * 0 = 15-bit
 	 * 1 = 7-bit
 	 */
-	bool lsfrWidth = 0;
+	bool lsfrWidth = false;
 	
 	/**
 	 * if clockDivider = 0,
@@ -43,10 +66,10 @@ struct NoiseChanel {
 	
 	// NR44
 	bool trigger = false;
-	bool lengthEnable;
+	bool lengthEnable = false;
 
 	// Setting
-	bool enabled;
+	bool enabled = false;
 	bool left = false;
 	bool right = false;
 };

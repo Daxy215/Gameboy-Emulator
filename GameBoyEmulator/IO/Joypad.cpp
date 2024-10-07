@@ -7,7 +7,7 @@
  *
  * This isn't made by me at all!
  * I got it from: https://github.com/jgilchrist/gbemu/blob/becc2e4475c2ba765b43701a8211f06d61b21219/src/input.cc#L9
- *
+ * 
  * Just wanted a quick working Joypad..
  */
 
@@ -118,6 +118,8 @@ void Joypad::pressButton(Buttons button) {
 	if (button == Buttons::B) { b = true; }
 	if (button == Buttons::SELECT) { select = true; }
 	if (button == Buttons::START) { start = true; }
+	
+	checkForInterrupts();
 }
 
 void Joypad::releaseButton(Buttons button) {
@@ -125,18 +127,24 @@ void Joypad::releaseButton(Buttons button) {
 	if (button == Buttons::B) { b = false; }
 	if (button == Buttons::SELECT) { select = false; }
 	if (button == Buttons::START) { start = false; }
+	
+	checkForInterrupts();
 }
 
 void Joypad::pressDpad(Dpad dpad) {
-	if (dpad == Dpad::UP) { up = true; }
-	if (dpad == Dpad::DOWN) { down = true; }
-	if (dpad == Dpad::LEFT) { left = true; }
-	if (dpad == Dpad::RIGHT) { right = true; }
+	if (dpad == UP) { up = true; }
+	if (dpad == DOWN) { down = true; }
+	if (dpad == LEFT) { left = true; }
+	if (dpad == RIGHT) { right = true; }
+	
+	checkForInterrupts();
 }
 
 void Joypad::releaseDpad(Dpad dpad) {
-	if (dpad == Dpad::UP) { up = false; }
-	if (dpad == Dpad::DOWN) { down = false; }
-	if (dpad == Dpad::LEFT) { left = false; }
-	if (dpad == Dpad::RIGHT) { right = false; }
+	if (dpad == UP) { up = false; }
+	if (dpad == DOWN) { down = false; }
+	if (dpad == LEFT) { left = false; }
+	if (dpad == RIGHT) { right = false; }
+	
+	checkForInterrupts();
 }

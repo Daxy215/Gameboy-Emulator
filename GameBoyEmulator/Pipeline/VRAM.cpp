@@ -14,7 +14,11 @@ uint8_t VRAM::fetch8(uint16_t address) {
          */
         if(Cartridge::mode != Color) return 0xFF;
         
-        return 0b01111111 | (vramBank & 0x01);
+        return 0b11111110 | vramBank;
+    }
+    
+    if(address >= std::size(RAM)) {
+        std::cerr << "OUT OF RANGE!\n";
     }
     
     uint16_t addr = (vramBank * 0x2000) + (address & 0x1FFF);
@@ -30,6 +34,10 @@ void VRAM::write8(uint16_t address, uint8_t data) {
         vramBank = check_bit(data, 0);
         
         return;
+    }
+    
+    if(address >= std::size(RAM)) {
+        std::cerr << "OUT OF RANGE!\n";
     }
     
     uint16_t addr = (vramBank * 0x2000) + (address & 0x1FFF);

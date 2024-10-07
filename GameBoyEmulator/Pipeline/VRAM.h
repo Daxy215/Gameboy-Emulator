@@ -23,7 +23,7 @@ private:
 	uint8_t vramBank = 0;
 	
 	LCDC& lcdc;
-
+	
 public:
-    uint8_t RAM[0x4000] = { 0 };
+    uint8_t RAM[0x4000 * 4] = { 0 };
 };

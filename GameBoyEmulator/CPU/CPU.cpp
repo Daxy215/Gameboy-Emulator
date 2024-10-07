@@ -1562,7 +1562,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			
         	// Will always result in the same value,
         	// no need to do an AND operation.
-        	//AF.A &= AF.A;
+        	AF.A &= AF.A;
             
         	AF.setZero(AF.A == 0);
         	AF.setSubtract(false);
@@ -2123,10 +2123,11 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 */
 			
         	if(AF.getZero()) {
-        		uint16_t address = mmu.fetch16(SP);
+        		/*uint16_t address = mmu.fetch16(SP);
         		SP += 2;
+        		*/
 				
-        		PC = address;
+        		PC = popStack();
 				
         		return 20;
         	}
@@ -2139,11 +2140,13 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
              * RET
              * 1, 16
              */
-            
-            uint16_t d16 = mmu.fetch16(SP);
+			
+        	PC = popStack();
+        	
+            /*uint16_t d16 = mmu.fetch16(SP);
         	
             PC = d16;
-            SP += 2;
+            SP += 2;*/
             
             return 16;
         }
@@ -2418,7 +2421,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 		
         case 0xE1: {
             /**
-             * POP HL,
+             * POP HL
              * 1, 12
              */
             
@@ -2600,6 +2603,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
              * 1, 4
              */
 			
+        	// TODO; Should this happen at a delay of 2 instructions?
 			interruptHandler.IME = false;
         	
             return 4;
@@ -2800,7 +2804,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
             // ld a,reg
             uint8_t& dst = getRegister(opcode >> 3 & 7);
             uint8_t src = getRegister(opcode & 7);
-            
+			
             dst = src;
             
             return 4;
@@ -6160,6 +6164,10 @@ int CPU::callnc(uint16_t& address) {
 }
 
 int CPU::jrz(int8_t& offset) {
+	if(!mmu.bootRomActive) {
+		printf("");
+	}
+		
 	if (AF.getZero()) {
 		PC += offset + 1; // For the byte
 		return 12;
@@ -6255,16 +6263,17 @@ void CPU::rra() {
 	AF.setCarry(bitOut);
 }
 
-
 void CPU::rst(uint16_t pc) {
-    uint8_t high = (PC >> 8) & 0xFF;
+    /*uint8_t high = (PC >> 8) & 0xFF;
     uint8_t low = PC & 0xFF;
     
     SP--;
     mmu.write8(SP, high);
     
     SP--;
-    mmu.write8(SP, low);
+    mmu.write8(SP, low);*/
+	
+	pushToStack(PC);
     
     PC = pc;
 }

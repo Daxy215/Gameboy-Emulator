@@ -35,12 +35,12 @@ uint8_t MBC5::fetch8(uint16_t address) {
 void MBC5::write8(uint16_t address, uint8_t data) {
 	if(address < 0x1FFF) {
 		ramEnabled = (data & 0xF) == 0xA;
-	} else if(address <= 0x2FFF) {
+	} else if(address >= 0x2000 && address <= 0x2FFF) {
 		curRomBank = ((curRomBank & 0x100) | (data)) % romBanks;
-	} else if(address <= 0x3FFF) {
-		curRomBank = ((curRomBank & 0x0FF) | (data & 0x1) << 8) % romBanks;
+	} else if(address >= 0x3000 && address <= 0x3FFF) {
+        curRomBank = ((curRomBank & 0x0FF) | ((static_cast<size_t>(data & 0x1)) << 8)) % romBanks;
 	} else if(address >= 0x4000 && address < 0x5FFF) {
-		curRomBank = ((data & 0x0F)) % ramBanks;
+		curRamBank = ((data & 0x0F)) % ramBanks;
 	} else if(address >= 0x6000 && address < 0x7FFF) {
 		
 	} else if(address >= 0xA000 && address <= 0xBFFF) {

@@ -4,6 +4,7 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 GameBoyEmulator/Roms/
+GameBoyEmulator/Saves/
 GameBoyEmulator/x64/
 x64/
 gameboy-doctor-master/

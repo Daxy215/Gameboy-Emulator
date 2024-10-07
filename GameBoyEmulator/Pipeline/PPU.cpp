@@ -17,12 +17,12 @@ constexpr int HEIGHT = 144 * 4;
 
 PPU::PPUMode PPU::mode = PPU::HBlank;
 
-void PPU::tick(const int& cycles = 4) {
+void PPU::tick(int cycles = 4) {
 	if(!lcdc.enable)
 		return;
 	
-	uint8_t LYC = mmu.fetch8(0xFF45);
-	uint8_t WY  = mmu.fetch8(0xFF4A);
+	/*uint8_t LYC = mmu.fetch8(0xFF45);
+	uint8_t WY  = mmu.fetch8(0xFF4A);*/
 	uint8_t& LY = lcdc.LY;
 	
 	/**
@@ -38,24 +38,23 @@ void PPU::tick(const int& cycles = 4) {
 	static constexpr int VBLANK_START_LINE = 144;     // Start of vertical blanking
 	*/
 	
-	currentDot += cycles;
+	//currentDot += cycles;
 	
 	//static uint16_t currentDot = 0;
 	//uint16_t currentScanline = 0;
 	
-	//uint32_t ticksLeft = cycles;
+	int32_t ticksLeft = cycles;
 	
-	//while(ticksLeft > 0) {
-		/*uint32_t curticks = ticksLeft >= 80 ? 80 : ticksLeft;
+	while(ticksLeft > 0) {
+		uint32_t curticks = ticksLeft >= 80 ? 80 : ticksLeft;
 		currentDot += curticks;
 		ticksLeft -= curticks;
-		*/
 		
 		//std::cerr << "Ticks; " << std::to_string(currentDot) << "\n";
 		
 		if(currentDot >= 456) {
 			currentDot -= 456;
-			LY = (LY + 1);
+			LY = (LY + 1) % 154;
 			checkLYCInterrupt();
 			
 			if(LY >= 144 && mode != VBlank) {
@@ -72,7 +71,7 @@ void PPU::tick(const int& cycles = 4) {
 				if(mode != HBlank) updateMode(HBlank);
 			}
 		}
-	//}
+	}
 	
 	/*switch (mode) {
 	case OAMScan:
@@ -305,13 +304,13 @@ void PPU::drawScanline() {
 }
 
 void PPU::drawBackground() {
-    uint8_t LY  = mmu.fetch8(0xFF44);
+    uint8_t LY  = lcdc.LY;//mmu.fetch8(0xFF44);
 	
-	uint8_t SCY = mmu.fetch8(0xFF42);
+	uint8_t SCY = lcdc.SCY;//mmu.fetch8(0xFF42);
     uint8_t SCX = lcdc.SCX; //mmu.fetch8(0xFF43);
 	
 	//uint8_t WY  = mmu.fetch8(0xFF4A);
-	uint8_t WX  = mmu.fetch8(0xFF4B);
+	uint8_t WX  = lcdc.WX;//mmu.fetch8(0xFF4B);
 	
 	uint16_t tileWinMapBase = lcdc.windowTileMapArea  ? 0x9C00 : 0x9800;
 	uint16_t tileBGMapBase  = lcdc.bgTileMapArea      ? 0x9C00 : 0x9800;
@@ -319,7 +318,7 @@ void PPU::drawBackground() {
 	
 	//bool drawWindow = lcdc.windowEnabled && LY >= WY && WX <= 166;
 	
-	if(!lcdc.windowEnabled && !lcdc.bgWindowEnabled)
+	if(!lcdc.windowEnabled && !lcdc.bgWindowEnabled/*????*/)
 		return;
 	
 	if(lcdc.windowEnabled && drawWindow && WX <= 166) {

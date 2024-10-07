@@ -2,16 +2,14 @@
 
 #include "../Utility/Bitwise.h"
 
-#include <windows.h>
-#include <mmsystem.h>
-#include <vector>
 #include <iostream>
 #include <thread>
 
-#pragma comment(lib, "winmm.lib")
+#include "../Memory/Cartridge.h"
 
-APU::APU() {
-	outputChannels.resize(2, std::vector<float>(44110));
+APU::APU()
+	: ch1(), ch2(), ch4(), wavePattern{} {
+	
 }
 
 void APU::tick(uint32_t cycles) {
@@ -19,102 +17,29 @@ void APU::tick(uint32_t cycles) {
 	if (!enabled || (!ch1.enabled && !ch2.enabled && !ch3.enabled && !ch4.enabled)) {
 		return;
 	}
+
+	// https://www.reddit.com/r/EmuDev/comments/5gkwi5/comment/dat3zni/
 	
-	ticks++;
-	
-	// Generate samples from each channel
-	uint8_t sampleCh1 = ch1.sample(cycles);
-	uint8_t sampleCh2 = ch2.sample(cycles);
-	uint8_t sampleCh3 = ch3.sample(cycles);
-	uint8_t sampleCh4 = ch4.sample(cycles);
-	
-	// Mix the channels
-	float mixedSample = sampleCh1 + sampleCh2 + sampleCh3 + sampleCh4;
-	
-	// Apply the left and right volume settings
-	float leftSample = mixedSample * static_cast<float>(leftVolume) / 7;  // Scale by left volume (0-7)
-	float rightSample = mixedSample * static_cast<float>(rightVolume) / 7; // Scale by right volume (0-7)
-	
-	// Apply optional VIN settings (if connected to external audio sources)
-	if (vinLeft) {
-		leftSample += 4;
-	}
-	
-	if (vinRight) {
-		rightSample += 4;
-	}
-	
-	outputChannels[0][ticks] = leftSample;
-	outputChannels[1][ticks] = rightSample;
-	
-	/**
-	 * 44100 samples / sec * 0.05 = 2205.
-	 *
-	 * So imma use this for now..
-	 */
-	if(ticks >= 44100) {
-		ticks = 0;
+	ticks += cycles;
+
+	// 512 Hz
+	if(ticks >= 8192) {
+		ticks -= 8192;
 		
-		beginPlaying();
+		counter = (counter + 1) % 8;
+		
+		// Clock length counters every step
+		
+		// Clock sweep ever 2 and 6 steps
+		if(counter == 2 || counter == 6) {
+				
+		}
+		
+		// Clock volume envelopes every 7 steps
+		if(counter == 7) {
+			
+		}
 	}
-}
-
-void APU::beginPlaying() {
-	std::thread playbackThread(&APU::playSound, this);
-	
-	playbackThread.detach();
-}
-
-void APU::playSound() {
-	HWAVEOUT hWaveOut = {};
-	WAVEFORMATEX wfx = {0};
-    
-	wfx.wFormatTag = WAVE_FORMAT_PCM;
-	wfx.nChannels = 2;  // 2 for Stereo
-	wfx.nSamplesPerSec = 44100;
-	wfx.wBitsPerSample = 16;
-	wfx.nBlockAlign = wfx.nChannels * wfx.wBitsPerSample / 8;
-	wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * wfx.nBlockAlign;
-    
-	// Open wave out device
-	//if (waveOutOpen(&hWaveOut, WAVE_MAPPER, &wfx, DWORD_PTR(waveCallback), (DWORD_PTR)this, CALLBACK_FUNCTION | WAVE_ALLOWSYNC) != MMSYSERR_NOERROR) {
-	if (waveOutOpen(&hWaveOut, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) {
-		std::cerr << "Failed to open wave out device!" << '\n';
-		return;
-	}
-    
-	// Prepare audio samples
-	std::vector<short> pcmSamples;
-	
-	size_t numSamples = outputChannels[0].size();
-	for (size_t i = 0; i < numSamples; i++) {
-		pcmSamples.push_back(floatToPCM(outputChannels[0][i])); // Left channel
-		pcmSamples.push_back(floatToPCM(outputChannels[1][i])); // Right channel
-	}
-    
-	// Create and prepare a WAVEHDR structure
-	WAVEHDR waveHeader = {0};
-	
-	waveHeader.lpData = (LPSTR)pcmSamples.data();
-	//waveHeader.lpData = (LPSTR)outputChannels.data();
-	waveHeader.dwBufferLength = pcmSamples.size() * sizeof(short);
-	waveHeader.dwFlags = 0;
-	waveHeader.dwLoops = 0;
-	
-	waveOutPrepareHeader(hWaveOut, &waveHeader, sizeof(WAVEHDR));
-    
-	// Send the block of audio data to the audio device
-	if (waveOutWrite(hWaveOut, &waveHeader, sizeof(WAVEHDR)) != MMSYSERR_NOERROR) {
-		std::cerr << "Failed to play audio!" << '\n';
-	}
-    
-	// Wait until the block has finished playing
-	while (waveOutUnprepareHeader(hWaveOut, &waveHeader, sizeof(WAVEHDR)) == WAVERR_STILLPLAYING) {
-		Sleep(100);
-	}
-	
-	// Cleanup
-	waveOutClose(hWaveOut);
 }
 
 uint8_t APU::fetch8(uint16_t address) {
@@ -123,6 +48,7 @@ uint8_t APU::fetch8(uint16_t address) {
         uint8_t result = 0;
     	
         result |= (enabled << 7);      // Bit 7 - Audio on/off
+    	result |= 0b01110000;          // Bit 6, 4
         result |= (ch4.enabled << 3);  // Bit 3 - Channel 4 status
         result |= (ch3.enabled << 2);  // Bit 2 - Channel 3 status
         result |= (ch2.enabled << 1);  // Bit 1 - Channel 2 status
@@ -186,9 +112,9 @@ uint8_t APU::fetch8(uint16_t address) {
         // NR14 - Channel 1 Period High & Control
         uint8_t result = 0;
     	
-        result |= (ch1.trigger << 7);            // Bit 7 - Trigger
-        result |= (ch1.lengthEnable << 6);        // Bit 6 - Length enable
-        result |= (ch1.periodHigh & 0b00000111);  // Bits 2-0 - Period high
+        //result |= (ch1.trigger << 7);            // Bit 7 - Trigger        - Write Only
+        result |= (ch1.lengthEnable << 6);         // Bit 6 - Length enable
+        //result |= (ch1.periodHigh & 0b00000111); // Bits 2-0 - Period high - Write Only
     	
         return result;
     } else if(address == 0xFF15) {
@@ -287,9 +213,12 @@ void APU::write8(uint16_t address, uint8_t data) {
 	 * Turning the APU off drains less power (around 16%),
 	 * but clears all APU registers and makes them read-only until turned back on, except NR521.
 	 */
-	/*if(!enabled && address != 0xFF26) {
+	if (!enabled && address != 0xFF26 && 
+		(address < 0xFF30) &&  // Ignore wave pattern memory
+		(Cartridge::mode != Color || (address != 0xFF11 && address != 0xFF21 && 
+					address != 0xFF31 && address != 0xFF41))) {
 		return;
-	}*/
+	}
 	
 	if(address == 0xFF26) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff26--nr52-audio-master-control
@@ -298,16 +227,33 @@ void APU::write8(uint16_t address, uint8_t data) {
 		enabled = check_bit(data, 7);
 		
 		// Bit 3 - CH4 on?
-		ch4.enabled = check_bit(data, 4);
+		ch4.enabled = check_bit(data, 3);
 		
 		// Bit 2 - CH3 on?
-		ch3.enabled = check_bit(data, 4);
+		ch3.enabled = check_bit(data, 2);
 		
 		// Bit 1 - CH2 on?
-		ch2.enabled = check_bit(data, 4);
+		ch2.enabled = check_bit(data, 1);
 		
 		// Bit 0 - CH1 on?
-		ch1.enabled = check_bit(data, 4);
+		ch1.enabled = check_bit(data, 0);
+		
+		// APU is powering off
+		if(!enabled) {
+			ch1.reset();
+			ch2.reset();
+			ch3.reset();
+			ch4.reset();
+			
+			vinLeft = false;
+			vinRight = false;
+			leftVolume = 0;
+			rightVolume = 0;
+			
+			// TODO; Clear WRAM?
+			/*for(auto& i : wavePattern)
+				i = 0;*/
+		}
 	} else if(address == 0xFF25) {
 		// 	https://gbdev.io/pandocs/Audio_Registers.html#ff25--nr51-sound-panning
 		

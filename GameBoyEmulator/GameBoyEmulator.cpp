@@ -55,6 +55,14 @@
 
 // TODO; https://gbdev.io/pandocs/Power_Up_Sequence.html#hardware-registers
 
+// TODO; Clean this class up..
+
+std::string toLowerCase(const std::string& str) {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return std::tolower(c); });
+    return result;
+}
+
 // Function to format CPU state as a string
 std::string formatCPUState(const CPU &cpu) {
     std::ostringstream oss;
@@ -71,6 +79,7 @@ std::string formatCPUState(const CPU &cpu) {
     oss << "SP: " << std::setw(4) << static_cast<int>(cpu.SP) << ' ';
     oss << "PC: 00:" << std::setw(4) << static_cast<int>(cpu.PC) << ' ';
     oss << "IME: " << (cpu.interruptHandler.IME ? "true" : "false") ;
+    oss << " LY: " << static_cast<int>(cpu.mmu.lcdc.LY);
     
     // Fetch the memory around the PC
     uint16_t pc = cpu.PC;
@@ -91,19 +100,18 @@ std::string formatCPUState(const CPU &cpu) {
 }
 
 void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
-    uint32_t stopCycles = 0;
-    
     bool running = true;
     
     const double CLOCK_SPEED_NORMAL = 4194304; // 4.194304 MHz
     const double CLOCK_SPEED_DOUBLE = 8388608; // 8.388608 MHz
-    const int FPS = 60; // Frames per second
+    const int FPS = 60;
     
     // Time tracking variables
     auto lastFrameTime = std::chrono::high_resolution_clock::now();
-
+    
     uint32_t x = 0;
-
+    uint16_t frames = 0;
+    
     while (running) {
         double cyclesPerFrame = cpu.mmu.doubleSpeed ? CLOCK_SPEED_DOUBLE / FPS : CLOCK_SPEED_NORMAL / FPS;
         
@@ -119,7 +127,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             
             uint16_t cycles = cpu.interruptHandler.handleInterrupt(cpu);
             
-            if (!cpu.halted && !cpu.stop && cycles == 0) {
+            if (!cpu.halted && cycles == 0) {
                 uint16_t opcode = cpu.fetchOpCode();
                 cycles = cpu.decodeInstruction(opcode);
                 
@@ -130,23 +138,16 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
                 if (cycles > 0) {
                     printf("??");
                 }
+                
                 cycles = 4;
             }
             
-            if (cpu.stop) {
-                stopCycles += (cycles == 0) ? 4 : cycles;
-                if (stopCycles >= 8200) {
-                    stopCycles = 0;
-                    cpu.stop = false;
-                }
-            } else {
+            if(!cpu.mmu.bootRomActive) {
+                cpu.mmu.tick(cycles);
                 timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
             }
             
-            x++;
-            
-            cpu.mmu.tick();
-            ppu.tick(cycles);
+            ppu.tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
             
             cpu.interruptHandler.IF |= timer.interrupt;
             timer.interrupt = 0;
@@ -161,7 +162,10 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
             cpu.mmu.serial.interrupt = 0;
             
             totalCyclesThisFrame += cycles;
+            cpu.mmu.cycles = 0;
         }
+        
+        frames++;
         
         // Calculate how much time should have passed for this frame
         auto now = std::chrono::high_resolution_clock::now();
@@ -172,6 +176,7 @@ void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
         
         // Sleep to limit frame rate if we are running too fast
         if (frameTime < targetFrameTime) {
+            frames = 0;
             std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(targetFrameTime - frameTime)));
         }
         
@@ -195,18 +200,34 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/TETRIS.gb";
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb";
+    //std::string filename = "Roms/Super Mario Land 4 (J) [!].gb";
     //std::string filename = "Roms/Mario & Yoshi (E) [!].gb";
     
-    // Games that don't work :(
-    //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
-    //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
-    //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
+    // Not fully tested but seems ok - though has some rendering issues
+    //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
     
-    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck??
-    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
+    /**
+     * Fixing the issue with,
+     * WRAM and HRAM, fixed,
+     * some of the rendering issues.
+     * 
+     * Future me; I was being too stupid,
+     * WRAM and VRAM's sizes were too small.
+     */
+    
+    /**
+     * This game had up arrow stuck and rendering issues,
+     * it was bc I had an issue with MBC5
+     */
+    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb";
+    std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Tennis (U) [C][!].gbc"; // Uses MBC5
-    //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
+    
+    /**
+     * Seems to work but has some rendering issues
+     */
+    //std::string filename = "Roms/Super Mario Bros. Deluxe (U) (V1.1) [C][!].gbc";
     
     /*
      * TODO; I believe they require speed switch IRQ
@@ -217,14 +238,28 @@ int main(int argc, char* argv[]) {
      * Ok I think the issue is the halt bug..
      * Which I can find little resources of ;)
      * 
-     * Or maybe HDMA?
+     * Or maybe HDMA? I don't know why I thought it'd be HDMA.. it's for CGB
      * 
      * Turns out it was the MBC1 :D
-     * Still a bit glitchy
+     * Still a bit glitchy.
+     * 
+     * Seems, like if you die in zelda,
+     * the lighting uses the wrong texture map..
      */
-    std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
+    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
     //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb";
+    
+    // Games that don't work :(
+    // These do run, just don't go past the main screen. Probably bc MBC3 is wrongly implemented(I just copied MBC1)
+    //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
+    //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
+    //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
+    
+    /**
+     * It runs but then freezes
+     */
+    //std::string filename = "Roms/Disney's Tarzan (U) [C][!].gbc"; // Uses MBC5
     
     // TESTS
     
@@ -274,7 +309,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/mem_timing/individual/02-write_timing.gb"; // TODO;
     //std::string filename = "Roms/mem_timing/individual/03-modify_timing.gb"; // TODO;
     
-    //std::string filename = "Roms/tests/bully/bully.gb"; // TODO;
+    //std::string filename = "Roms/tests/bully/bully.gb"; // TODO; DMA bus conflict always reads $FF??
     
     //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // Passed
     
@@ -328,15 +363,17 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TOOD; It passed but doesn't show up?
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO; Wrong bank number
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_64kb.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/ram_256kb.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO; Stuck
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_2Mb.gb"; // TODO; Stuck
+    
+    // TODO; These gets stuck if boot rom is disabled.
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_1Mb.gb"; // TODO; Wrong bank number
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_2Mb.gb"; // TODO; Wrong bank number
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_4Mb.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_8Mb.gb"; // TODO; Wrong bank number
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_16Mb.gb"; // TODO;  Wrong bank number
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_512kb.gb"; // TODO; Stuck
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/rom_512kb.gb"; // TODO; Wrong bank number
     
     //std::string filename = "Roms/tests/mooneye-test-suite/manual-only/sprite_priority.gb"; // Passed
     
@@ -348,7 +385,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/scribbltests/palettely/palettely.gb"; // Passed
     //std::string filename = "Roms/tests/scribbltests/scxly/scxly.gb"; // Passed
     //std::string filename = "Roms/tests/scribbltests/statcount/statcount.gb"; // TODO??
-    //std::string filename = "Roms/tests/scribbltests/winpos/winpos.gb"; // Idk?
+    //std::string filename = "Roms/tests/scribbltests/winpos/winpos.gb"; // Passed
     
     //std::string filename = "Roms/tests/strikethrough/strikethrough.gb"; // Passed
     
@@ -371,7 +408,7 @@ int main(int argc, char* argv[]) {
         
         return 1;
     }
-
+    
     // TODO; Make a class for this
     /*std::string booRom = "Roms/bootroms/dmg0_boot.bin";
     
@@ -412,10 +449,29 @@ int main(int argc, char* argv[]) {
         0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
     };
     
-    ifstream boot("Roms/bootroms/cgb_boot.bin", ios::binary | ios::ate);
+    std::vector<uint8_t> bootCGB = {
+        0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
+        0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
+        0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
+        0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
+        0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
+        0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
+        0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
+        0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
+        0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
+        0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
+        0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9, 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
+        0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
+        0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
+        0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C,
+        0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
+        0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
+    };
+    
+    /*ifstream boot("Roms/bootroms/cgb_boot.bin", ios::binary | ios::ate);
      
     if (!boot.good()) {
-        std::cerr << "Cannot read from file: Roms/bootroms/cgb_boot.bin \n";
+        std::cerr << "Cannot read from file: Roms/bootroms/dmg_boot.bin \n";
     }
     
     auto f = boot.tellg();
@@ -428,6 +484,7 @@ int main(int argc, char* argv[]) {
         
         return 1;
     }
+    */
     
     Cartridge cartridge;
     
@@ -446,15 +503,29 @@ int main(int argc, char* argv[]) {
     OAM oam;
     
     // Init memories
+    /**
+     * I have no clue what's happening,
+     * but writting to hram sometimes,
+     * fucks up wram??? And vice versa..
+     * 
+     * I am so confused rn.
+     * 
+     * Future me; I was being too stupid,
+     * WRAM and VRAM's sizes were too small.
+     */
     WRAM wram;
     HRAM hram;
+    
     VRAM vram(lcdc);
     
     PPU* ppu;
     APU apu;
     
     // Create MMU
-    MMU mmu(interruptHandler, serial, joypad, mbc, wram, hram, vram, lcdc, timer, oam, *(new PPU(vram, oam, lcdc, mmu)), apu, bootDMG, memory);
+    MMU mmu(interruptHandler, serial, joypad, mbc, wram,
+        hram, vram, lcdc, timer, oam,
+        *(new PPU(vram, oam, lcdc, mmu)),
+        apu, Cartridge::mode == Color ? bootCGB : bootDMG, memory);
     
     // Listen.. I'm too lazy to deal with this crap
     ppu = &mmu.ppu;
@@ -476,12 +547,10 @@ int main(int argc, char* argv[]) {
     
     //runEmulation(cpu, *ppu);
     
+    // Load save
+    mmu.mbc.load("Saves/" + cartridge.title + "/save.bin");
+    
     std::thread emulationThread(runEmulation, std::ref(cpu), std::ref(*ppu), std::ref(timer));
-
-    // Boot rom
-    for(int i = 0; i < 100; i++) {
-        
-    }
     
     bool running = true;
     const int targetFPS = 60;
@@ -574,6 +643,8 @@ int main(int argc, char* argv[]) {
             SDL_Delay(frameDelay - frameTime);
         }
     }
+    
+    mbc.save("Saves/" + cartridge.title + "/save.bin");
     
     emulationThread.detach();
     

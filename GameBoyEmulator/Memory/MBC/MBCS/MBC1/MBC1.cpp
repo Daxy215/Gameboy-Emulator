@@ -1,5 +1,10 @@
 #include "MBC1.h"
 
+#include <fstream>
+#include <iostream>
+#include <ios>
+#include <iostream>
+
 MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
 	this->rom = rom;
 	
@@ -7,7 +12,7 @@ MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
 	this->ramBanks = cartridge.ramBanks;
 	
 	//eram.resize(static_cast<size_t>(cartridge.romSize) * 1024);
-	eram.resize(static_cast<size_t>((cartridge.ramSize + 1) * 4) * 1024);
+	eram.resize(static_cast<size_t>((cartridge.ramSize + 1) * 6) * 1024);
 }
 
 uint8_t MBC1::fetch8(uint16_t address) {
@@ -33,6 +38,8 @@ uint8_t MBC1::fetch8(uint16_t address) {
 		
 		return eram[(bank * 0x2000) | (address & 0x1FFF)];
 	}
+	
+	return 0xF;
 }
 
 void MBC1::write8(uint16_t address, uint8_t data) {
@@ -64,5 +71,7 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 		uint8_t bank = bankingMode ? (curRamBank) : 0;
 		
 		eram[(address & 0x1FFF) + (bank * 0x2000)] = data;
+		
+		ramUpdatd = true;
 	}
 }

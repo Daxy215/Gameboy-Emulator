@@ -20,10 +20,32 @@ struct WaveChannel {
 		return volume * (sample / 15.0f);*/
 		return 0;
 	}
-	
-	/*uint8_t frequency = 0;
-	uint8_t volume = 0;*/
 
+	void reset() {
+		// NR30
+		DAC = false;
+		
+		// NR31
+		lengthTimer = 0;
+		
+		// NR32
+		outputLevel = 0;
+
+		// NR 33
+		periodLow = 0;
+		
+		// NR34
+		trigger = false;
+		lengthEnable = false;
+		periodHigh = 0;
+		
+		enabled = false;
+		left = false;
+		right = false;
+		
+		// TODO; Clear waveform?
+	}
+	
 	// NR30
 	bool DAC = false;
 	

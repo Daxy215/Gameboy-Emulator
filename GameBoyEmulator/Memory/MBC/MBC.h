@@ -4,8 +4,6 @@
 
 #include "../Cartridge.h"
 
-enum CartridgeType : int;
-
 class MBC {
 public:
 	MBC();
@@ -13,23 +11,36 @@ public:
 	
 	virtual ~MBC() = default;
 	
+	void tick(uint16_t cycles);
+	
 	uint8_t read(uint16_t address);
 	void write(uint16_t address, uint8_t data);
+	
+public:
+	void load(const std::string& path);
+	void save(const std::string& path);
 	
 protected:
 	virtual uint8_t fetch8(uint16_t address);
 	virtual void write8(uint16_t address, uint8_t data);
-
+	
 protected:
 	uint16_t romBanks = 0;
 	
 	// Technically, this CAN be a uint8
 	uint16_t ramBanks = 0;
 	
+	bool ramUpdatd;
+	
 	std::vector<uint8_t> rom;
 	std::vector<uint8_t> eram;
 
 private:
+	uint32_t ticks;
+	
+	// Used for saving.. Ik it's scuffed
+	std::string title;
+	
 	std::vector<uint8_t> data;
 	
 	/**
