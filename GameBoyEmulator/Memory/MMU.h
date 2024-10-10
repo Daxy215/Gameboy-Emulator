@@ -39,22 +39,7 @@ class MMU {
 public:
     MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC& mbc, WRAM& wram,
         HRAM& hram, VRAM& vram, LCDC& lcdc, Timer& timer, OAM& oam, PPU& ppu, APU& apu,
-        const std::vector<uint8_t>& bootRom, const std::vector<uint8_t>& memory)
-        : interruptHandler(interruptHandler),
-          serial(serial),
-          joypad(joypad),
-          timer(timer),
-          mbc(mbc),
-          wram(wram),
-          hram(hram),
-          vram(vram),
-          lcdc(lcdc),
-          oam(oam),
-          ppu(ppu),
-          apu(apu),
-          bootRom(bootRom) {
-        
-    }
+        const std::vector<uint8_t>& bootRom, const std::vector<uint8_t>& memory);
     
     void tick(uint32_t cycles);
     

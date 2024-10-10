@@ -6,6 +6,16 @@
 #include <chrono>
 #include <thread>
 
+#include "imgui.h"
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_opengl3.h"
+
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+#include <SDL_opengles2.h>
+#else
+#include <SDL_opengl.h>
+#endif
+
 #include "APU/APU.h"
 #include "CPU/CPU.h"
 
@@ -63,7 +73,6 @@ std::string toLowerCase(const std::string& str) {
     return result;
 }
 
-// Function to format CPU state as a string
 std::string formatCPUState(const CPU &cpu) {
     std::ostringstream oss;
     
@@ -99,91 +108,7 @@ std::string formatCPUState(const CPU &cpu) {
     return oss.str();
 }
 
-void runEmulation(CPU& cpu, PPU& ppu, Timer& timer) {
-    bool running = true;
-    
-    const double CLOCK_SPEED_NORMAL = 4194304; // 4.194304 MHz
-    const double CLOCK_SPEED_DOUBLE = 8388608; // 8.388608 MHz
-    const int FPS = 60;
-    
-    // Time tracking variables
-    auto lastFrameTime = std::chrono::high_resolution_clock::now();
-    
-    uint32_t x = 0;
-    uint16_t frames = 0;
-    
-    while (running) {
-        double cyclesPerFrame = cpu.mmu.doubleSpeed ? CLOCK_SPEED_DOUBLE / FPS : CLOCK_SPEED_NORMAL / FPS;
-        
-        // Track the total cycles executed this frame
-        uint64_t totalCyclesThisFrame = 0;
-        
-        while (totalCyclesThisFrame < cyclesPerFrame) {
-            if(cpu.ei >= 0) cpu.ei--;
-            
-            if(cpu.ei == 0) {
-                cpu.interruptHandler.IME = true;
-            }
-            
-            uint16_t cycles = cpu.interruptHandler.handleInterrupt(cpu);
-            
-            if (!cpu.halted && cycles == 0) {
-                uint16_t opcode = cpu.fetchOpCode();
-                cycles = cpu.decodeInstruction(opcode);
-                
-                if (cpu.PC >= 0x0100) {
-                    cpu.mmu.bootRomActive = false;
-                }
-            } else if (cpu.halted) {
-                if (cycles > 0) {
-                    printf("??");
-                }
-                
-                cycles = 4;
-            }
-            
-            if(!cpu.mmu.bootRomActive) {
-                cpu.mmu.tick(cycles);
-                timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
-            }
-            
-            ppu.tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
-            
-            cpu.interruptHandler.IF |= timer.interrupt;
-            timer.interrupt = 0;
-            
-            cpu.interruptHandler.IF |= cpu.mmu.joypad.interrupt;
-            cpu.mmu.joypad.interrupt = 0;
-            
-            cpu.interruptHandler.IF |= ppu.interrupt;
-            ppu.interrupt = 0;
-            
-            cpu.interruptHandler.IF |= cpu.mmu.serial.interrupt;
-            cpu.mmu.serial.interrupt = 0;
-            
-            totalCyclesThisFrame += cycles;
-            cpu.mmu.cycles = 0;
-        }
-        
-        frames++;
-        
-        // Calculate how much time should have passed for this frame
-        auto now = std::chrono::high_resolution_clock::now();
-        auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFrameTime).count();
-        
-        // Frame time should be 1000 / FPS milliseconds (16.67 ms at 60 FPS)
-        double targetFrameTime = 1000.0 / FPS;
-        
-        // Sleep to limit frame rate if we are running too fast
-        if (frameTime < targetFrameTime) {
-            frames = 0;
-            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(targetFrameTime - frameTime)));
-        }
-        
-        lastFrameTime = now;
-    }
-}
-
+// TODO; Remove
 std::optional<uint8_t> stdoutprinter(uint8_t value) {
     std::cerr << static_cast<char>(value);
     return std::nullopt;
@@ -204,6 +129,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Mario & Yoshi (E) [!].gb";
     
     // Not fully tested but seems ok - though has some rendering issues
+    // Idk what I did but now it's completely fucked
     //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
     
     /**
@@ -217,10 +143,19 @@ int main(int argc, char* argv[]) {
     
     /**
      * This game had up arrow stuck and rendering issues,
-     * it was bc I had an issue with MBC5
+     * it was bc I had an issue with MBC
+     *
+     * So, issue is back idk how it got fixed in the first place.
+     * From my understanding, input is registered via interrupt,
+     * when pressing up arrow, it doesn't cause an interrupt.
+     * 
+     * Though, every other button it does?
+     * 
+     * Also, it's quite weird that this is ONLY happening,
+     * in this game. Every other game, it works correctly.
      */
-    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb";
-    std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
+    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
+    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Tennis (U) [C][!].gbc"; // Uses MBC5
     
@@ -250,16 +185,20 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
     //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb";
     
+    /**
+     * It runs but then freezes;
+     * 
+     * Issue was with 0xFF55 returning wrong value.
+     *
+     * Runs correctly now
+     */
+    //std::string filename = "Roms/Disney's Tarzan (U) [C][!].gbc"; // Uses MBC5
+    
     // Games that don't work :(
     // These do run, just don't go past the main screen. Probably bc MBC3 is wrongly implemented(I just copied MBC1)
     //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
-    
-    /**
-     * It runs but then freezes
-     */
-    //std::string filename = "Roms/Disney's Tarzan (U) [C][!].gbc"; // Uses MBC5
     
     // TESTS
     
@@ -380,6 +319,8 @@ int main(int argc, char* argv[]) {
     // An MBC3 Test for the real time clock
     //std::string filename = "Roms/tests/rtc3test/rtc3test.gb"; // Uses MBC3
     
+    //std::string filename = "Roms/tests/same-suite/apu/div_trigger_volume_10.gb";
+    
     //std::string filename = "Roms/tests/scribbltests/lycscx/lycscx.gb"; // Passed
     //std::string filename = "Roms/tests/scribbltests/lycscy/lycscy.gb"; // Passed
     //std::string filename = "Roms/tests/scribbltests/palettely/palettely.gb"; // Passed
@@ -409,26 +350,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    // TODO; Make a class for this
-    /*std::string booRom = "Roms/bootroms/dmg0_boot.bin";
-    
-    ifstream bootStream(filename.c_str(), ios::binary | ios::ate);
-    
-    if (!bootStream.good()) {
-        std::cerr << "Cannot read from file: " << booRom << '\n';
-    }
-    
-    auto size = bootStream.tellg();
-    bootStream.seekg(0, ios::beg);
-    
-    std::vector<uint8_t> bootRom(size);
-    
-    if (!bootStream.read(reinterpret_cast<char*>(bootRom.data()), size)) {
-        std::cerr << "Error reading file!" << '\n';
-        
-        return 1;
-    }*/
-    
     // From GearBoy
     std::vector<uint8_t> bootDMG = {
         0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
@@ -448,43 +369,6 @@ int main(int argc, char* argv[]) {
         0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
         0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
     };
-    
-    std::vector<uint8_t> bootCGB = {
-        0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
-        0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
-        0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
-        0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
-        0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
-        0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
-        0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
-        0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
-        0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
-        0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
-        0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9, 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
-        0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
-        0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
-        0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C,
-        0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
-        0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
-    };
-    
-    /*ifstream boot("Roms/bootroms/cgb_boot.bin", ios::binary | ios::ate);
-     
-    if (!boot.good()) {
-        std::cerr << "Cannot read from file: Roms/bootroms/dmg_boot.bin \n";
-    }
-    
-    auto f = boot.tellg();
-    boot.seekg(0, ios::beg);
-    
-    std::vector<uint8_t> bootCGB(f);
-    
-    if (!boot.read(reinterpret_cast<char*>(bootCGB.data()), f)) {
-        std::cerr << "Error reading file!" << '\n';
-        
-        return 1;
-    }
-    */
     
     Cartridge cartridge;
     
@@ -525,7 +409,7 @@ int main(int argc, char* argv[]) {
     MMU mmu(interruptHandler, serial, joypad, mbc, wram,
         hram, vram, lcdc, timer, oam,
         *(new PPU(vram, oam, lcdc, mmu)),
-        apu, Cartridge::mode == Color ? bootCGB : bootDMG, memory);
+        apu, bootDMG, memory);
     
     // Listen.. I'm too lazy to deal with this crap
     ppu = &mmu.ppu;
@@ -534,39 +418,54 @@ int main(int argc, char* argv[]) {
     
     serial.set_callback(stdoutprinter);
     
-    // NO bios
-    /*mmu.write8(0xFF40, 0x91);
-    mmu.write8(0xFF47, 0xFC);
-    mmu.write8(0xFF48, 0xFF);
-    mmu.write8(0xFF49, 0xFF);*/
-    
-    // TODO; Test
-    //cpu.testCases();
-    
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
+        std::cerr << "SDL could not initialize SDL_Error: " << SDL_GetError() << '\n';
+        return -1;
+    }
+
     ppu->createWindow();
+    //apu.init();
     
-    //runEmulation(cpu, *ppu);
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+    
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForOpenGL(ppu->window, ppu->sdl_context);
+    ImGui_ImplOpenGL3_Init("#version 130");
     
     // Load save
     mmu.mbc.load("Saves/" + cartridge.title + "/save.bin");
     
-    std::thread emulationThread(runEmulation, std::ref(cpu), std::ref(*ppu), std::ref(timer));
-    
     bool running = true;
-    const int targetFPS = 60;
-    const int frameDelay = 1000 / targetFPS; // Frame delay in milliseconds
     
-    uint32_t frameStart;
-    uint32_t frameTime;
+    const double CLOCK_SPEED_NORMAL = 4194304; // 4.194304 MHz
+    const double CLOCK_SPEED_DOUBLE = 8388608; // 8.388608 MHz
+    const int FPS = 60;
+    
+    // Time tracking variables
+    auto lastFrameTime = std::chrono::high_resolution_clock::now();
+    
+    uint16_t frames = 0;
     
     while (running) {
-        frameStart = SDL_GetTicks();  // Get the number of milliseconds since the SDL library was initialized
+        double cyclesPerFrame = cpu.mmu.doubleSpeed ? CLOCK_SPEED_DOUBLE / FPS : CLOCK_SPEED_NORMAL / FPS;
         
-        // Event handler
+        uint64_t totalCyclesThisFrame = 0;
+
         SDL_Event e;
         
         // Handle events on queue
         while (SDL_PollEvent(&e)) {
+            ImGui_ImplSDL2_ProcessEvent(&e);
+            
             // User requests quit
             if (e.type == SDL_QUIT) {
                 running = false;  // Exit the loop
@@ -630,26 +529,94 @@ int main(int argc, char* argv[]) {
             }
         }
         
-        //SDL_RenderClear(ppu.renderer);
-        
-        // Swap the window buffer (update the window with the rendered image)
-        //SDL_GL_SwapWindow(ppu.window);
-        
-        // Calculate how long the frame has taken
-        frameTime = SDL_GetTicks() - frameStart;
-        
-        // If the frame finished early, delay the next iteration to maintain 60 FPS
-        if (frameDelay > frameTime) {
-            SDL_Delay(frameDelay - frameTime);
+        while (totalCyclesThisFrame < cyclesPerFrame) {
+            uint16_t cycles = cpu.cycle();
+            
+            if(!cpu.mmu.bootRomActive) {
+                cpu.mmu.tick(cycles);
+                timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
+            }
+            
+            cpu.mmu.apu.tick(cycles);
+            ppu->tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
+            
+            cpu.interruptHandler.IF |= timer.interrupt;
+            timer.interrupt = 0;
+            
+            cpu.interruptHandler.IF |= cpu.mmu.joypad.interrupt;
+            cpu.mmu.joypad.interrupt = 0;
+            
+            cpu.interruptHandler.IF |= ppu->interrupt;
+            ppu->interrupt = 0;
+            
+            cpu.interruptHandler.IF |= cpu.mmu.serial.interrupt;
+            cpu.mmu.serial.interrupt = 0;
+                
+            totalCyclesThisFrame += cycles;
+            cpu.mmu.cycles = 0;
         }
+        
+        /*ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+        
+        ImGui::Begin("Pulse Waveform");
+            ImGui::Text(("Duty cycles: " + std::to_string(apu.ch1.waveDuty) + " = " + std::to_string(apu.ch1.sequencePointer) + " = " + std::to_string(apu.ch1.currentVolume) + "/" + std::to_string(apu.ch1.initialVolume)).c_str());
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            const ImVec2 windowPos = ImGui::GetCursorScreenPos();
+            const float width = 400;
+            const float height = 200;
+            
+            // Draw background
+            drawList->AddRectFilled(windowPos, ImVec2(windowPos.x + width, windowPos.y + height), IM_COL32(30, 30, 30, 255));
+            
+            // Get samples for rendering
+            const auto& samples = cpu.mmu.apu.newSamples;
+            
+            // Draw waveform
+            for (size_t i = 0; i < samples.size() - 1; ++i) {
+                float x1 = windowPos.x + (i * width / (samples.size() - 1));
+                float y1 = windowPos.y + height / 2 - (samples[i] / 255.0f * height / 2);
+                float x2 = windowPos.x + ((i + 1) * width / (samples.size() - 1));
+                float y2 = windowPos.y + height / 2 - (samples[i + 1] / 255.0f * height / 2);
+                
+                drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(255, 255, 255, 255));
+            }
+            
+            ImGui::End();
+        ImGui::Render();
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        //glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        SDL_GL_SwapWindow(ppu->window);*/
+        
+        //SDL_RenderClear(ppu->renderer);
+        //SDL_RenderCopy(ppu->renderer, ppuTexture, NULL, NULL);
+        //SDL_RenderPresent(ppu->renderer);
+        
+        frames++;
+        
+        // Calculate how much time should have passed for this frame
+        auto now = std::chrono::high_resolution_clock::now();
+        auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFrameTime).count();
+        
+        // Frame time should be 1000 / FPS milliseconds (16.67 ms at 60 FPS)
+        double targetFrameTime = 1000.0 / FPS;
+        
+        // Sleep to limit frame rate if we are running too fast
+        if (frameTime < targetFrameTime) {
+            frames = 0;
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(targetFrameTime - frameTime)));
+        }
+        
+        lastFrameTime = now;
     }
     
     mbc.save("Saves/" + cartridge.title + "/save.bin");
     
-    emulationThread.detach();
-    
     // Cleanup code
-    //SDL_DestroyWindow(ppu->window);
+    SDL_DestroyWindow(ppu->window);
     SDL_Quit();
     
     return 0;

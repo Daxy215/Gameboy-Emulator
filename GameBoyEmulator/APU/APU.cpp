@@ -7,37 +7,75 @@
 
 #include "../Memory/Cartridge.h"
 
+/*
+uint8_t* APU::audio_chunk;
+uint32_t APU::audio_len = 0;
+uint8_t* APU::audio_pos;
+*/
+
 APU::APU()
-	: ch1(), ch2(), ch4(), wavePattern{} {
+	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(1024) {
+	//SDL_Init(SDL_INIT_AUDIO);
+	
 	
 }
 
+void APU::init() {
+	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
+	
+	SDL_zero(audioSpec);
+	//extern void fill_audio(void *udata, Uint8 *stream, int len);
+	
+	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
+	
+	audioSpec.freq = 44100;           // Output sample rate
+	audioSpec.format = AUDIO_S16SYS;  // 32-bit floating point PCM samples
+	audioSpec.channels = 2;
+	audioSpec.samples = 512;
+	audioSpec.callback = APU::fill_audio;
+	audioSpec.userdata = this;
+	
+	audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
+	if (audioDevice == 0) {
+		std::cerr << "Failed to open audio device: " << SDL_GetError() << "\n";
+	}
+	
+	// Play audio
+	SDL_PauseAudioDevice(audioDevice, 0);
+}
+
 void APU::tick(uint32_t cycles) {
+	if(ch1.trigger)
+		ch1.updateTrigger();
+	
+	/*if(ch2.trigger)
+		ch2.updateTrigger();*/
+	
 	// APU Disabled
 	if (!enabled || (!ch1.enabled && !ch2.enabled && !ch3.enabled && !ch4.enabled)) {
 		return;
 	}
-
+	
 	// https://www.reddit.com/r/EmuDev/comments/5gkwi5/comment/dat3zni/
 	
 	ticks += cycles;
-
+	
 	// 512 Hz
 	if(ticks >= 8192) {
 		ticks -= 8192;
 		
 		counter = (counter + 1) % 8;
-		
-		// Clock length counters every step
+
+		ch1.updateCounter();
 		
 		// Clock sweep ever 2 and 6 steps
 		if(counter == 2 || counter == 6) {
-				
+			ch1.updateSweep();
 		}
 		
 		// Clock volume envelopes every 7 steps
 		if(counter == 7) {
-			
+			ch1.updateEnvelope();
 		}
 	}
 }
@@ -84,7 +122,7 @@ uint8_t APU::fetch8(uint16_t address) {
         uint8_t result = 0;
     	
         result |= (ch1.pace << 4);       // Bits 6-4 - Sweep pace
-        result |= (ch1.direction << 3);  // Bit 3 - Sweep direction
+        result |= (ch1.direction << 3);  // Bit  3 - Sweep direction
         result |= (ch1.individualStep);  // Bits 2-0 - Individual step
     	
         return result;
@@ -213,12 +251,12 @@ void APU::write8(uint16_t address, uint8_t data) {
 	 * Turning the APU off drains less power (around 16%),
 	 * but clears all APU registers and makes them read-only until turned back on, except NR521.
 	 */
-	if (!enabled && address != 0xFF26 && 
+	/*if (!enabled && address != 0xFF26 && 
 		(address < 0xFF30) &&  // Ignore wave pattern memory
 		(Cartridge::mode != Color || (address != 0xFF11 && address != 0xFF21 && 
 					address != 0xFF31 && address != 0xFF41))) {
 		return;
-	}
+	}*/
 	
 	if(address == 0xFF26) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff26--nr52-audio-master-control
@@ -239,7 +277,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		ch1.enabled = check_bit(data, 0);
 		
 		// APU is powering off
-		if(!enabled) {
+		/*if(!enabled) {
 			ch1.reset();
 			ch2.reset();
 			ch3.reset();
@@ -252,8 +290,8 @@ void APU::write8(uint16_t address, uint8_t data) {
 			
 			// TODO; Clear WRAM?
 			/*for(auto& i : wavePattern)
-				i = 0;*/
-		}
+				i = 0;#1#
+		}*/
 	} else if(address == 0xFF25) {
 		// 	https://gbdev.io/pandocs/Audio_Registers.html#ff25--nr51-sound-panning
 		
@@ -299,10 +337,10 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		/**
 		 * Bit 6, 5 and 4 - Pace
-		 *
+		 * 
 		 * TODO; Note that the value written to this field is not re-read by the hardware,
 		 * until a sweep iteration completes, or the channel is (re)triggered.
-		 *
+		 * 
 		 * However, if 0 is written to this field,
 		 * then iterations are instantly disabled (but see below),
 		 * and it will be reloaded as soon as it’s set to something else.
@@ -383,6 +421,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * the lower 8 bits are from NR13 (ch1.periodLow)
 		 */
 		ch1.periodHigh = data & 0b00000111;
+		ch1.sweepFrequency = (ch1.periodHigh << 8) | ch1.periodLow;
 	} else if(address == 0xFF15) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#sound-channel-2--pulse
 		
@@ -553,5 +592,25 @@ void APU::write8(uint16_t address, uint8_t data) {
 	else {
 		printf("Unknown APU address: %x\n", address);
 		std::cerr << "";
+	}
+}
+
+// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
+void APU::fill_audio(void* udata, Uint8* stream, int len) {
+	APU* apu = reinterpret_cast<APU*>(udata);
+	
+	int sampleCount = len / 2;
+	
+	Sint16* buffer = reinterpret_cast<Sint16*>(stream);
+	
+	for(int i = 0; i < sampleCount; i++) {
+		uint8_t samp = apu->ch1.sample(4);
+		Sint16 convertedSample = samp ? (32767 / 15) : (-32768 / 15);
+        
+		buffer[i * 2] = convertedSample;     // Left channel
+		buffer[i * 2 + 1] = convertedSample; // Right channel
+		
+		// TODO; Remove
+		apu->newSamples[i] = samp * 100;
 	}
 }

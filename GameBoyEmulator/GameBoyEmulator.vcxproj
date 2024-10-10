@@ -109,7 +109,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..\libs\glew-2.2.0\src;..\libs\glew-2.2.0\include;..\libs\SDL2-2.30.3\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\libs\glew-2.2.0\src;..\libs\glew-2.2.0\include;..\libs\SDL2-2.30.3\include;..\libs\imgui-1.91.3\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -158,7 +158,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\libs\glew-2.2.0\src\glew.c" />
+    <ClCompile Include="..\libs\imgui-1.91.3\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\libs\imgui-1.91.3\backends\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="..\libs\imgui-1.91.3\backends\imgui_impl_sdlrenderer2.cpp" />
+    <ClCompile Include="..\libs\imgui-1.91.3\imgui.cpp" />
+    <ClCompile Include="..\libs\imgui-1.91.3\imgui_demo.cpp" />
+    <ClCompile Include="..\libs\imgui-1.91.3\imgui_draw.cpp" />
+    <ClCompile Include="..\libs\imgui-1.91.3\imgui_tables.cpp" />
+    <ClCompile Include="..\libs\imgui-1.91.3\imgui_widgets.cpp" />
     <ClCompile Include="CPU\CPU.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -1407,6 +1414,16 @@
     <ClCompile Include="APU\APU.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\libs\imgui-1.91.3\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\backends\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\backends\imgui_impl_sdl2.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\backends\imgui_impl_sdlrenderer2.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\imconfig.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\imgui.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\imgui_internal.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\imstb_rectpack.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\imstb_textedit.h" />
+    <ClInclude Include="..\libs\imgui-1.91.3\imstb_truetype.h" />
     <ClInclude Include="CPU\CPU.h" />
     <ClInclude Include="IO\InterrupHandler.h" />
     <ClInclude Include="IO\Joypad.h" />

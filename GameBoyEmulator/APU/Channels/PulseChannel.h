@@ -1,56 +1,114 @@
 #pragma once
 #include <cstdint>
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <string>
 
 // https://en.wikipedia.org/wiki/Pulse-width_modulation
 
+// TODO; Convert this to a class
+
 struct PulseChannel {
 	uint8_t sample(uint32_t cycles) {
-		// https://en.wikipedia.org/wiki/Pulse-width_modulation
-		
-		if (!enabled || lengthTimer == 0) {
+		if (!enabled || (lengthEnable && lengthTimer == 0)) {
 			return 0;
 		}
-		
-		uint16_t period = (periodHigh << 8) | periodLow;
-		
+
 		if (period == 0) {
 			return 0;
 		}
 		
-		uint16_t positionInWave = cycles % period;
+		ticks += cycles;
+		
+		while(ticks >= period) {
+			ticks -= period;
+			sequencePointer = (sequencePointer + 1) % 8;
+		}
 		
 		// Visual here: https://gbdev.io/pandocs/Audio_Registers.html#ff11--nr11-channel-1-length-timer--duty-cycle
-		uint8_t dutyCycle = 0;
-		switch (waveDuty) {
-			case 0: dutyCycle = 1; break;  // 12.5% duty cycle
-			case 1: dutyCycle = 2; break;  // 25% duty cycle
-			case 2: dutyCycle = 4; break;  // 50% duty cycle (square wave)
-			case 3: dutyCycle = 6; break;  // 75% duty cycle
-			default: std::cerr << "Unknown waveDuty! " << std::to_string(waveDuty) << "\n";
-		}
 		
-		// Generate the waveform (high for dutyCycle, low otherwise)
-		bool isHigh = positionInWave < (dutyCycle * period / 8);
+		static const uint8_t dutyCycles[4][8] = {
+			{0, 0, 0, 0, 0, 0, 0, 1},  // 12.5% duty cycle
+			{0, 0, 0, 0, 0, 0, 1, 1},  // 25% duty cycle
+			{0, 0, 0, 0, 1, 1, 1, 1},  // 50% duty cycle
+			{0, 1, 1, 1, 1, 1, 1, 1}   // 75% duty cycle
+		};
 		
-		// Adjust volume with the envelope
-		uint8_t volume = initialVolume;
+		bool isHigh = dutyCycles[waveDuty][sequencePointer];
 		
-		if (envDir) {
-			volume += sweepPace;  // Volume increases
-		} else {
-			volume -= sweepPace;  // Volume decreases
-		}
+		return isHigh ? 1 : 0;
+    }
+	
+    void updateTrigger() {
+		/*if(enabled)
+			return;*/
 		
-		// Return the sample value scaled by volume
-		return isHigh ? volume : 0;
-	}
+        enabled = true;
+		
+        if (lengthTimer == 0) {
+            lengthTimer = 64;  // Reload length timer (max 64 for pulse channels)
+        }
+		
+        currentVolume = initialVolume;
+        envelopeCounter = sweepPace;
+		
+        /*uint16_t frequency = (periodHigh << 8) | periodLow;
+        period = (2048 - frequency) * 4;*/
+		
+        sequencePointer = 0;
+        trigger = false;
+    }
+	
+    void updateSweep() {
+        if (/*sweepPace > 0 && */sweepCounter <= 0) {
+            //uint16_t frequency = (periodHigh << 8) | periodLow;
+            uint16_t delta = sweepFrequency >> individualStep;
+        	
+            if (direction) {
+                sweepFrequency -= delta;
+            } else {
+                sweepFrequency += delta;
+            }
+			
+            if (sweepFrequency > 2047) {
+                enabled = false;
+            } else {
+                /*periodLow = frequency & 0xFF;
+                periodHigh = (frequency >> 8) & 0xFF;
+				
+            	period = (periodHigh << 8) | periodLow;*/
+            	period  = (2048 - sweepFrequency) * 4;
+            }
+			
+            sweepCounter = sweepPace;
+        } else {
+            sweepCounter--;
+        }
+    }
+	
+    void updateEnvelope() {
+        if (sweepPace > 0 && envelopeCounter == 0) {
+            if (envDir && currentVolume < 15) {
+                currentVolume++;
+            } else if (!envDir && currentVolume > 0) {
+                currentVolume--;
+            }
+        	
+            envelopeCounter = sweepPace;
+        } else if (sweepPace > 0) {
+            envelopeCounter--;
+        }
+    }
+	
+    void updateCounter() {
+        if (lengthEnable && lengthTimer > 0) {
+            lengthTimer--;
+        }
+		
+        if (lengthEnable && lengthTimer == 0) {
+            enabled = false;
+        }
+    }
 	
 	void reset() {
-		// NR10
+		/*// NR10
 		pace = 0;
 		direction = false;
 		individualStep = 0;
@@ -74,7 +132,7 @@ struct PulseChannel {
 		
 		enabled = false;
 		left = false;
-		right = false;
+		right = false;*/
 	}
 	
 	// NR10
@@ -91,6 +149,11 @@ struct PulseChannel {
 	bool envDir = false;
 	uint8_t sweepPace = 0;
 	
+	uint8_t currentVolume = 0;
+	uint8_t envelopeCounter = 0;
+	uint16_t sequencePointer = 0;
+	uint16_t ticks = 0;
+	
 	// NR13
 	uint8_t periodLow = 0;
 	
@@ -98,6 +161,11 @@ struct PulseChannel {
 	bool trigger = false;
 	bool lengthEnable = false;
 	uint8_t periodHigh = 0;
+	
+	int32_t period = 0;
+	
+	uint8_t sweepCounter = 0;
+	uint16_t sweepFrequency = 0;
 	
 	bool enabled = false;
 	bool left = false;

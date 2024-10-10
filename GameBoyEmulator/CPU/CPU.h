@@ -11,7 +11,7 @@ class CPU {
 public:
     CPU(InterruptHandler& interruptHandler, MMU& mmu);
     
-    void bootRom();
+    uint16_t cycle();
     
     uint16_t fetchOpCode();
     uint16_t decodeInstruction(uint16_t opcode);
@@ -58,7 +58,7 @@ public:
     void xor8(uint8_t& regA, uint8_t& regB);
     
     // Prefix instructions
-    void checkBit(uint8_t bit, uint8_t& reg);
+    void checkBit(uint8_t bit, uint8_t reg);
     void checkBit(uint8_t bit, uint16_t& reg);
     
     void clearBit(uint8_t bit, uint8_t& reg);

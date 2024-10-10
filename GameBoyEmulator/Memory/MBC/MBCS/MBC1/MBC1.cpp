@@ -25,6 +25,7 @@ uint8_t MBC1::fetch8(uint16_t address) {
 	} else if(address < 0x8000) {
 		size_t bank = curRomBank;
 		
+		// Bank 0 not allowed.
 		if(bank == 0)
 			bank = 1;
 		
@@ -53,6 +54,9 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 		
 		curRomBank = ((curRomBank & 0x60) | lowerBits) % romBanks;
 	} else if(address >= 0x4000 && address <= 0x5FFF) {
+		if(data == 252)
+			std::cerr << "Write to; " << std::to_string(data) << "\n";
+		
 		if(romBanks > 0x20) {
 			uint16_t upperBits = (data & 0x03) % (romBanks >> 5);
 			curRomBank = (curRomBank & 0x1F) | (upperBits << 5);

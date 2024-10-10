@@ -1,4 +1,7 @@
 #pragma once
+
+#include <SDL.h>
+
 #include "Channels/NoiseChanel.h"
 #include "Channels/PulseChannel.h"
 #include "Channels/WaveChannel.h"
@@ -29,27 +32,52 @@
 class APU {
 public:
 	APU();
+
+	void init();
 	void tick(uint32_t cycles);
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
-
+	
+	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
+	static void fill_audio(void *udata, Uint8 *stream, int len);
+	
 private:
 	uint32_t ticks = 0;
 	uint8_t counter = 0;
 	
-private:
+public:
 	bool enabled = false;
 	
 	bool vinLeft = false, vinRight = false;
 	
 	uint8_t leftVolume = 0;
 	uint8_t rightVolume = 0;
-
+	
 	// TODO; Why tf r these structs ;-;
 	PulseChannel ch1, ch2;
 	WaveChannel ch3;
 	NoiseChanel ch4;
 	
 	uint8_t wavePattern[16];
+
+public:
+	// TEST
+	int sampleCounter = 0;
+	
+	std::vector<uint8_t> newSamples;
+	
+private:
+	//const int bufferSize = 1024;
+	/*float audioBuffer[BUFFER_SIZE];
+	int audioBufferIndex = 0;
+	*/
+	
+	SDL_AudioSpec audioSpec;
+	SDL_AudioDeviceID audioDevice;
+
+public:
+	/*static uint8_t* audio_chunk;
+	static uint32_t audio_len;
+	static uint8_t* audio_pos;*/
 };

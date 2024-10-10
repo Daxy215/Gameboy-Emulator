@@ -77,6 +77,33 @@ CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
 	mmu.write8(0xFF4B, 0x00);
 }
 
+uint16_t CPU::cycle() {
+	if(ei >= 0) ei--;
+	
+	if(ei == 0) {
+		interruptHandler.IME = true;
+	}
+	
+	uint16_t cycles = interruptHandler.handleInterrupt(*this);
+	
+	if (!halted && cycles == 0) {
+		uint16_t opcode = fetchOpCode();
+		cycles = decodeInstruction(opcode);
+		
+		if (PC >= 0x0100) {
+			mmu.bootRomActive = false;
+		}
+	} else if (halted) {
+		if (cycles > 0) {
+			printf("??");
+		}
+		
+		cycles = 4;
+	}
+	
+	return cycles;
+}
+
 uint16_t CPU::fetchOpCode() {
     uint16_t opcode = mmu.fetch8(PC++);
     
@@ -2605,6 +2632,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			
         	// TODO; Should this happen at a delay of 2 instructions?
 			interruptHandler.IME = false;
+        	ei = 0;
         	
             return 4;
         }
@@ -6364,7 +6392,8 @@ void CPU::xor8(uint8_t& regA, uint8_t& regB) {
 	AF.setCarry(false);
 }
 
-void CPU::checkBit(uint8_t bit, uint8_t& reg) {
+void CPU::checkBit(uint8_t bit, uint8_t reg) {
+	// Y tf did I do != instead of ==??
 	bool bitSet = (reg & (1 << bit)) != 0;
     
 	AF.setZero(!bitSet);

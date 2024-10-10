@@ -2,8 +2,6 @@
 
 #include <iostream>
 
-#include <GL/glew.h>
-
 #include "LCDC.h"
 #include "SDL.h"
 #include "VRAM.h"
@@ -21,8 +19,6 @@ void PPU::tick(int cycles = 4) {
 	if(!lcdc.enable)
 		return;
 	
-	/*uint8_t LYC = mmu.fetch8(0xFF45);
-	uint8_t WY  = mmu.fetch8(0xFF4A);*/
 	uint8_t& LY = lcdc.LY;
 	
 	/**
@@ -31,18 +27,6 @@ void PPU::tick(int cycles = 4) {
 	 * http://blog.kevtris.org/blogfiles/Nitty%20Gritty%20Gameboy%20VRAM%20Timing.txt
 	 */
 	
-	/*
-	static constexpr int SCANLINE_DOTS = 456;         // Total dots per scanline
-	static constexpr int SCANLINES = 154;             // Total scanlines per frame
-	static constexpr int MODE_2_DOTS = 80;            // OAM search duration in dots
-	static constexpr int VBLANK_START_LINE = 144;     // Start of vertical blanking
-	*/
-	
-	//currentDot += cycles;
-	
-	//static uint16_t currentDot = 0;
-	//uint16_t currentScanline = 0;
-	
 	int32_t ticksLeft = cycles;
 	
 	while(ticksLeft > 0) {
@@ -50,12 +34,14 @@ void PPU::tick(int cycles = 4) {
 		currentDot += curticks;
 		ticksLeft -= curticks;
 		
-		//std::cerr << "Ticks; " << std::to_string(currentDot) << "\n";
-		
 		if(currentDot >= 456) {
 			currentDot -= 456;
 			LY = (LY + 1) % 154;
 			checkLYCInterrupt();
+			
+			if(LY == 143) {
+				printf("");
+			}
 			
 			if(LY >= 144 && mode != VBlank) {
 				updateMode(VBlank);
@@ -72,181 +58,11 @@ void PPU::tick(int cycles = 4) {
 			}
 		}
 	}
-	
-	/*switch (mode) {
-	case OAMScan:
-		if(currentDot >= 80) {
-			currentDot %= 80;
-
-			drawScanline();
-			
-			if(lcdc.mode2) {
-				interrupt |= 0x02;
-			}
-			
-			mode = VRAMTransfer;
-		}
-		break;
-	case VRAMTransfer:
-		if(currentDot >= 172 + 80) {
-			if(lcdc.windowEnabled && !drawWindow && LY == WY) {
-				drawWindow = true;
-				winLineCounter = 0;
-			}
-			
-			currentDot %= (172 + 80);
-			mode = HBlank;
-		}
-		
-		break;
-	case HBlank:
-		if(currentDot >= 204) {
-			currentDot %= 204;
-			
-			LY = (LY + 1);
-			
-			if(lcdc.lycInc && LYC == LY) {
-				interrupt |= 0x02;
-			}
-			
-			if(lcdc.mode0) {
-				interrupt |= 0x02;
-			}
-			
-			if(LY == 144) {
-				mode = VBlank;
-			} else {
-				mode = OAMScan;
-			}
-		}
-		
-		break;
-	case VBlank:
-		if(currentDot >= 456) {
-			drawWindow = false;
-			
-			currentDot %= 456;
-			LY = (LY + 1);
-			
-			if(lcdc.lycInc && LYC == LY) {
-				interrupt |= 0x02;
-			}
-			
-			// VBlank interrupt
-			interrupt |= 0x01;
-			
-			if(lcdc.mode1) {
-				interrupt |= 0x02;
-			}
-			
-			if(LY == 154) {
-				LY = 0;
-				winLineCounter = 0;
-				
-				mode = OAMScan;
-				SDL_RenderPresent(renderer);
-			}
-		}
-		
-		break;
-	}*/
-	
-	/*switch (mode) {
-		case OAMScan: {
-			// https://gbdev.io/pandocs/Scrolling.html?highlight=LY%20%3D%20WY#window
-			if(lcdc.mode2) {
-				interrupt |= 0x02;
-			}
-			
-			if (currentDot >= MODE_2_DOTS) {
-				mode = VRAMTransfer;
-			}
-			
-			break;
-		}
-		
-		case VRAMTransfer: {
-			if(lcdc.windowEnabled && !drawWindow && LY == WY) {
-				drawWindow = true;
-				winLineCounter = 0;
-			}
-			
-			// TODO; 10 - Sprite count, just 10 for now..
-			uint32_t mode3_dots = 168 + (10) * 10;
-			if (currentDot >= MODE_2_DOTS + mode3_dots) {
-				mode = HBlank;
-			}
-			
-			break;
-		}
-		
-		case HBlank: {
-			if (currentDot >= SCANLINE_DOTS) {
-				drawScanline();
-				
-				currentDot = 0;
-				LY = (LY + 1);
-				
-				if(lcdc.lycInc && LYC == LY) {
-					interrupt |= 0x02;
-				}
-				
-				if(lcdc.mode0) {
-					interrupt |= 0x02;
-				}
-				
-				if (LY < VBLANK_START_LINE) {
-					mode = OAMScan;
-				} else if (LY < SCANLINES) {
-					mode = VBlank;
-				} else {
-					// LY 154 reached
-					LY = 0;
-					
-					mode = OAMScan;
-				}
-			}
-			
-			break;
-		}
-		
-		case VBlank: {
-			if (currentDot >= SCANLINE_DOTS) {
-				drawWindow = false;
-				
-				currentDot = 0;
-				LY = (LY + 1);
-				
-				// VBlank interrupt
-				interrupt |= 0x01;
-				
-				/*if(lcdc.lycInc && LYC == LY) {
-					interrupt |= 0x02;
-				}#1#
-				
-				if(lcdc.mode1) {
-					interrupt |= 0x02;
-				}
-				
-				if (LY >= SCANLINES) {
-					// LY 154 reached
-					
-					LY = 0;
-					
-					mode = OAMScan;
-				}
-				
-				SDL_RenderPresent(renderer);
-			}
-			
-			break;
-		}
-	}*/
 }
 
 void PPU::updateMode(PPUMode mode) {
 	this->mode = mode;
-
+	
 	switch(this->mode) {
 		case HBlank: {
 			drawScanline();
@@ -299,8 +115,6 @@ void PPU::drawScanline() {
 	
 	drawBackground();
 	drawSprites();
-	
-	//SDL_RenderPresent(renderer);
 }
 
 void PPU::drawBackground() {
@@ -336,7 +150,7 @@ void PPU::drawBackground() {
 		uint16_t tileX, tileY;
 		uint8_t pY, pX;
 		
-        if(lcdc.windowEnabled && drawWindow && winX >= 0 && lcdc.WY < 140) {
+        if(/*lcdc.windowEnabled && */drawWindow && winX >= 0 && lcdc.WY < 140) {
 			tilemapAddr = tileWinMapBase;
 			
 			tileY = static_cast<uint16_t>((winLineCounter - 1)) >> 3;
@@ -351,7 +165,7 @@ void PPU::drawBackground() {
 			tileX = (bgX >> 3) & 31;
 			
 			pY = bgY & 0x07;
-			pX =(bgX & 0x07);
+			pX = (bgX & 0x07);
 		}
 		
 		//uint8_t tileID = mmu.fetch8(tilemapAddr + tileY * 32 + tileX);
@@ -786,37 +600,64 @@ void PPU::checkLYCInterrupt() {
 }
 
 void PPU::createWindow() {
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        std::cerr << "SDL could not initialize SDL_Error: " << SDL_GetError() << '\n';
-        return;
-    }
     
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    
+	// Decide GL+GLSL versions
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+	// GL ES 2.0 + GLSL 100
+	const char* glsl_version = "#version 100";
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#elif defined(__APPLE__)
+	// GL 3.2 Core + GLSL 150
+	const char* glsl_version = "#version 150";
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+#else
+	// GL 3.0 + GLSL 130
+	const char* glsl_version = "#version 130";
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
+
+	// From 2.0.18: Enable native IME.
+#ifdef SDL_HINT_IME_SHOW_UI
+	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+#endif
+	
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL/* | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI*/);
     window = SDL_CreateWindow("Game Boy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        WIDTH, HEIGHT, SDL_WINDOW_OPENGL);
+        WIDTH, HEIGHT, window_flags);
     
     if (window == nullptr) {
         std::cerr << "Window could not be created SDL_Error: " << SDL_GetError() << '\n';
         return;
     }
-    
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, GL_CONTEXT_FLAG_DEBUG_BIT);
-    
+	
     sdl_context = SDL_GL_CreateContext(window);
     if (sdl_context == nullptr) {
         std::cerr << "OpenGL context could not be created SDL_Error: " << SDL_GetError() << '\n';
         return;
     }
+	
+	SDL_GL_MakeCurrent(window, sdl_context);
+	SDL_GL_SetSwapInterval(1); // Enable vsync
     
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+	renderer = SDL_CreateRenderer(window, -1, /*SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED*/SDL_RENDERER_SOFTWARE);
     
-    GLenum err = glewInit();
+    /*GLenum err = glewInit();
     if (err!= GLEW_OK) {
         std::cerr << "GLEW initialization failed: " << glewGetErrorString(err) << '\n';
         return;
-    }
+    }*/
 	
 	surface = SDL_GetWindowSurface(window);
 	//surface = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
@@ -824,10 +665,10 @@ void PPU::createWindow() {
 		std::cerr << "SDL_CreateRGBSurface Error: " << SDL_GetError() << '\n';
 	}
 	
-    GLenum ersr = glGetError();
+    /*GLenum ersr = glGetError();
     if (ersr!= GL_NO_ERROR) {
         std::cerr << "OpenGL Error con: " << ersr << '\n';
-    }
+    }*/
 	
 	for(int x = 0; x < surface->w; x++) {
 		for(int y = 0; y < surface->h; y++) {
@@ -835,7 +676,7 @@ void PPU::createWindow() {
 		}
 	}
 	
-	SDL_RenderPresent(renderer);
+	//SDL_RenderPresent(renderer);
 }
 
 void PPU::updatePixel(uint32_t x, uint32_t y, uint32_t color) {
@@ -865,9 +706,20 @@ void PPU::setPixel(uint32_t x, uint32_t y, uint32_t color) {
 		return;
 	}
 	
-	//((uint16_t*)surface->pixels)[y * surface->w + x] = color;
+	if (SDL_MUSTLOCK(surface)) {
+		if (SDL_LockSurface(surface) != 0) {
+			// Handle error if locking fails
+			std::cerr << "Failed to lock surface: " << SDL_GetError() << std::endl;
+			return;
+		}
+	}
+	
 	uint32_t* pixels = static_cast<uint32_t*>(surface->pixels);
 	pixels[(y * surface->w) + x] = color;
+	
+	if (SDL_MUSTLOCK(surface)) {
+		SDL_UnlockSurface(surface);
+	}
 }
 
 void PPU::reset(const uint32_t& clock) {

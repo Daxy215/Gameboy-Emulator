@@ -18,6 +18,25 @@
 #include "../Utility/Bitwise.h"
 #include "MBC/MBC.h"
 
+MMU::MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC& mbc, WRAM& wram, HRAM& hram,
+    VRAM& vram, LCDC& lcdc, Timer& timer, OAM& oam, PPU& ppu, APU& apu, const std::vector<uint8_t>& bootRom,
+    const std::vector<uint8_t>& memory) 
+        : interruptHandler(interruptHandler),
+          serial(serial),
+          joypad(joypad),
+          timer(timer),
+          mbc(mbc),
+          wram(wram),
+          hram(hram),
+          vram(vram),
+          lcdc(lcdc),
+          oam(oam),
+          ppu(ppu),
+          apu(apu),
+          bootRom(bootRom) {
+    bootRomActive = (Cartridge::mode == DMG);
+}
+
 void MMU::tick(uint32_t cycles) {
     //joypad.checkForInterrupts();
     
@@ -32,7 +51,7 @@ void MMU::tick(uint32_t cycles) {
     }*/
     
     // HDMA
-    // TODO; Check if tihs correct
+    // TODO; Check if this correct
     if(enabled) {
         // GDMA
         if (mode == 0) {
@@ -98,7 +117,7 @@ uint8_t MMU::fetch8(uint16_t address) {
     } else if(address >= 0xD000 && address <= 0xDFFF) {
         return wram.fetch8((wramBank * 0x1000) | (address & 0x0FFF));
     } else if(address >= 0xE000 && address <= 0xFDFF) {
-        return  wram.fetch8(address & 0x0FFF);
+        return wram.fetch8(address & 0x0FFF);
     } else if(address >= 0xFE00 && address <= 0xFE9F) {
         return oam.fetch8(address);
     } else if(address >= 0xFEA0 && address <= 0xFEFF) {
@@ -187,7 +206,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
         // https://gbdev.io/pandocs/CGB_Registers.html#ff55--hdma5-cgb-mode-only-vram-dma-lengthmodestart
         if(Cartridge::mode != Color) return 0xFF;
         
-        return length | (enabled ? 0x80 : 0);
+        return length | (!enabled ? 0x80 : 0);
     } else if(address >= 0xFF68 && address <= 0xFF6B) {
         return ppu.fetch8(address);
     } else if(address == 0xFF70) {

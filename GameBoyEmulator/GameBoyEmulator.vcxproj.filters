@@ -18,81 +18,150 @@
     <ClCompile Include="GameBoyEmulator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Cartridge.cpp">
+    <ClCompile Include="..\libs\glew-2.2.0\src\glew.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="InterruptHandler.cpp">
+    <ClCompile Include="CPU\CPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LCDC.cpp">
+    <ClCompile Include="IO\InterruptHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MMU.cpp">
+    <ClCompile Include="IO\Joypad.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CPU.cpp">
+    <ClCompile Include="IO\Serial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HRAM.cpp">
+    <ClCompile Include="IO\Timer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OAM.cpp">
+    <ClCompile Include="Memory\Cartridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PPU.cpp">
+    <ClCompile Include="Memory\HRAM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RAM.cpp">
+    <ClCompile Include="Memory\MBC\MBC.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Serial.cpp">
+    <ClCompile Include="Memory\MBC\MBCS\MBC0\MBC0.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VRAM.cpp">
+    <ClCompile Include="Memory\MBC\MBCS\MBC1\MBC1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WRAM.cpp">
+    <ClCompile Include="Memory\MBC\MBCS\MBC3\MBC3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory\MBC\MBCS\MBC5\MBC5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory\MMU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory\WRAM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipeline\Fetcher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipeline\FIFO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipeline\LCDC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipeline\OAM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipeline\PPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Pipeline\VRAM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="APU\APU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cartridge.h">
+    <ClInclude Include="CPU\CPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="InterrupHandler.h">
+    <ClInclude Include="IO\InterrupHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LCDC.h">
+    <ClInclude Include="IO\Joypad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MMU.h">
+    <ClInclude Include="IO\Serial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Bitwise.h">
+    <ClInclude Include="IO\Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CPU.h">
+    <ClInclude Include="Memory\Cartridge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HRAM.h">
+    <ClInclude Include="Memory\enums\CartridgeTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OAM.h">
+    <ClInclude Include="Memory\HRAM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PPU.h">
+    <ClInclude Include="Memory\MBC\MBC.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RAM.h">
+    <ClInclude Include="Memory\MBC\MBCS\MBC0\MBC0.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Serial.h">
+    <ClInclude Include="Memory\MBC\MBCS\MBC1\MBC1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VRAM.h">
+    <ClInclude Include="Memory\MBC\MBCS\MBC3\MBC3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WRAM.h">
+    <ClInclude Include="Memory\MBC\MBCS\MBC5\MBD5.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Memory\MMU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Memory\WRAM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipeline\Fetcher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipeline\FIFO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipeline\LCDC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipeline\OAM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipeline\PPU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pipeline\VRAM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="APU\Channels\NoiseChanel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="APU\Channels\PulseChannel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="APU\APU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="APU\Channels\WaveChannel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility\Bitwise.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -157,7 +157,8 @@ public:
 	bool autoIncrementOBJ = false;
 	
 	bool opri = false;
-private:
+	
+public:
 	SDL_Window* window;
 	SDL_GLContext sdl_context;
 	SDL_Renderer* renderer;
