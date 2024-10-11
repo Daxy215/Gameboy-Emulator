@@ -207,7 +207,7 @@ uint8_t MMU::fetchIO(uint16_t address) {
         if(Cartridge::mode != Color) return 0xFF;
         
         return length | (!enabled ? 0x80 : 0);
-    } else if(address >= 0xFF68 && address <= 0xFF6B) {
+    } else if(address >= 0xFF68 && address <= 0xFF6C) {
         return ppu.fetch8(address);
     } else if(address == 0xFF70) {
         if(Cartridge::mode != Color) return 0xFF;

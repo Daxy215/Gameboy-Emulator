@@ -1725,7 +1725,6 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
              * Z 0 0 0
              */
 			
-        	// No need to
             AF.A ^= AF.A;
             
             AF.setZero(AF.A == 0);

@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
      * in this game. Every other game, it works correctly.
      */
     //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
-    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
+    std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Tennis (U) [C][!].gbc"; // Uses MBC5
     
@@ -199,6 +199,8 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
+    //std::string filename = "Roms/Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc"; // Uses MBC3..
+    //std::string filename = "Roms/Pokemon - Yellow Version (UE) [C][!].gbc"; // Uses MBC3..
     
     // TESTS
     
@@ -269,6 +271,8 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mbc3-tester/mbc3-tester.gb"; // TODO;
     
     // Mooneye
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/div_timing.gb"; // Passed
+    
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/bits/mem_oam.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/bits/reg_f.gb"; // Passed I think?
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/bits/unused_hwio-GS.gb"; // TODO;
@@ -342,7 +346,7 @@ int main(int argc, char* argv[]) {
     auto fileSize = stream.tellg();
     stream.seekg(0, ios::beg);
     
-    std::vector<uint8_t> memory(fileSize/* 2 * 1024 * 1024*/);
+    std::vector<uint8_t> memory(fileSize);
     
     if (!stream.read(reinterpret_cast<char*>(memory.data()), fileSize)) {
         std::cerr << "Error reading file!" << '\n';
@@ -422,9 +426,9 @@ int main(int argc, char* argv[]) {
         std::cerr << "SDL could not initialize SDL_Error: " << SDL_GetError() << '\n';
         return -1;
     }
-
+    
     ppu->createWindow();
-    //apu.init();
+    apu.init();
     
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -551,7 +555,7 @@ int main(int argc, char* argv[]) {
             
             cpu.interruptHandler.IF |= cpu.mmu.serial.interrupt;
             cpu.mmu.serial.interrupt = 0;
-                
+            
             totalCyclesThisFrame += cycles;
             cpu.mmu.cycles = 0;
         }

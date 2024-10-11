@@ -14,7 +14,7 @@ uint8_t* APU::audio_pos;
 */
 
 APU::APU()
-	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(1024) {
+	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(2048) {
 	//SDL_Init(SDL_INIT_AUDIO);
 	
 	
@@ -23,14 +23,34 @@ APU::APU()
 void APU::init() {
 	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
 	
-	SDL_zero(audioSpec);
 	//extern void fill_audio(void *udata, Uint8 *stream, int len);
 	
 	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
 	
-	audioSpec.freq = 44100;           // Output sample rate
-	audioSpec.format = AUDIO_S16SYS;  // 32-bit floating point PCM samples
-	audioSpec.channels = 2;
+	SDL_AudioSpec want, have;
+	SDL_AudioDeviceID dev;
+	
+	// Clear the structure
+	SDL_memset(&want, 0, sizeof(want));
+	want.freq = 44100;
+	want.format = AUDIO_U8;
+	want.channels = 1;
+	want.samples = 512;
+	want.callback = fill_audio;
+	want.userdata = this;
+	
+	// Open audio device
+	dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+	if (dev == 0) {
+		printf("Failed to open audio: %s\n", SDL_GetError());
+	}
+	
+	// Start playing audio
+	SDL_PauseAudioDevice(dev, 0);
+	
+	/*audioSpec.freq = 44100;
+	audioSpec.format = AUDIO_U8;
+	audioSpec.channels = 1;
 	audioSpec.samples = 512;
 	audioSpec.callback = APU::fill_audio;
 	audioSpec.userdata = this;
@@ -41,15 +61,15 @@ void APU::init() {
 	}
 	
 	// Play audio
-	SDL_PauseAudioDevice(audioDevice, 0);
+	SDL_PauseAudioDevice(audioDevice, 0);*/
 }
 
 void APU::tick(uint32_t cycles) {
 	if(ch1.trigger)
 		ch1.updateTrigger();
 	
-	/*if(ch2.trigger)
-		ch2.updateTrigger();*/
+	if(ch2.trigger)
+		ch2.updateTrigger();
 	
 	// APU Disabled
 	if (!enabled || (!ch1.enabled && !ch2.enabled && !ch3.enabled && !ch4.enabled)) {
@@ -65,8 +85,9 @@ void APU::tick(uint32_t cycles) {
 		ticks -= 8192;
 		
 		counter = (counter + 1) % 8;
-
+		
 		ch1.updateCounter();
+		ch2.updateCounter();
 		
 		// Clock sweep ever 2 and 6 steps
 		if(counter == 2 || counter == 6) {
@@ -76,6 +97,7 @@ void APU::tick(uint32_t cycles) {
 		// Clock volume envelopes every 7 steps
 		if(counter == 7) {
 			ch1.updateEnvelope();
+			ch2.updateEnvelope();
 		}
 	}
 }
@@ -413,7 +435,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 6 - Length enable - R/W
 		ch1.lengthEnable = check_bit(data, 6);
-
+		
 		/**
 		 * Bit 2, 1 and 0 - Period
 		 *
@@ -597,20 +619,30 @@ void APU::write8(uint16_t address, uint8_t data) {
 
 // https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
 void APU::fill_audio(void* udata, Uint8* stream, int len) {
-	APU* apu = reinterpret_cast<APU*>(udata);
+	APU* apu = static_cast<APU*>(udata);
 	
-	int sampleCount = len / 2;
+	//const int cycles_per_sample = 4194304 / 44100;
+	const int cycles_per_sample = 2;
 	
+	for(int i = 0; i < len; i++) {
+		uint8_t samp = apu->ch1.sample(cycles_per_sample);/*(apu->ch1.sample(cycles_per_sample) + apu->ch2.sample(cycles_per_sample)) / 2;*/
+		
+		stream[i] = samp * 80;
+		apu->newSamples[i] = samp * 80;
+	}
+	
+	/*int sampleCount = len/* / 2#1#;
 	Sint16* buffer = reinterpret_cast<Sint16*>(stream);
+	size_t size = sizeof(buffer) / sizeof(buffer[0]);
 	
 	for(int i = 0; i < sampleCount; i++) {
-		uint8_t samp = apu->ch1.sample(4);
-		Sint16 convertedSample = samp ? (32767 / 15) : (-32768 / 15);
+		uint8_t samp = apu->ch1.sample(1);
+		Sint16 convertedSample = samp * 8000;/*? (32767 / 15) : (-32768 / 15);#1#
         
-		buffer[i * 2] = convertedSample;     // Left channel
-		buffer[i * 2 + 1] = convertedSample; // Right channel
+		buffer[i/* * 2#1#] = convertedSample;     // Left channel
+		//buffer[i * 2 + 1] = convertedSample; // Right channel
 		
 		// TODO; Remove
-		apu->newSamples[i] = samp * 100;
-	}
+		apu->newSamples[i] = samp;
+	}*/
 }

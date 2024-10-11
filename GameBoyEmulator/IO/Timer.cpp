@@ -53,16 +53,18 @@ uint8_t Timer::fetch8(uint16_t address) {
 		return modulo;
 	} else if(address == 0xFF07) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff07--tac-timer-control
-		uint8_t result = 0xF8; // 0b11111000
+		uint8_t result = 0xF8;
 		
-		if(enabled) {
-			result |= 0x4; // 0b0100
-		}
+		//if(enabled) {
+			result |= (enabled ? (0x4) : 0);
+		//}
 		
-		result |= clockSelected;
+		result |= (clockSelected);
 		
 		return result;
 	}
+	
+	return 0xFF;
 }
 
 void Timer::write8(uint16_t address, uint8_t data) {

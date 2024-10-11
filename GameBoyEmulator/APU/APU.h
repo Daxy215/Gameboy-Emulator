@@ -73,8 +73,8 @@ private:
 	int audioBufferIndex = 0;
 	*/
 	
-	SDL_AudioSpec audioSpec;
-	SDL_AudioDeviceID audioDevice;
+	/*SDL_AudioSpec audioSpec;
+	SDL_AudioDeviceID audioDevice;*/
 
 public:
 	/*static uint8_t* audio_chunk;
