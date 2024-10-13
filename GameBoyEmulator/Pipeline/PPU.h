@@ -1,17 +1,7 @@
 ﻿#pragma once
 #include <cstdint>
-#include <iostream>
 #include <SDL_render.h>
 #include <SDL_video.h>
-
-#include "Fetcher.h"
-
-/*struct Pixel {
-	uint8_t color;
-	uint8_t palette;
-	bool spritePriority;
-	bool bgPriority;
-};*/
 
 class VRAM;
 class OAM;
@@ -34,11 +24,10 @@ public:
 		Priority,
 		Zero
 	};
-
+	
 public:
 	PPU(VRAM& vram, OAM& oam, LCDC& lcdc, MMU& mmu)
-		: fetcher(mmu),
-		  vram(vram),
+		: vram(vram),
 		  oam(oam),
 		  lcdc(lcdc),
 		  mmu(mmu) {
@@ -98,7 +87,7 @@ public:
 		}
 	}
 	
-	SDL_Texture* createTexture(uint8_t width, uint8_t height);
+	SDL_Texture* createTexture(uint32_t width, uint32_t height);
 
 public:
 	static PPUMode mode;
@@ -111,14 +100,11 @@ private:
 	bool drawWindow = false;
 	
 	BGPriority bgPriority[160] = { Zero };
+	
 public:
 	uint8_t interrupt = 0;
 	
-	//bool wyTrigger = false;
-	
 private:
-	Fetcher fetcher;
-	
 	VRAM& vram;
 	OAM& oam;
 	
@@ -165,4 +151,7 @@ public:
 	SDL_Surface* surface;
 	
 	SDL_Texture* texture;
+
+	int pitch;
+	uint32_t* pixels;
 };

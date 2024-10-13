@@ -1117,8 +1117,6 @@
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
     <ClCompile Include="GameBoyEmulator.cpp" />
-    <ClCompile Include="Pipeline\Fetcher.cpp" />
-    <ClCompile Include="Pipeline\FIFO.cpp" />
     <ClCompile Include="Pipeline\LCDC.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -1439,8 +1437,6 @@
     <ClInclude Include="Memory\MBC\MBCS\MBC5\MBD5.h" />
     <ClInclude Include="Memory\MMU.h" />
     <ClInclude Include="Memory\WRAM.h" />
-    <ClInclude Include="Pipeline\Fetcher.h" />
-    <ClInclude Include="Pipeline\FIFO.h" />
     <ClInclude Include="Pipeline\LCDC.h" />
     <ClInclude Include="Pipeline\OAM.h" />
     <ClInclude Include="Pipeline\PPU.h" />

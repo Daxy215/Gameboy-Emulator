@@ -1,5 +1,7 @@
 ﻿#include "VRAM.h"
 
+#include <iostream>
+
 #include "PPU.h"
 #include "../Memory/Cartridge.h"
 #include "../Utility/Bitwise.h"

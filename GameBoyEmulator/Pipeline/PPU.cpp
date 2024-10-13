@@ -1,5 +1,6 @@
 ﻿#include "PPU.h"
 
+#include <algorithm>
 #include <iostream>
 
 #include "LCDC.h"
@@ -83,7 +84,10 @@ void PPU::updateMode(PPUMode mode) {
 				interrupt |= 0x02;
 			}
 			
-			SDL_RenderPresent(renderer);
+			//SDL_UpdateTexture(texture, nullptr, pixels, pitch);
+			//SDL_RenderPresent(renderer);
+			/*SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+			SDL_RenderPresent(renderer);*/
 			
 			break;
 		}
@@ -653,22 +657,24 @@ void PPU::createWindow() {
     
 	renderer = SDL_CreateRenderer(window, -1, /*SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED*/SDL_RENDERER_SOFTWARE);
     
-    /*GLenum err = glewInit();
-    if (err!= GLEW_OK) {
-        std::cerr << "GLEW initialization failed: " << glewGetErrorString(err) << '\n';
-        return;
-    }*/
-	
 	surface = SDL_GetWindowSurface(window);
-	//surface = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 	if (!surface) {
 		std::cerr << "SDL_CreateRGBSurface Error: " << SDL_GetError() << '\n';
 	}
 	
-    /*GLenum ersr = glGetError();
-    if (ersr!= GL_NO_ERROR) {
-        std::cerr << "OpenGL Error con: " << ersr << '\n';
-    }*/
+	texture = createTexture(WIDTH, HEIGHT);
+	
+	pixels = nullptr;
+	pitch = 0;
+	
+	if (SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&pixels), &pitch) != 0) {
+		std::cerr << "Failed to lock texture: " << SDL_GetError() << '\n';
+		//throw std::runtime_error("Failed to lock texture");
+		//return;
+	}
+    
+	// Unlock the texture
+	SDL_UnlockTexture(texture);
 	
 	for(int x = 0; x < surface->w; x++) {
 		for(int y = 0; y < surface->h; y++) {
@@ -714,8 +720,9 @@ void PPU::setPixel(uint32_t x, uint32_t y, uint32_t color) {
 		}
 	}
 	
-	uint32_t* pixels = static_cast<uint32_t*>(surface->pixels);
 	pixels[(y * surface->w) + x] = color;
+	/*uint32_t* pixels = static_cast<uint32_t*>(surface->pixels);
+	pixels[(y * surface->w) + x] = color;*/
 	
 	if (SDL_MUSTLOCK(surface)) {
 		SDL_UnlockSurface(surface);
@@ -730,7 +737,7 @@ void PPU::reset(const uint32_t& clock) {
 	//frames = 0;
 }
 
-SDL_Texture* PPU::createTexture(uint8_t width, uint8_t height) {
+SDL_Texture* PPU::createTexture(uint32_t width, uint32_t height) {
 	return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
 											 SDL_TEXTUREACCESS_STREAMING,
 											 width, height);

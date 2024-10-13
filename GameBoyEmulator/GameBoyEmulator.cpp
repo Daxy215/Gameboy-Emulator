@@ -17,6 +17,7 @@
 #endif
 
 #include "APU/APU.h"
+#include "backends/imgui_impl_sdlrenderer2.h"
 #include "CPU/CPU.h"
 
 #include "IO/InterrupHandler.h"
@@ -182,7 +183,7 @@ int main(int argc, char* argv[]) {
      * Seems, like if you die in zelda,
      * the lighting uses the wrong texture map..
      */
-    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
+    std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
     //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb";
     
@@ -437,14 +438,15 @@ int main(int argc, char* argv[]) {
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
     
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(ppu->window, ppu->sdl_context);
-    ImGui_ImplOpenGL3_Init("#version 130");
+    ImGui_ImplSDL2_InitForSDLRenderer(ppu->window, ppu->renderer);
+    ImGui_ImplSDLRenderer2_Init(ppu->renderer);
     
     // Load save
     mmu.mbc.load("Saves/" + cartridge.title + "/save.bin");
@@ -482,6 +484,9 @@ int main(int argc, char* argv[]) {
         uint64_t totalCyclesThisFrame = 0;
         
         SDL_Event e;
+        
+        //SDL_RenderClear(ppu->renderer);
+        //SDL_RenderCopy(ppu->renderer, ppu->texture, nullptr, nullptr);
         
         // Handle events on queue
         while (SDL_PollEvent(&e)) {
@@ -582,9 +587,13 @@ int main(int argc, char* argv[]) {
             cpu.mmu.cycles = 0;
         }
         
-        /*ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+
+        ImGui::Begin("Game Boy");
+            ImGui::Image((void*)(intptr_t)ppu->texture, ImVec2(256*2, 256*2));
+        ImGui::End();
         
         ImGui::Begin("Pulse Waveform");
             ImGui::Text(("Duty cycles: " + std::to_string(apu.ch1.waveDuty) + " = " + std::to_string(apu.ch1.sequencePointer) + " = " + std::to_string(apu.ch1.currentVolume) + "/" + std::to_string(apu.ch1.initialVolume)).c_str());
@@ -608,17 +617,21 @@ int main(int argc, char* argv[]) {
                 
                 drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(255, 255, 255, 255));
             }
-            
-            ImGui::End();
+        ImGui::End();
+        
         ImGui::Render();
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        SDL_RenderClear(ppu->renderer);
+        ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), ppu->renderer);
+        SDL_RenderPresent(ppu->renderer);
+        
+        //glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         //glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        SDL_GL_SwapWindow(ppu->window);*/
+        //glClear(GL_COLOR_BUFFER_BIT);
+        //ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        //SDL_GL_SwapWindow(ppu->window);
         
         //SDL_RenderClear(ppu->renderer);
-        //SDL_RenderCopy(ppu->renderer, ppuTexture, NULL, NULL);
+        //SDL_RenderCopy(ppu->renderer, ppu->texture, NULL, NULL);
         //SDL_RenderPresent(ppu->renderer);
         
         frames++;
