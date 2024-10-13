@@ -639,7 +639,7 @@ void PPU::createWindow() {
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL/* | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI*/);
     window = SDL_CreateWindow("Game Boy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        WIDTH, HEIGHT, window_flags);
+        WIDTH * 2, 940, window_flags);
     
     if (window == nullptr) {
         std::cerr << "Window could not be created SDL_Error: " << SDL_GetError() << '\n';
@@ -676,11 +676,11 @@ void PPU::createWindow() {
 	// Unlock the texture
 	SDL_UnlockTexture(texture);
 	
-	for(int x = 0; x < surface->w; x++) {
+	/*for(int x = 0; x < surface->w; x++) {
 		for(int y = 0; y < surface->h; y++) {
 			setPixel(x, y, 0xFFFF0000);
 		}
-	}
+	}*/
 	
 	//SDL_RenderPresent(renderer);
 }
@@ -720,7 +720,7 @@ void PPU::setPixel(uint32_t x, uint32_t y, uint32_t color) {
 		}
 	}
 	
-	pixels[(y * surface->w) + x] = color;
+	pixels[(y * WIDTH) + x] = color;
 	/*uint32_t* pixels = static_cast<uint32_t*>(surface->pixels);
 	pixels[(y * surface->w) + x] = color;*/
 	
