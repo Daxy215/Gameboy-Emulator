@@ -83,7 +83,7 @@ void PPU::updateMode(PPUMode mode) {
 				interrupt |= 0x02;
 			}
 			
-			SDL_RenderPresent(renderer);
+			//SDL_RenderPresent(renderer);
 			
 			break;
 		}
