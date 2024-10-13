@@ -20,7 +20,7 @@ class OAM;
 class APU;
 
 struct DMA {
-    void activate(uint8_t& source) {
+    void activate(uint16_t source) {
         this->source = source;
         
         // 160 M cycles - 640 T cycles
@@ -29,7 +29,7 @@ struct DMA {
         active = true;
     }
     
-    uint8_t source = 0;
+    uint16_t source = 0;
     uint32_t remainingCycles = 0;
     
     bool active = false;
@@ -62,6 +62,7 @@ public:
     bool bootRomActive = false;
     
 private:
+    
     uint8_t wramBank = 1;
     
     uint8_t lastDma = 0;
@@ -118,8 +119,8 @@ public:
     
     LCDC& lcdc;
     OAM& oam;
-
-private:
+    
+public:
     DMA dma;
     
 public:

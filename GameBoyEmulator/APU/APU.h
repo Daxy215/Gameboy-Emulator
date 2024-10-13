@@ -1,5 +1,7 @@
 #pragma once
 
+#include <deque>
+#include <queue>
 #include <SDL.h>
 
 #include "Channels/NoiseChanel.h"
@@ -65,6 +67,7 @@ public:
 	// TEST
 	int sampleCounter = 0;
 	
+	std::queue<uint8_t> samples;
 	std::vector<uint8_t> newSamples;
 	
 private:

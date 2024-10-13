@@ -23,10 +23,6 @@ APU::APU()
 void APU::init() {
 	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
 	
-	//extern void fill_audio(void *udata, Uint8 *stream, int len);
-	
-	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
-	
 	SDL_AudioSpec want, have;
 	SDL_AudioDeviceID dev;
 	
@@ -47,21 +43,6 @@ void APU::init() {
 	
 	// Start playing audio
 	SDL_PauseAudioDevice(dev, 0);
-	
-	/*audioSpec.freq = 44100;
-	audioSpec.format = AUDIO_U8;
-	audioSpec.channels = 1;
-	audioSpec.samples = 512;
-	audioSpec.callback = APU::fill_audio;
-	audioSpec.userdata = this;
-	
-	audioDevice = SDL_OpenAudioDevice(NULL, 0, &audioSpec, NULL, 0);
-	if (audioDevice == 0) {
-		std::cerr << "Failed to open audio device: " << SDL_GetError() << "\n";
-	}
-	
-	// Play audio
-	SDL_PauseAudioDevice(audioDevice, 0);*/
 }
 
 void APU::tick(uint32_t cycles) {
@@ -79,6 +60,8 @@ void APU::tick(uint32_t cycles) {
 	// https://www.reddit.com/r/EmuDev/comments/5gkwi5/comment/dat3zni/
 	
 	ticks += cycles;
+	
+	//samples.push(ch1.sample(cycles));
 	
 	// 512 Hz
 	if(ticks >= 8192) {
@@ -622,10 +605,18 @@ void APU::fill_audio(void* udata, Uint8* stream, int len) {
 	APU* apu = static_cast<APU*>(udata);
 	
 	//const int cycles_per_sample = 4194304 / 44100;
-	const int cycles_per_sample = 2;
+	const int cycles_per_sample = 1;
 	
 	for(int i = 0; i < len; i++) {
-		uint8_t samp = apu->ch1.sample(cycles_per_sample);/*(apu->ch1.sample(cycles_per_sample) + apu->ch2.sample(cycles_per_sample)) / 2;*/
+		/*if(apu->samples.size() <= 0) {
+			stream[i] = 0;
+			continue;
+		}*/
+		
+		uint8_t ch1 = apu->ch1.sample(cycles_per_sample);
+		uint8_t ch2 = 0;//apu->ch2.sample(cycles_per_sample);
+		
+		uint8_t samp = (ch1 + ch2);
 		
 		stream[i] = samp * 80;
 		apu->newSamples[i] = samp * 80;

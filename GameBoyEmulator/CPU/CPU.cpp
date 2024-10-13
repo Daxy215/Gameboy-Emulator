@@ -88,7 +88,7 @@ uint16_t CPU::cycle() {
 	
 	if (!halted && cycles == 0) {
 		uint16_t opcode = fetchOpCode();
-		cycles = decodeInstruction(opcode);
+		cycles = decodeInstruction(/*mmu.dma.active ? 0 : */opcode);
 		
 		if (PC >= 0x0100) {
 			mmu.bootRomActive = false;
@@ -96,6 +96,7 @@ uint16_t CPU::cycle() {
 	} else if (halted) {
 		if (cycles > 0) {
 			printf("??");
+			std::cerr << "";
 		}
 		
 		cycles = 4;

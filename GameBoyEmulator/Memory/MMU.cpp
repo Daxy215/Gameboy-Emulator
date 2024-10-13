@@ -46,7 +46,10 @@ void MMU::tick(uint32_t cycles) {
         if(dma.remainingCycles <= 0) {
             dma.active = false;
             
-            
+            for(uint16_t i = 0; i < 160; i++) {
+                uint8_t val = fetch8(dma.source + i);
+                write8(0xFE00 + i, val);
+            }
         }
     }*/
     
@@ -105,6 +108,10 @@ uint8_t MMU::fetch8(uint16_t address) {
     if(bootRomActive && address < 0x100) {
         return bootRom[address];
     }
+    
+    /*if (dma.active && (address < 0xFF80 || address > 0xFFFE)) {
+        return 0xFF;
+    }*/
     
     if(address <= 0x7FFF) {
         return mbc.read(address);
@@ -371,9 +378,9 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
             //  $FF46	DMA	OAM DMA source address & start
             lastDma = data;
             
-            dma.activate(data);
+            //dma.activate(static_cast<uint16_t>(data) << 8);
             
-            uint16_t u16 = static_cast<uint16_t>(dma.source) << 8;
+            uint16_t u16 = static_cast<uint16_t>(data) << 8;
             
             for(uint16_t i = 0; i < 160; i++) {
                 uint8_t val = fetch8(u16 + i);
