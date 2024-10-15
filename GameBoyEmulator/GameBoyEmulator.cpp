@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
      * Seems, like if you die in zelda,
      * the lighting uses the wrong texture map..
      */
-    std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
+    //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
     //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb";
     
@@ -483,7 +483,13 @@ int main(int argc, char* argv[]) {
      * But to pass bully test rom,
      * 425 doesn't work.. ;-;
      */
-    int32_t timerDelay = 256;
+    //int32_t timerDelay = 0;//456 * 2;
+    
+    /**
+     * Forgot to reset the counter,
+     * for the divider when resetting,
+     * the divider value.. :)
+     */
     
     while (running) {
         double cyclesPerFrame = cpu.mmu.doubleSpeed ? CLOCK_SPEED_DOUBLE / FPS : CLOCK_SPEED_NORMAL / FPS;
@@ -492,10 +498,6 @@ int main(int argc, char* argv[]) {
         
         SDL_Event e;
         
-        //SDL_RenderClear(ppu->renderer);
-        //SDL_RenderCopy(ppu->renderer, ppu->texture, nullptr, nullptr);
-        
-        // Handle events on queue
         while (SDL_PollEvent(&e)) {
             ImGui_ImplSDL2_ProcessEvent(&e);
             
@@ -565,15 +567,10 @@ int main(int argc, char* argv[]) {
         while (totalCyclesThisFrame < cyclesPerFrame) {
             uint16_t cycles = cpu.cycle();
             
-            if(!cpu.mmu.bootRomActive) {
+            //if(!cpu.mmu.bootRomActive) {
                 cpu.mmu.tick(cycles);
-                
-                if(timerDelay > 0)
-                    timerDelay -= cycles;
-                
-                if(timerDelay <= 0)
-                    timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
-            }
+                timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
+            //}
             
             cpu.mmu.apu.tick(cycles);
             ppu->tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
@@ -599,32 +596,41 @@ int main(int argc, char* argv[]) {
         ImGui::NewFrame();
         
         ImGui::Begin("Game Boy");
-            ImGui::Image((void*)(intptr_t)ppu->texture, ImVec2(256*2, 256*2));
+            ImGui::Image((void*)(intptr_t)ppu->texture, ImVec2(ImGui::GetWindowSize().y, ImGui::GetWindowSize().y - 48));
+        ImGui::End();
+
+        ImGui::Begin("CPU");
+        
+        
+        
         ImGui::End();
         
-        ImGui::Begin("Pulse Waveform");
-            ImGui::Text(("Duty cycles: " + std::to_string(apu.ch1.waveDuty) + " = " + std::to_string(apu.ch1.sequencePointer) + " = " + std::to_string(apu.ch1.currentVolume) + "/" + std::to_string(apu.ch1.initialVolume)).c_str());
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            const ImVec2 windowPos = ImGui::GetCursorScreenPos();
-            const float width = 400;
-            const float height = 200;
-            
-            // Draw background
-            drawList->AddRectFilled(windowPos, ImVec2(windowPos.x + width, windowPos.y + height), IM_COL32(30, 30, 30, 255));
-            
-            // Get samples for rendering
-            const auto& samples = cpu.mmu.apu.newSamples;
-            
-            // Draw waveform
-            for (size_t i = 0; i < samples.size() - 1; ++i) {
-                float x1 = windowPos.x + (i * width / (samples.size() - 1));
-                float y1 = windowPos.y + height / 2 - (samples[i] / 255.0f * height / 2);
-                float x2 = windowPos.x + ((i + 1) * width / (samples.size() - 1));
-                float y2 = windowPos.y + height / 2 - (samples[i + 1] / 255.0f * height / 2);
+        ImGui::Begin("APU");
+            if(ImGui::TreeNode("Pulse Waveform - Channel 1")) {
+                ImGui::Text(("Duty cycles: " + std::to_string(apu.ch1.waveDuty) + " = " + std::to_string(apu.ch1.sequencePointer) + " = " + std::to_string(apu.ch1.currentVolume) + "/" + std::to_string(apu.ch1.initialVolume)).c_str());
+                ImDrawList* drawList = ImGui::GetWindowDrawList();
+                const ImVec2 windowPos = ImGui::GetCursorScreenPos();
+                const float width = 400;
+                const float height = 200;
                 
-                drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(255, 255, 255, 255));
+                // Draw background
+                drawList->AddRectFilled(windowPos, ImVec2(windowPos.x + width, windowPos.y + height), IM_COL32(30, 30, 30, 255));
+                
+                // Get samples for rendering
+                const auto& samples = cpu.mmu.apu.newSamples;
+                
+                // Draw waveform
+                for (size_t i = 0; i < samples.size() - 1; ++i) {
+                    float x1 = windowPos.x + (i * width / (samples.size() - 1));
+                    float y1 = windowPos.y + height / 2 - (samples[i] / 255.0f * height / 2);
+                    float x2 = windowPos.x + ((i + 1) * width / (samples.size() - 1));
+                    float y2 = windowPos.y + height / 2 - (samples[i + 1] / 255.0f * height / 2);
+                    
+                    drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), IM_COL32(255, 255, 255, 255));
+                }
+                
+                ImGui::TreePop();
             }
-        
         ImGui::End();
         
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -639,16 +645,6 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(ppu->renderer);
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), ppu->renderer);
         SDL_RenderPresent(ppu->renderer);
-        
-        //glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-        //glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        //glClear(GL_COLOR_BUFFER_BIT);
-        //ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        //SDL_GL_SwapWindow(ppu->window);
-        
-        //SDL_RenderClear(ppu->renderer);
-        //SDL_RenderCopy(ppu->renderer, ppu->texture, NULL, NULL);
-        //SDL_RenderPresent(ppu->renderer);
         
         frames++;
         

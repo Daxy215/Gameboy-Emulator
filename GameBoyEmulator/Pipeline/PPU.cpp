@@ -272,7 +272,6 @@ void PPU::drawSprites() {
 	 * The PPU can render up to 40 moveble objects,
 	 * but only 10 objects can be displayed per scanline.
 	 */
-	
 	for(uint8_t i = 0; i < 40; i++) {
 		// 0xFE00 -> OAM
 		uint16_t spriteAdr = 0xFE00 + i * 4;

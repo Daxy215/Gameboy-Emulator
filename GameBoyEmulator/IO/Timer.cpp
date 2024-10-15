@@ -73,6 +73,7 @@ void Timer::write8(uint16_t address, uint8_t data) {
 		// As mentioned writing any value to this address resets it to 0
 		divider = 0;
 		counterTimer = 0;
+		divTimer = 0;
 	} else if(address == 0xFF05) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff05--tima-timer-counter
 		counter = data;

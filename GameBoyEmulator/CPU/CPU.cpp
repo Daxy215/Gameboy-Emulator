@@ -1,6 +1,7 @@
 ﻿#include "CPU.h"
 
 #include "../IO/InterrupHandler.h"
+#include "../IO/Timer.h"
 #include "../Memory/Cartridge.h"
 
 #include "../Memory/MMU.h"
@@ -90,7 +91,7 @@ uint16_t CPU::cycle() {
 		uint16_t opcode = fetchOpCode();
 		cycles = decodeInstruction(/*mmu.dma.active ? 0 : */opcode);
 		
-		if (PC >= 0x0100) {
+		if (PC >= 0x0100 && mmu.bootRomActive) {
 			mmu.bootRomActive = false;
 		}
 	} else if (halted) {
