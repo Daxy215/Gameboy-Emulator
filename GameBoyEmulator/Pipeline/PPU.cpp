@@ -40,10 +40,6 @@ void PPU::tick(int cycles = 4) {
 			LY = (LY + 1) % 154;
 			checkLYCInterrupt();
 			
-			if(LY == 143) {
-				printf("");
-			}
-			
 			if(LY >= 144 && mode != VBlank) {
 				updateMode(VBlank);
 			}
@@ -136,7 +132,7 @@ void PPU::drawBackground() {
 	
 	//bool drawWindow = lcdc.windowEnabled && LY >= WY && WX <= 166;
 	
-	if(!lcdc.windowEnabled && !lcdc.bgWindowEnabled/*????*/)
+	if(/*!lcdc.windowEnabled && */!lcdc.bgWindowEnabled/*????*/)
 		return;
 	
 	if(lcdc.windowEnabled && drawWindow && WX <= 166) {
@@ -154,7 +150,7 @@ void PPU::drawBackground() {
 		uint16_t tileX, tileY;
 		uint8_t pY, pX;
 		
-        if(/*lcdc.windowEnabled && */drawWindow && winX >= 0 && lcdc.WY < 140) {
+        if(lcdc.windowEnabled && drawWindow && winX >= 0 && lcdc.WY < 140) {
 			tilemapAddr = tileWinMapBase;
 			
 			tileY = static_cast<uint16_t>((winLineCounter - 1)) >> 3;

@@ -71,7 +71,7 @@ uint8_t InterruptHandler::fetch8(uint16_t address) {
 		 * IE: Interrup enable
 		 */
 		
-		return IE;
+		return IE/* | 0xE0*/;
 	}
 	
 	return 0xFF;

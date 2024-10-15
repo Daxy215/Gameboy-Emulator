@@ -266,6 +266,8 @@ void APU::write8(uint16_t address, uint8_t data) {
 	if(address == 0xFF26) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff26--nr52-audio-master-control
 		
+		bool wasEnabled = enabled;
+		
 		// Bit 7 - Audio on/off
 		enabled = check_bit(data, 7);
 		
@@ -280,6 +282,14 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 0 - CH1 on?
 		ch1.enabled = check_bit(data, 0);
+		
+		// Shutting off
+		/*if(wasEnabled && !enabled) {
+			// Clear NR12
+			ch1.initialVolume = 0;
+			ch1.envDir = false;
+			ch1.sweepPace = 0;
+		}*/
 		
 		// APU is powering off
 		/*if(!enabled) {

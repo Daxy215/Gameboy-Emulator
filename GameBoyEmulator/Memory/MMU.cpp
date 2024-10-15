@@ -262,6 +262,10 @@ void MMU::write8(uint16_t address, uint8_t data) {
     } else if(address >= 0xE000 && address <= 0xFDFF) {
         wram.write8(address & 0x0FFF, data);
     } else if (address >= 0xFE00 && address <= 0xFE9F) {
+        if(!bootRomActive) {
+            printf("");
+        }
+        
         oam.write8(address - 0xFE00, data);
     } else if(address >= 0xFEA0 && address <= 0xFEFF) {
         // Not usable

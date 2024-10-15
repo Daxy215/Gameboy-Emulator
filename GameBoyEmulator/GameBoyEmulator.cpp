@@ -8,7 +8,6 @@
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl2.h"
-#include "backends/imgui_impl_opengl3.h"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
@@ -132,6 +131,7 @@ int main(int argc, char* argv[]) {
     
     // Not fully tested but seems ok - though has some rendering issues
     // Idk what I did but now it's completely fucked
+    // Ok nvm just when a pop up shows up or a text, everything becomes blue?
     //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
     
     /**
@@ -206,7 +206,7 @@ int main(int argc, char* argv[]) {
     
     // TESTS
     
-    //std::string filename = "Roms/dmg-acid2.gb"; // Passed
+    std::string filename = "Roms/dmg-acid2.gb"; // Passed
     //std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO; Nose not showing
     
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
@@ -246,16 +246,6 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/instr_timing/instr_timing.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/interrupt_time/interrupt_time.gb"; // TODO;
     
-    // MEMORY TIMING
-    //std::string filename = "Roms/mem_timing/mem_timing.gb"; // TODO;
-    //std::string filename = "Roms/mem_timing/individual/01-read_timing.gb"; // TODO;
-    //std::string filename = "Roms/mem_timing/individual/02-write_timing.gb"; // TODO;
-    //std::string filename = "Roms/mem_timing/individual/03-modify_timing.gb"; // TODO;
-    
-    //std::string filename = "Roms/tests/bully/bully.gb"; // TODO; DMA bus conflict always reads $FF??
-    
-    //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // Passed
-    
     // OAM BUG
     //std::string filename = "Roms/tests/blargg/oam_bug/oam_bug.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/1-lcd_sync.gb"; // Passed
@@ -266,6 +256,16 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/6-timing_no_bug.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/7-timing_effect.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/oam_bug/rom_singles/8-instr_effect.gb"; // TODO;
+    
+    // MEMORY TIMING
+    //std::string filename = "Roms/mem_timing/mem_timing.gb"; // TODO;
+    //std::string filename = "Roms/mem_timing/individual/01-read_timing.gb"; // TODO;
+    //std::string filename = "Roms/mem_timing/individual/02-write_timing.gb"; // TODO;
+    //std::string filename = "Roms/mem_timing/individual/03-modify_timing.gb"; // TODO;
+    
+    //std::string filename = "Roms/tests/bully/bully.gb"; // TODO; DMA bus conflict always reads $FF??
+    
+    //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // Passed
     
     //std::string filename = "Roms/tests/mbc3-fiddle/mbc3.gb"; // TODO;
     //std::string filename = "Roms/tests/mbc3-fiddle/mbc3-withram.gb"; // TODO;
@@ -285,14 +285,14 @@ int main(int argc, char* argv[]) {
     
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/basic.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/reg_read.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/sources-GS.gb"; // TODO; Failed BF00
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/sources-GS.gb"; // TODO; Failed FE00
     
     // Timer
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/div_write.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/rapid_toggle.gb"; // TODO;
     
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim00.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim00_div_trigger.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim00_div_trigger.gb"; // TODO; E is 5 and not 4 :)
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim01.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim01_div_trigger.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim10.gb"; // Passed

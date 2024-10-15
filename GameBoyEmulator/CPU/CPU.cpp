@@ -349,7 +349,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
              * LD DE, d16
              * 3, 12
              */
-            
+			
             DE = mmu.fetch16(PC);
             
             PC += 2;
@@ -375,11 +375,15 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * 1, 8
 			 * - - - -
 			 */
-			
+
+        	if(!mmu.bootRomActive)
+				printf("");
+        	
         	DE = DE.get() + 1;
         	
         	return 8;
         }
+    	
 		
 		case 0x14: {
 			/**

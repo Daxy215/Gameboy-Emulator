@@ -18,7 +18,7 @@ void Timer::tick(uint16_t cycles) {
 	if(enabled) {
 		counterTimer += cycles;
 		
-		while (counterTimer >= clockSpeed) {
+		while(counterTimer >= clockSpeed) {
 			counter++;
 			
 			/**
@@ -53,7 +53,9 @@ uint8_t Timer::fetch8(uint16_t address) {
 		return modulo;
 	} else if(address == 0xFF07) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff07--tac-timer-control
-		uint8_t result = 0xF8;
+		return control;
+		
+		/*uint8_t result = 0xF8;
 		
 		//if(enabled) {
 			result |= (enabled ? (0x4) : 0);
@@ -61,7 +63,7 @@ uint8_t Timer::fetch8(uint16_t address) {
 		
 		result |= (clockSelected);
 		
-		return result;
+		return result;*/
 	}
 	
 	return 0xFF;
@@ -72,8 +74,10 @@ void Timer::write8(uint16_t address, uint8_t data) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
 		// As mentioned writing any value to this address resets it to 0
 		divider = 0;
-		counterTimer = 0;
 		divTimer = 0;
+		
+		counterTimer = 0;
+		//clockSpeed = 1024;
 	} else if(address == 0xFF05) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff05--tima-timer-counter
 		counter = data;
@@ -109,7 +113,4 @@ void Timer::write8(uint16_t address, uint8_t data) {
 			break;
 		}
 	}
-	
-	//printf("Time write; %x -> %x\n", clockSpeed, clockSelected);
-	//std::cerr << "";
 }

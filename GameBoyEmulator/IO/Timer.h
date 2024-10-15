@@ -9,12 +9,17 @@ public:
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
-
+	
 public:
-	// To send an interrupt if it occours
+	// To send an interrupt if it occurs
 	uint8_t interrupt = 0;
 	
 private:
+	/**
+	 * Bully test rom suggests
+	 * that initial divider
+	 * should be 0xAD for DMG.
+	 */
 	uint8_t divider = 0xAD;
 	uint8_t counter = 0;
 	uint8_t modulo = 0;
