@@ -132,7 +132,7 @@ void PPU::drawBackground() {
 	
 	//bool drawWindow = lcdc.windowEnabled && LY >= WY && WX <= 166;
 	
-	if(/*!lcdc.windowEnabled && */!lcdc.bgWindowEnabled/*????*/)
+	if(!lcdc.windowEnabled && !lcdc.bgWindowEnabled/*????*/)
 		return;
 	
 	if(lcdc.windowEnabled && drawWindow && WX <= 166) {

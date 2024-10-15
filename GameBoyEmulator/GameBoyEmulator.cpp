@@ -206,8 +206,8 @@ int main(int argc, char* argv[]) {
     
     // TESTS
     
-    std::string filename = "Roms/dmg-acid2.gb"; // Passed
-    //std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO; Nose not showing
+    //std::string filename = "Roms/dmg-acid2.gb"; // Passed
+    std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO; Nose not showing
     
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
     
