@@ -85,6 +85,12 @@ uint16_t CPU::cycle() {
 		interruptHandler.IME = true;
 	}
 	
+	// TODO; Im so close
+	if(hatlBug) {
+		//PC--;
+		hatlBug = false;
+	}
+	
 	uint16_t cycles = interruptHandler.handleInterrupt(*this);
 	
 	if (!halted && cycles == 0) {
@@ -1200,6 +1206,10 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			
         	//std::cerr << "HALT\n";
         	halted = true;
+			
+        	if(!interruptHandler.IME && (interruptHandler.IF & interruptHandler.IE & 0x1F)) {
+        		hatlBug = true;
+        	}
         	
         	return 4;
         }

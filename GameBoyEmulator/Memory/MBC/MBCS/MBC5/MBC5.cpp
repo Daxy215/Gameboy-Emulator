@@ -40,7 +40,8 @@ void MBC5::write8(uint16_t address, uint8_t data) {
 	} else if(address >= 0x3000 && address <= 0x3FFF) {
         curRomBank = ((curRomBank & 0x0FF) | ((static_cast<size_t>(data & 0x1)) << 8)) % romBanks;
 	} else if(address >= 0x4000 && address < 0x5FFF) {
-		if(ramBanks > 0)
+		/*if(ramBanks > 0)
+			*/
 			curRamBank = ((data & 0x0F)) % ramBanks;
 	} else if(address >= 0x6000 && address < 0x7FFF) {
 		

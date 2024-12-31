@@ -315,6 +315,7 @@ public:
     
 public:
     bool halted = false;
+    bool hatlBug = false;
     bool stop = false;
     
     int8_t ei = -1;

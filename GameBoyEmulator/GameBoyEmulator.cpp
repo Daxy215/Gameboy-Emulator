@@ -127,11 +127,12 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb";
     //std::string filename = "Roms/Super Mario Land 4 (J) [!].gb";
-    //std::string filename = "Roms/Mario & Yoshi (E) [!].gb";
+    std::string filename = "Roms/Mario & Yoshi (E) [!].gb";
     
     // Not fully tested but seems ok - though has some rendering issues
     // Idk what I did but now it's completely fucked
     // Ok nvm just when a pop up shows up or a text, everything becomes blue?
+    // Ok issue was caused by the window rendering bug. I commented some code.. and forgot about it
     //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
     
     /**
@@ -157,6 +158,7 @@ int main(int argc, char* argv[]) {
      * in this game. Every other game, it works correctly.
      */
     //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
+    
     //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Tennis (U) [C][!].gbc"; // Uses MBC5
@@ -207,7 +209,7 @@ int main(int argc, char* argv[]) {
     // TESTS
     
     //std::string filename = "Roms/dmg-acid2.gb"; // Passed
-    std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO; Nose not showing
+    //std::string filename = "Roms/tests/cgb-acid2/cgb-acid2.gbc"; // TODO; Nose not showing
     
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
     
@@ -572,7 +574,7 @@ int main(int argc, char* argv[]) {
                 timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
             //}
             
-            cpu.mmu.apu.tick(cycles);
+            //cpu.mmu.apu.tick(cycles);
             ppu->tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
             
             cpu.interruptHandler.IF |= timer.interrupt;

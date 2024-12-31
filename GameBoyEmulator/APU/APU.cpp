@@ -14,7 +14,7 @@ uint8_t* APU::audio_pos;
 */
 
 APU::APU()
-	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(2048) {
+	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(8192 / 2) {
 	//SDL_Init(SDL_INIT_AUDIO);
 	
 	
@@ -31,7 +31,7 @@ void APU::init() {
 	want.freq = 44100;
 	want.format = AUDIO_U8;
 	want.channels = 1;
-	want.samples = 512;
+	want.samples = 44100 / 60;
 	want.callback = fill_audio;
 	want.userdata = this;
 	
@@ -63,14 +63,15 @@ void APU::tick(uint32_t cycles) {
 	
 	//samples.push(ch1.sample(cycles));
 	
-	// 512 Hz
 	if(ticks >= 8192) {
-		ticks -= 8192;
+		ticks = 0;
 		
 		counter = (counter + 1) % 8;
 		
-		ch1.updateCounter();
-		ch2.updateCounter();
+		if(counter % 2 == 0) {
+			ch1.updateCounter();
+			ch2.updateCounter();
+		}
 		
 		// Clock sweep ever 2 and 6 steps
 		if(counter == 2 || counter == 6) {
@@ -256,6 +257,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 	 * Turning the APU off drains less power (around 16%),
 	 * but clears all APU registers and makes them read-only until turned back on, except NR521.
 	 */
+	
 	/*if (!enabled && address != 0xFF26 && 
 		(address < 0xFF30) &&  // Ignore wave pattern memory
 		(Cartridge::mode != Color || (address != 0xFF11 && address != 0xFF21 && 
@@ -312,16 +314,16 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 7 - CH4 Left
 		ch4.left = check_bit(data, 7);
-
+		
 		// Bit 6 - CH3 Left
 		ch3.left = check_bit(data, 6);
-
+		
 		// Bit 5 - CH2 Left
 		ch2.left = check_bit(data, 5);
-
+		
 		// Bit 4 - CH1 Left
 		ch1.left = check_bit(data, 4);
-
+		
 		// Bit 3 - CH4 Right
 		ch4.right = check_bit(data, 3);
 		
@@ -447,7 +449,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * TODO; Check this
 		 */
 	} else if(address == 0xFF16) {
-		// NR21, exact same behavior as NR11 but for CH2.
+		// NR21, exact same behaviour as NR11 but for CH2.
 		
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff11--nr11-channel-1-length-timer--duty-cycle
 		
@@ -462,7 +464,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		*/
 		ch2.lengthTimer = data & 0b00111111;
 	} else if(address == 0xFF17) {
-		// NR22, exact same behavior as NR12 but for CH2.
+		// NR22, exact same behaviour as NR12 but for CH2.
 		
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff12--nr12-channel-1-volume--envelope
 		
@@ -490,13 +492,13 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * turns off DAC and the channel as well!
 		 */
 	} else if(address == 0xFF18) {
-		// NR23, exact same behavior as NR13 but for CH2.
+		// NR23, exact same behaviour as NR13 but for CH2.
 		
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff13--nr13-channel-1-period-low-write-only
 		
 		ch2.periodLow = data;
 	} else if(address == 0xFF19) {
-		// NR24, exact same behavior as NR14 but for CH2.
+		// NR24, exact same behaviour as NR14 but for CH2.
 		
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff14--nr14-channel-1-period-high--control
 		
@@ -602,9 +604,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 6 - Length enable - W/R
 		ch4.lengthEnable = check_bit(data, 6);
-	}
-	
-	else {
+	} else {
 		printf("Unknown APU address: %x\n", address);
 		std::cerr << "";
 	}
@@ -614,36 +614,39 @@ void APU::write8(uint16_t address, uint8_t data) {
 void APU::fill_audio(void* udata, Uint8* stream, int len) {
 	APU* apu = static_cast<APU*>(udata);
 	
-	//const int cycles_per_sample = 4194304 / 44100;
-	const int cycles_per_sample = 1;
+	Uint8* out = (Uint8*)stream;
+	int length = len / sizeof(stream[0]);
 	
-	for(int i = 0; i < len; i++) {
-		/*if(apu->samples.size() <= 0) {
-			stream[i] = 0;
-			continue;
-		}*/
-		
-		uint8_t ch1 = apu->ch1.sample(cycles_per_sample);
+	//float cycles = 4194304.0f / 44100.0f;
+	
+	//int x = 0;
+	/*for(int i = 0; i < length; i += 2) {
+		uint8_t ch1 = apu->ch1.sample(1);
 		uint8_t ch2 = 0;//apu->ch2.sample(cycles_per_sample);
 		
-		uint8_t samp = (ch1 + ch2);
+		Uint8 samp = (ch1);
 		
-		stream[i] = samp * 80;
-		apu->newSamples[i] = samp * 80;
-	}
-	
-	/*int sampleCount = len/* / 2#1#;
-	Sint16* buffer = reinterpret_cast<Sint16*>(stream);
-	size_t size = sizeof(buffer) / sizeof(buffer[0]);
-	
-	for(int i = 0; i < sampleCount; i++) {
-		uint8_t samp = apu->ch1.sample(1);
-		Sint16 convertedSample = samp * 8000;/*? (32767 / 15) : (-32768 / 15);#1#
-        
-		buffer[i/* * 2#1#] = convertedSample;     // Left channel
-		//buffer[i * 2 + 1] = convertedSample; // Right channel
+		out[i] = samp;
+		out[i + 1] = samp;
 		
-		// TODO; Remove
-		apu->newSamples[i] = samp;
+		apu->newSamples[x++] = ch1 * 10;
 	}*/
+	
+	auto ticks = 4 * 1024 * 1024;
+	auto sampleRate = ticks / 44100;
+	for(int i = 0; i < length; i++) {
+		uint8_t ch1 = 0;
+		uint8_t ch2 = 0;
+		
+		for(int i = 0; i <= sampleRate; i++) {
+			apu->tick(1);
+			
+			ch1 = apu->ch1.sample(1);
+			ch2 = apu->ch2.sample(1);
+		}
+		
+		out[i] = ((ch1 + ch2));
+		
+		apu->newSamples[i] = ch1 * 10;
+	}
 }

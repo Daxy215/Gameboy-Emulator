@@ -10,6 +10,9 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		if(interrupt == 0)
 			return 0;
 		
+		if(IME && cpu.hatlBug)
+			cpu.hatlBug = false;
+		
 		/*std::cerr << "PC: " << std::hex << cpu.PC 
 		  << " IME: " << std::hex << cpu.interruptHandler.IME
 		  << " IF: " << std::hex << (int)cpu.interruptHandler.IF 
@@ -18,8 +21,10 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		
 		if(cpu.halted) {
 			// TODO; Halt bug
-			if(!IME && interrupt != 0x0) {
+			if(!IME && interrupt) {
+				//cpu.PC--;
 				cpu.halted = false;
+				//cpu.hatlBug = true;
 				
 				return 0;
 			}
