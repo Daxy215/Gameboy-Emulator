@@ -32,7 +32,7 @@ void APU::init() {
 	SDL_memset(&want, 0, sizeof(want));
 	want.freq = 44100;
 	want.format = /*AUDIO_S16SYS*/AUDIO_U8;
-	want.channels = 1;
+	want.channels = 2;
 	want.samples = /*44100 / 60*//*4096*/1024;
 	want.callback = fill_audio;
 	want.userdata = this;
@@ -59,6 +59,12 @@ void APU::tick(uint32_t cycles) {
 	
 	// https://www.reddit.com/r/EmuDev/comments/5gkwi5/comment/dat3zni/
 	
+	/**
+	 * TODO; https://gbdev.io/pandocs/Audio_details.html#div-apu
+	 * A “DIV-APU” counter is increased every time DIV’s bit 4 (5 in double-speed mode)
+	 * goes from 1 to 0, therefore at a frequency of 512 Hz
+	 * (regardless of whether double-speed is active).
+	 */
 	ticks += cycles;
 	
 	// 512hz -> 8192 T-Cycles
@@ -253,17 +259,15 @@ uint8_t APU::fetch8(uint16_t address) {
 void APU::write8(uint16_t address, uint8_t data) {
 	/**
 	 * According to: https://gbdev.io/pandocs/Audio_Registers.html#ff26--nr52-audio-master-control
-	 *
+	 * 
 	 * Turning the APU off drains less power (around 16%),
 	 * but clears all APU registers and makes them read-only until turned back on, except NR521.
 	 */
-	
-	/*if (!enabled && address != 0xFF26 && 
-		(address < 0xFF30) &&  // Ignore wave pattern memory
+	if (!enabled && address != 0xFF26 && (address < 0xFF30) &&
 		(Cartridge::mode != Color || (address != 0xFF11 && address != 0xFF21 && 
 					address != 0xFF31 && address != 0xFF41))) {
 		return;
-	}*/
+	}
 	
 	if(address == 0xFF26) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff26--nr52-audio-master-control
@@ -285,16 +289,8 @@ void APU::write8(uint16_t address, uint8_t data) {
 		// Bit 0 - CH1 on?
 		ch1.enabled = check_bit(data, 0);
 		
-		// Shutting off
-		/*if(wasEnabled && !enabled) {
-			// Clear NR12
-			ch1.initialVolume = 0;
-			ch1.envDir = false;
-			ch1.sweepPace = 0;
-		}*/
-		
 		// APU is powering off
-		/*if(!enabled) {
+		if(wasEnabled && !enabled) {
 			ch1.reset();
 			ch2.reset();
 			ch3.reset();
@@ -307,8 +303,8 @@ void APU::write8(uint16_t address, uint8_t data) {
 			
 			// TODO; Clear WRAM?
 			/*for(auto& i : wavePattern)
-				i = 0;#1#
-		}*/
+				i = 0;*/
+		}
 	} else if(address == 0xFF25) {
 		// 	https://gbdev.io/pandocs/Audio_Registers.html#ff25--nr51-sound-panning
 		
@@ -609,8 +605,6 @@ void APU::write8(uint16_t address, uint8_t data) {
 		std::cerr << "";
 	}
 }
-const int SAMPLE_RATE = 44100;
-const double TWO_PI = 6.28318530718;
 
 // https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
 void APU::fill_audio(void* udata, Uint8* stream, int len) {
@@ -621,13 +615,14 @@ void APU::fill_audio(void* udata, Uint8* stream, int len) {
 	
 	int length = len / sizeof(out[0]);
 	
-	apu->newSamples.resize(length);
+	apu->newSamples.resize(length / 2);
 	
 	// CPU clock rate
 	auto ticks = 4 * 1024 * 1024;
 	auto sampleRate = ticks / 44100;
 	
-	for(int i = 0; i < length; i++) {
+	int x = 0;
+	for(int i = 0; i < length; i += 2) {
 		uint8_t ch1 = 0;
 		uint8_t ch2 = 0;
 		
@@ -636,8 +631,14 @@ void APU::fill_audio(void* udata, Uint8* stream, int len) {
 			ch2 = apu->ch2.sample(1);
 		}
 		
-		out[i] = 128 + ((ch1 + ch2));
+		// TODO; What is vin left/right?
 		
-		apu->newSamples[i] = out[i];
+		out[i + 0] = apu->enabled ?
+			(((ch1 * apu->ch1.left)  + (ch2 * apu->ch2.left ))) + (apu->leftVolume  + 1) : 0;
+		
+		out[i + 1] = apu->enabled ?
+			(((ch1 * apu->ch1.right) + (ch2 * apu->ch2.right))) + (apu->rightVolume + 1) : 0;
+		
+		apu->newSamples[x++] = out[i];
 	}
 }
