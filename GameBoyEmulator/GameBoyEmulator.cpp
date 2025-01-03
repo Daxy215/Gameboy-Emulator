@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/Super Mario Land (JUE) (V1.1) [!].gb";
     //std::string filename = "Roms/Super Mario Land 2 - 6 Golden Coins (UE) (V1.2) [!].gb";
     //std::string filename = "Roms/Super Mario Land 4 (J) [!].gb";
-    std::string filename = "Roms/Mario & Yoshi (E) [!].gb";
+    //std::string filename = "Roms/Mario & Yoshi (E) [!].gb";
     
     // Not fully tested but seems ok - though has some rendering issues
     // Idk what I did but now it's completely fucked
@@ -147,7 +147,7 @@ int main(int argc, char* argv[]) {
     /**
      * This game had up arrow stuck and rendering issues,
      * it was bc I had an issue with MBC
-     *
+     * 
      * So, issue is back idk how it got fixed in the first place.
      * From my understanding, input is registered via interrupt,
      * when pressing up arrow, it doesn't cause an interrupt.
@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
      * Also, it's quite weird that this is ONLY happening,
      * in this game. Every other game, it works correctly.
      */
-    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
+    std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
     
     //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
@@ -574,7 +574,7 @@ int main(int argc, char* argv[]) {
                 timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
             //}
             
-            //cpu.mmu.apu.tick(cycles);
+            cpu.mmu.apu.tick(cycles);
             ppu->tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
             
             cpu.interruptHandler.IF |= timer.interrupt;

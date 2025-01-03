@@ -17,22 +17,11 @@ struct PulseChannel {
 		while(ticks >= period) {
 			ticks = 0;
 			
-			//period = 131072 / (2048 - sweepFrequency)/* * 4*/;
-			period =  (2048 - sweepFrequency) * 4;
+			period          = (2048 - sweepFrequency) * 4;
 			sequencePointer = (sequencePointer + 1) % 8;
 		}
 		
 		// Visual here: https://gbdev.io/pandocs/Audio_Registers.html#ff11--nr11-channel-1-length-timer--duty-cycle
-		
-		/*static uint8_t f = 0;
-		static uint8_t h = 100;
-		
-		static const uint8_t dutyCycles[4][8] = {
-			{f ,f ,f ,f ,f, f, f, h},  // 12.5% duty cycle
-			{h, f, f, f, f, f, f, h},  // 25% duty cycle
-			{h, f, f, f, f, h, h, h},  // 50% duty cycle
-			{f, h, h, h, h, h, h, f}   // 75% duty cycle
-		};*/
 		
 		uint8_t dutyCycles[4][8] = {
 			{0, 0, 0, 0, 0, 0, 0, 1},
@@ -43,22 +32,26 @@ struct PulseChannel {
 		
 		uint8_t isHigh = dutyCycles[waveDuty][sequencePointer];
 		
-		return isHigh * (currentVolume) * enabled;
+		return (isHigh * (currentVolume)) * enabled;
     }
 	
     void updateTrigger() {
         enabled = true;
+		trigger = false;
 		
         if (lengthTimer == 0) {
             lengthTimer = 64;
         }
 		
+		period = (2048 - sweepFrequency) * 4;
+		
         currentVolume = initialVolume;
         envelopeCounter = sweepPace;
 		
-        //sequencePointer = 0;
+		if(envelopeCounter == 0)
+			envelopeCounter = 8;
 		
-        trigger = false;
+        sequencePointer = 0;
     }
 	
     void updateSweep() {
@@ -82,7 +75,7 @@ struct PulseChannel {
         			}
         		}
 				
-        		sweepFrequency &= 0x7FF;
+        		sweepFrequency &= 2047;
         	}
         }
     }
@@ -96,18 +89,24 @@ struct PulseChannel {
             }
         	
             envelopeCounter = sweepPace;
+        	if(envelopeCounter == 0)
+        		envelopeCounter = 8;
         } else if (sweepPace > 0) {
             envelopeCounter--;
         }
     }
 	
-    void updateCounter() {
+	/**
+	 * Just shuts off this channel,
+	 * once the timer hits 0
+	 */
+	void updateCounter() {
         if (lengthEnable && lengthTimer > 0) {
             lengthTimer--;
-        }
-		
-        if (lengthEnable && lengthTimer <= 0) {
-            enabled = false;
+			
+        	if(lengthTimer <= 0) {
+        		enabled = false;
+        	}
         }
     }
 	

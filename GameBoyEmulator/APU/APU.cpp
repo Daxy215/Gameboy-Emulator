@@ -14,7 +14,7 @@ uint8_t* APU::audio_pos;
 */
 
 APU::APU()
-	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(8192 / 2) {
+	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(0) {
 	//SDL_Init(SDL_INIT_AUDIO);
 	
 	
@@ -22,27 +22,27 @@ APU::APU()
 
 void APU::init() {
 	// https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
+	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+		std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
+	}
 	
 	SDL_AudioSpec want, have;
-	SDL_AudioDeviceID dev;
 	
 	// Clear the structure
 	SDL_memset(&want, 0, sizeof(want));
 	want.freq = 44100;
-	want.format = AUDIO_U8;
+	want.format = /*AUDIO_S16SYS*/AUDIO_U8;
 	want.channels = 1;
-	want.samples = 44100 / 60;
+	want.samples = /*44100 / 60*//*4096*/1024;
 	want.callback = fill_audio;
 	want.userdata = this;
 	
-	// Open audio device
-	dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
-	if (dev == 0) {
-		printf("Failed to open audio: %s\n", SDL_GetError());
+	if (SDL_OpenAudio(&want, NULL) < 0) {
+		std::cerr << "Failed to open audio: " << SDL_GetError() << std::endl;
+		SDL_Quit();
 	}
-	
-	// Start playing audio
-	SDL_PauseAudioDevice(dev, 0);
+
+	SDL_PauseAudio(0); // Start audio playback
 }
 
 void APU::tick(uint32_t cycles) {
@@ -61,8 +61,8 @@ void APU::tick(uint32_t cycles) {
 	
 	ticks += cycles;
 	
-	//samples.push(ch1.sample(cycles));
-	
+	// 512hz -> 8192 T-Cycles
+	// 4194304/512 = 8192
 	if(ticks >= 8192) {
 		ticks = 0;
 		
@@ -399,7 +399,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		/**
 		 * Bit 3 - Env dir
-		 *
+		 * 
 		 * Envelope direction
 		 * 0 = Decrease volume over time
 		 * 1 = Increase volume over time
@@ -609,44 +609,35 @@ void APU::write8(uint16_t address, uint8_t data) {
 		std::cerr << "";
 	}
 }
+const int SAMPLE_RATE = 44100;
+const double TWO_PI = 6.28318530718;
 
 // https://www.libsdl.org/release/SDL-1.2.15/docs/html/guideaudioexamples.html
 void APU::fill_audio(void* udata, Uint8* stream, int len) {
 	APU* apu = static_cast<APU*>(udata);
 	
 	Uint8* out = (Uint8*)stream;
-	int length = len / sizeof(stream[0]);
+	//int16_t* out = (int16_t*)(stream);
 	
-	//float cycles = 4194304.0f / 44100.0f;
+	int length = len / sizeof(out[0]);
 	
-	//int x = 0;
-	/*for(int i = 0; i < length; i += 2) {
-		uint8_t ch1 = apu->ch1.sample(1);
-		uint8_t ch2 = 0;//apu->ch2.sample(cycles_per_sample);
-		
-		Uint8 samp = (ch1);
-		
-		out[i] = samp;
-		out[i + 1] = samp;
-		
-		apu->newSamples[x++] = ch1 * 10;
-	}*/
+	apu->newSamples.resize(length);
 	
+	// CPU clock rate
 	auto ticks = 4 * 1024 * 1024;
 	auto sampleRate = ticks / 44100;
+	
 	for(int i = 0; i < length; i++) {
 		uint8_t ch1 = 0;
 		uint8_t ch2 = 0;
 		
-		for(int i = 0; i <= sampleRate; i++) {
-			apu->tick(1);
-			
+		for(int j = 0; j <= sampleRate; j++) {
 			ch1 = apu->ch1.sample(1);
 			ch2 = apu->ch2.sample(1);
 		}
 		
-		out[i] = ((ch1 + ch2));
+		out[i] = 128 + ((ch1 + ch2));
 		
-		apu->newSamples[i] = ch1 * 10;
+		apu->newSamples[i] = out[i];
 	}
 }
