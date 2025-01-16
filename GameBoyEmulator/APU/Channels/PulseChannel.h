@@ -7,15 +7,22 @@
 
 struct PulseChannel {
 	uint8_t sample(float cycles) {
-		/*if (!enabled/* || (lengthEnable && lengthTimer == 0)#1#) {
+		// TODO; Does it update instantly?
+		if(trigger)
+			updateTrigger();
+		
+		// TODO; Not sure if it should still,
+		// update the channel?
+		if (!enabled) {
 			return 0;
 		}
-		*/
 		
 		ticks += cycles;
 		
 		while(ticks >= period) {
 			ticks = 0;
+			
+			//sweepFrequency = (periodHigh << 8) | periodLow;
 			
 			period          = (2048 - sweepFrequency) * 4;
 			sequencePointer = (sequencePointer + 1) % 8;
@@ -32,18 +39,20 @@ struct PulseChannel {
 		
 		uint8_t isHigh = dutyCycles[waveDuty][sequencePointer];
 		
-		return (isHigh * (currentVolume)) * enabled;
+		return (isHigh * (currentVolume))/* * enabled*/;
     }
 	
     void updateTrigger() {
         enabled = true;
 		trigger = false;
 		
-        if (lengthTimer == 0) {
-            lengthTimer = 64;
+		// When the length timer reaches 64 (CH1, CH2, and CH4) the channel is turned off.
+        if (lengthTimer >= 64) {
+            lengthTimer = 0;
         }
 		
-		period = (2048 - sweepFrequency) * 4;
+		sweepFrequency = (periodHigh << 8) | periodLow;
+		//period = (2048 - sweepFrequency) * 4;
 		
         currentVolume = initialVolume;
         envelopeCounter = sweepPace;
@@ -89,6 +98,7 @@ struct PulseChannel {
             }
         	
             envelopeCounter = sweepPace;
+        	
         	if(envelopeCounter == 0)
         		envelopeCounter = 8;
         } else if (sweepPace > 0) {
@@ -98,20 +108,21 @@ struct PulseChannel {
 	
 	/**
 	 * Just shuts off this channel,
-	 * once the timer hits 0
+	 * once the timer hits 64
+	 * TODO; Check this?
 	 */
 	void updateCounter() {
-        if (lengthEnable && lengthTimer > 0) {
-            lengthTimer--;
+        if (lengthEnable) {
+            lengthTimer++;
 			
-        	if(lengthTimer <= 0) {
+        	if(lengthTimer >= 64) {
         		enabled = false;
         	}
         }
     }
 	
 	void reset() {
-		/*// NR10
+		// NR10
 		pace = 0;
 		direction = false;
 		individualStep = 0;
@@ -121,9 +132,9 @@ struct PulseChannel {
 		lengthTimer = 0;
 		
 		// NR12
-		initialVolume = 0;
-		envDir = false;
-		sweepPace = 0;
+		//initialVolume = 0;
+		//envDir = false;
+		//sweepPace = 0;
 		
 		// NR13
 		periodLow = 0;
@@ -135,10 +146,10 @@ struct PulseChannel {
 		
 		enabled = false;
 		left = false;
-		right = false;*/
+		right = false;
+		
+		sweepFrequency = (periodHigh << 8) | periodLow;
 	}
-	
-	const uint32_t GB_CLOCK_SPEED = 4194304;
 	
 	// NR10
 	uint8_t pace = 0;
@@ -157,7 +168,7 @@ struct PulseChannel {
 	uint8_t currentVolume = 0;
 	uint8_t envelopeCounter = 0;
 	uint16_t sequencePointer = 0;
-	float ticks = 0;
+	uint16_t ticks = 0;
 	
 	// NR13
 	uint8_t periodLow = 0;

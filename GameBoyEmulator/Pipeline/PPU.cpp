@@ -217,7 +217,7 @@ void PPU::drawBackground() {
 		
 		uint16_t address = yFlip ? offset + (14 - (pY * 2)) : offset + (pY * 2);
 		
-		uint8_t b0 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[(address & 0x1FFF) + 0x2000] : mmu.vram.RAM[(address & 0x1FFF)];
+		uint8_t b0 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[(address & 0x1FFF) + 0x2000]       : mmu.vram.RAM[(address & 0x1FFF)];
 		uint8_t b1 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[((address & 0x1FFF) + 0x2000) + 1] : mmu.vram.RAM[(address & 0x1FFF) + 1];
 		
 		uint8_t pixel = static_cast<uint8_t>((b0 >> pX) & 1) | static_cast<uint8_t>(((b1 >> pX) & 1) << 1);

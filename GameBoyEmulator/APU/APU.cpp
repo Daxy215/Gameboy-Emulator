@@ -3,7 +3,6 @@
 #include "../Utility/Bitwise.h"
 
 #include <iostream>
-#include <thread>
 
 #include "../Memory/Cartridge.h"
 
@@ -14,8 +13,7 @@ uint8_t* APU::audio_pos;
 */
 
 APU::APU()
-	: ch1(), ch2(), ch4(), wavePattern{}, newSamples(0) {
-	//SDL_Init(SDL_INIT_AUDIO);
+	: ch1(), ch2(), ch4(), newSamples(0) {
 	
 	
 }
@@ -41,21 +39,15 @@ void APU::init() {
 		std::cerr << "Failed to open audio: " << SDL_GetError() << std::endl;
 		SDL_Quit();
 	}
-
+	
 	SDL_PauseAudio(0); // Start audio playback
 }
 
 void APU::tick(uint32_t cycles) {
-	if(ch1.trigger)
-		ch1.updateTrigger();
-	
-	if(ch2.trigger)
-		ch2.updateTrigger();
-	
 	// APU Disabled
-	if (!enabled || (!ch1.enabled && !ch2.enabled && !ch3.enabled && !ch4.enabled)) {
+	/*if (!enabled || (!ch1.enabled && !ch2.enabled && !ch3.enabled && !ch4.enabled)) {
 		return;
-	}
+	}*/
 	
 	// https://www.reddit.com/r/EmuDev/comments/5gkwi5/comment/dat3zni/
 	
@@ -77,28 +69,37 @@ void APU::tick(uint32_t cycles) {
 		if(counter % 2 == 0) {
 			ch1.updateCounter();
 			ch2.updateCounter();
+			ch3.updateCounter();
+			ch4.updateCounter();
 		}
 		
 		// Clock sweep ever 2 and 6 steps
 		if(counter == 2 || counter == 6) {
 			ch1.updateSweep();
+			//ch3.updateSweep();
+			//ch4.updateSweep();
 		}
 		
 		// Clock volume envelopes every 7 steps
 		if(counter == 7) {
 			ch1.updateEnvelope();
 			ch2.updateEnvelope();
+			//ch3.updateEnvelope();
+			//ch4.updateEnvelope();
 		}
 	}
 }
 
 uint8_t APU::fetch8(uint16_t address) {
+	if(address != 0xFF26) {
+		printf("");
+	}
+	
     if (address == 0xFF26) {
         // NR52 - Audio Master Control
         uint8_t result = 0;
     	
         result |= (enabled << 7);      // Bit 7 - Audio on/off
-    	result |= 0b01110000;          // Bit 6, 4
         result |= (ch4.enabled << 3);  // Bit 3 - Channel 4 status
         result |= (ch3.enabled << 2);  // Bit 2 - Channel 3 status
         result |= (ch2.enabled << 1);  // Bit 1 - Channel 2 status
@@ -231,10 +232,10 @@ uint8_t APU::fetch8(uint16_t address) {
         return result;
     } else if (address >= 0xFF30 && address <= 0xFF3F) {
         // Wave Pattern RAM
-        return wavePattern[address - 0xFF30];
+        return ch3.waveform[address - 0xFF30];
     } else if (address == 0xFF20) {
         // NR41 - Channel 4 Length Timer (Write-only)
-        return 0xFF;
+        return ch4.lengthTimer;
     } else if (address == 0xFF21) {
         // NR42 - Channel 4 Volume Envelope
         uint8_t result = 0;
@@ -277,17 +278,21 @@ void APU::write8(uint16_t address, uint8_t data) {
 		// Bit 7 - Audio on/off
 		enabled = check_bit(data, 7);
 		
+		// Apparently this is ready-only:
+		// CHn on? (Read-only): Each of these four bits allows checking whether channels are active2.
+		// Writing to those does not enable or disable the channels, despite many emulators behaving as if.
+		
 		// Bit 3 - CH4 on?
-		ch4.enabled = check_bit(data, 3);
+		//ch4.enabled = check_bit(data, 3);
 		
 		// Bit 2 - CH3 on?
-		ch3.enabled = check_bit(data, 2);
+		//ch3.enabled = check_bit(data, 2);
 		
 		// Bit 1 - CH2 on?
-		ch2.enabled = check_bit(data, 1);
+		//ch2.enabled = check_bit(data, 1);
 		
 		// Bit 0 - CH1 on?
-		ch1.enabled = check_bit(data, 0);
+		//ch1.enabled = check_bit(data, 0);
 		
 		// APU is powering off
 		if(wasEnabled && !enabled) {
@@ -302,7 +307,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 			rightVolume = 0;
 			
 			// TODO; Clear WRAM?
-			/*for(auto& i : wavePattern)
+			/*for(auto& i : ch3.waveform)
 				i = 0;*/
 		}
 	} else if(address == 0xFF25) {
@@ -434,7 +439,6 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * the lower 8 bits are from NR13 (ch1.periodLow)
 		 */
 		ch1.periodHigh = data & 0b00000111;
-		ch1.sweepFrequency = (ch1.periodHigh << 8) | ch1.periodLow;
 	} else if(address == 0xFF15) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#sound-channel-2--pulse
 		
@@ -549,7 +553,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		ch3.periodHigh = data & 0b00000111;
 	} else if(address >= 0xFF30 && address <= 0xFF3F) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff30ff3f--wave-pattern-ram
-		wavePattern[address - 0xFF30] = data;
+		ch3.waveform[address - 0xFF30] = data;
 	} else if(address == 0xFF20) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff20--nr41-channel-4-length-timer-write-only
 		
@@ -625,20 +629,32 @@ void APU::fill_audio(void* udata, Uint8* stream, int len) {
 	for(int i = 0; i < length; i += 2) {
 		uint8_t ch1 = 0;
 		uint8_t ch2 = 0;
+		uint8_t ch3 = 0;
+		uint8_t ch4 = 0;
 		
 		for(int j = 0; j <= sampleRate; j++) {
 			ch1 = apu->ch1.sample(1);
 			ch2 = apu->ch2.sample(1);
+			ch3 = apu->ch3.sample(1);
+			ch4 = apu->ch4.sample(1);
 		}
 		
 		// TODO; What is vin left/right?
 		
-		out[i + 0] = apu->enabled ?
-			(((ch1 * apu->ch1.left)  + (ch2 * apu->ch2.left ))) + (apu->leftVolume  + 1) : 0;
+		if(!apu->enableAudio) {
+			continue;
+		}
+		
+ 		out[i + 0] = apu->enabled ?
+			(((ch1 * apu->ch1.left )  + (ch2 * apu->ch2.left))) +
+			(((ch3 * apu->ch3.left )  + (ch4 * apu->ch4.left)))
+			+ (apu->leftVolume  + 1) : 0;
 		
 		out[i + 1] = apu->enabled ?
-			(((ch1 * apu->ch1.right) + (ch2 * apu->ch2.right))) + (apu->rightVolume + 1) : 0;
+			(((ch1 * apu->ch1.right) + (ch2 * apu->ch2.right))) +
+			(((ch3 * apu->ch3.right) + (ch4 * apu->ch4.right)))
+			+ (apu->rightVolume + 1) : 0;
 		
-		apu->newSamples[x++] = out[i];
+		apu->newSamples[x++] = out[i] * 10;
 	}
 }

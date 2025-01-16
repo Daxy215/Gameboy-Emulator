@@ -3,6 +3,9 @@
 
 struct NoiseChanel {
 	uint8_t sample(uint32_t cycles) {
+		if(trigger)
+			updateTrigger();
+		
 		/*if(!enabled)
 			return 0;
 		
@@ -17,10 +20,46 @@ struct NoiseChanel {
 		
 		return 0;
 	}
-
+	
+	void updateTrigger() {
+		enabled = true;
+		trigger = false;
+		
+		// When the length timer reaches 64 (CH1, CH2, and CH4) the channel is turned off.
+		if (lengthTimer >= 64) {
+			lengthTimer = 0;
+		}
+		
+		/*sweepFrequency = (periodHigh << 8) | periodLow;
+		//period = (2048 - sweepFrequency) * 4;
+		
+		currentVolume = initialVolume;
+		envelopeCounter = sweepPace;
+		
+		if(envelopeCounter == 0)
+			envelopeCounter = 8;
+		
+		sequencePointer = 0;*/
+	}
+	
+	/**
+	 * Just shuts off this channel,
+	 * once the timer hits 64
+	 * TODO; Check this?
+	 */
+	void updateCounter() {
+		if (lengthEnable) {
+			lengthTimer++;
+			
+			if(lengthTimer >= 64) {
+				enabled = false;
+			}
+		}
+	}
+	
 	void reset() {
 		// NR41
-		lengthTimer = 0;
+		//lengthTimer = 0;
 		
 		// NR42
 		initialVolume = 0;
@@ -29,7 +68,7 @@ struct NoiseChanel {
 		
 		// NR43
 		clockShift = 0;
-		lsfrWidth = 0;
+		lsfrWidth = false;
 		clockDivider = 0;
 		
 		// NR44

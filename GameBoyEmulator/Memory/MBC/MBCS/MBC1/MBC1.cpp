@@ -12,7 +12,7 @@ MBC1::MBC1(Cartridge cartridge, std::vector<uint8_t> rom) {
 	this->ramBanks = cartridge.ramBanks;
 	
 	//eram.resize(static_cast<size_t>(cartridge.romSize) * 1024);
-	eram.resize(static_cast<size_t>((cartridge.ramSize + 1) * 6) * 1024);
+	eram.resize(static_cast<size_t>((cartridge.ramSize + 1) * 12) * 1024);
 }
 
 uint8_t MBC1::fetch8(uint16_t address) {
@@ -37,7 +37,7 @@ uint8_t MBC1::fetch8(uint16_t address) {
 		
 		uint8_t bank = bankingMode ? curRamBank : 0;
 		
-		return eram[(bank * 0x2000) | (address & 0x1FFF)];
+		return eram[(bank * 0x2000) | (address - 0xA000)];
 	}
 	
 	return 0xF;
@@ -63,7 +63,7 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 			curRamBank = data & 0x03;
 		}
 	} else if(address >= 0x6000 && address <= 0x7FFF) {
-		bankingMode = data & 0x01;
+		bankingMode = data & 0x1;
 	} else if(address >= 0xA000 && address <= 0xBFFF) {
 		if(!ramEnabled) {
 			return;
@@ -72,7 +72,5 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 		uint8_t bank = bankingMode ? (curRamBank) : 0;
 		
 		eram[(address & 0x1FFF) + (bank * 0x2000)] = data;
-		
-		ramUpdatd = true;
 	}
 }

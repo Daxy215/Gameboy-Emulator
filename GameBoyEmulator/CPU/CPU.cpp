@@ -1,5 +1,7 @@
 ﻿#include "CPU.h"
 
+#include <iomanip>
+
 #include "../IO/InterrupHandler.h"
 #include "../IO/Timer.h"
 #include "../Memory/Cartridge.h"
@@ -87,7 +89,7 @@ uint16_t CPU::cycle() {
 	
 	// TODO; Im so close
 	if(hatlBug) {
-		//PC--;
+		PC++;
 		hatlBug = false;
 	}
 	
@@ -2578,7 +2580,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * 2, 8
 			 * Z 0 0 0
 			 */
-
+			
         	uint8_t u8 = mmu.fetch8(PC++);
         	xor8(AF.A, u8);
         	
@@ -6136,7 +6138,7 @@ int CPU::jrc(int8_t& offset) {
 	}
 	
 	PC++;
-
+	
 	return 8;
 }
 
@@ -6210,7 +6212,7 @@ int CPU::jrz(int8_t& offset) {
 	if(!mmu.bootRomActive) {
 		printf("");
 	}
-		
+	
 	if (AF.getZero()) {
 		PC += offset + 1; // For the byte
 		return 12;

@@ -2,10 +2,13 @@
 
 #include <cstdint>
 #include <iostream>
+#include <vector>
 
 class InterruptHandler;
 
 class MMU;
+
+// Taken from: https://gist.github.com/SakiiR/62661e45ee8b2ab13f0dc8203a7dfbd9
 
 class CPU {
 public:

@@ -15,11 +15,11 @@ private:
 	 * 0 - ROM
 	 * 1 - RAM
 	 */
-	bool bankingMode = false;
+	//bool bankingMode = false;
 	
 	bool ramEnabled = false;
 	bool rtcRegister = false;
 	
-	uint8_t curRomBank = 1;
-	uint8_t curRamBank = 0;
+	uint16_t curRomBank = 1;
+	uint16_t curRamBank = 0;
 };

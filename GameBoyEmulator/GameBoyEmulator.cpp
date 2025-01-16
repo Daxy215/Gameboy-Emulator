@@ -15,6 +15,8 @@
 #include <SDL_opengl.h>
 #endif
 
+#include <map>
+
 #include "APU/APU.h"
 #include "backends/imgui_impl_sdlrenderer2.h"
 #include "CPU/CPU.h"
@@ -90,7 +92,6 @@ std::string formatCPUState(const CPU &cpu) {
     oss << "IME: " << (cpu.interruptHandler.IME ? "true" : "false") ;
     oss << " LY: " << static_cast<int>(cpu.mmu.lcdc.LY);
     
-    // Fetch the memory around the PC
     uint16_t pc = cpu.PC;
     uint8_t mem[4];
     
@@ -113,6 +114,246 @@ std::optional<uint8_t> stdoutprinter(uint8_t value) {
     std::cerr << static_cast<char>(value);
     return std::nullopt;
 }
+
+// TODO; Move this into a different class:
+class Disassembler {
+public:
+	struct Instruction {
+		uint16_t address;
+		std::string instruction;
+	};
+	
+	static int instructionLength(uint8_t opcode) {
+		switch (opcode) {
+			// 1-byte opcodes
+			case 0x00: case 0x07: case 0x0F: case 0x17: case 0x1F:
+			case 0x27: case 0x2F: case 0x37: case 0x3F: case 0x76:
+			case 0xC9: case 0xD9:
+			case 0xC0: case 0xC8: case 0xD0: case 0xD8:
+			case 0xE0: case 0xE2: case 0xE8: case 0xF0: case 0xF2:
+			case 0xF8: case 0xEA: case 0xEE: case 0xFA: case 0xFE:
+			case 0xF9:
+				return 1;
+				
+			// 2-byte opcodes
+			case 0x06: case 0x0E: case 0x16: case 0x1E: case 0x26: case 0x2E:
+			case 0x36: case 0x3E: case 0xC6: case 0xD6: case 0xE6: case 0xF6:
+			case 0xC7: case 0xD7: case 0xE7: case 0xF7:
+			case 0xCD: case 0xC4: case 0xCC: case 0xD4: case 0xDC:
+			case 0xCE: case 0xDE:
+			case 0x10:
+				return 2;
+				
+			// 3-byte opcodes
+			case 0x01: case 0x11: case 0x21: case 0x31:
+			case 0xC2: case 0xCA: case 0xD2: case 0xDA:
+			case 0xC3:
+				return 3;
+				
+			default:
+				// TODO; I think all of the CB instructions are 2 bytes? Not sure
+				if ((opcode & 0xF0) == 0xCB) {
+					return 2;
+				}
+				
+				return 1;
+		}
+	}
+	
+	static uint16_t getJumpTarget(uint8_t* opcode, uint16_t currentAddress, CPU& cpu) {
+		switch (opcode[0]) {
+			// Jumps
+	        case 0xC3: return (opcode[2] << 8) | opcode[1]; // JP nn
+	        case 0xE9: return cpu.HL.get(); // JP (HL)
+	        case 0x18: return currentAddress + (int8_t)opcode[1] + 2; // JR n
+	        case 0x20: if (!cpu.AF.getZero()) return currentAddress + (int8_t)opcode[1] + 2; break; // JR NZ, n
+	        case 0x28: if ( cpu.AF.getZero()) return currentAddress + (int8_t)opcode[1] + 2; break; // JR Z, n
+	        case 0x30: if (!cpu.AF.getCarry()) return currentAddress + (int8_t)opcode[1] + 2; break; // JR NC, n
+	        case 0x38: if ( cpu.AF.getCarry()) return currentAddress + (int8_t)opcode[1] + 2; break; // JR C, n
+	        case 0xC2: if (!cpu.AF.getZero()) return (opcode[2] << 8) | opcode[1]; break; // JP NZ, nn
+	        case 0xCA: if ( cpu.AF.getZero()) return (opcode[2] << 8) | opcode[1]; break; // JP Z, nn
+	        case 0xD2: if (!cpu.AF.getCarry()) return (opcode[2] << 8) | opcode[1]; break; // JP NC, nn
+	        case 0xDA: if ( cpu.AF.getCarry()) return (opcode[2] << 8) | opcode[1]; break; // JP C, nn
+			
+	        // Calls
+	        case 0xCD: return (opcode[2] << 8) | opcode[1]; // CALL nn
+	        case 0xC4: if (!cpu.AF.getZero()) return (opcode[2] << 8) | opcode[1]; break; // CALL NZ, nn
+	        case 0xCC: if ( cpu.AF.getZero()) return (opcode[2] << 8) | opcode[1]; break; // CALL Z, nn
+	        case 0xD4: if (!cpu.AF.getCarry()) return (opcode[2] << 8) | opcode[1]; break; // CALL NC, nn
+	        case 0xDC: if ( cpu.AF.getCarry()) return (opcode[2] << 8) | opcode[1]; break; // CALL C, nn
+			
+	        // Returns
+	        case 0xC9: // RET
+	        case 0xC0: // RET NZ
+	        case 0xC8: // RET Z
+	        case 0xD0: // RET NC
+	        case 0xD8: // RET C
+	        case 0xD9: // RETI
+	            return currentAddress + instructionLength(opcode[0]); // Return address after the RET instruction
+			
+	        default: return 0; // Not a jump/call/return
+		}
+		
+		return 0; // No jump taken
+	}
+	
+	static std::string disassemble(const uint8_t* opcode, size_t size) {
+		std::stringstream ss;
+		ss << std::hex << std::setfill('0') << std::uppercase;
+		
+		switch (opcode[0]) {
+			case 0x00: ss << "NOP"; break;
+        	case 0x01: ss << "LD BC, $" << std::setw(4) << ((opcode[2] << 8) | opcode[1]); break;
+        	case 0x06: ss << "LD B, $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x0E: ss << "LD C, $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x11: ss << "LD DE, $" << std::setw(4) << ((opcode[2] << 8) | opcode[1]); break;
+        	case 0x16: ss << "LD D, $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x1E: ss << "LD E, $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x21: ss << "LD HL, $" << std::setw(4) << ((opcode[2] << 8) | opcode[1]); break;
+        	case 0x26: ss << "LD H, $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x2E: ss << "LD L, $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x31: ss << "LD SP, $" << std::setw(4) << ((opcode[2] << 8) | opcode[1]); break;
+        	case 0x3E: ss << "LD A, $" << std::setw(2) << (int)opcode[1]; break;
+			
+        	case 0x76: ss << "HALT"; break; // Halt
+			
+        	case 0xC3: ss << "JP $" << std::setw(4) << ((opcode[2] << 8) | opcode[1]); break;
+        	case 0xCD: ss << "CALL $" << std::setw(4) << ((opcode[2] << 8) | opcode[1]); break;
+        	case 0xE9: ss << "JP (HL)"; break;
+        	case 0x18: ss << "JR $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x20: ss << "JR NZ, $" << std::setw(2) << (int)opcode[1]; break;
+        	case 0x28: ss << "JR Z, $" << std::setw(2) << (int)opcode[1]; break; // JR Z
+        	case 0x30: ss << "JR NC, $" << std::setw(2) << (int)opcode[1]; break; // JR NC
+        	case 0x38: ss << "JR C, $" << std::setw(2) << (int)opcode[1]; break; // JR C
+			
+        	case 0xA7: ss << "AND A"; break;
+        	case 0xB0: ss << "OR B"; break;
+        	case 0xB1: ss << "OR C"; break;
+        	case 0xAF: ss << "XOR A"; break;
+        	case 0xFE: ss << "CP $" << std::setw(2) << (int)opcode[1]; break;
+			case 0xFF: ss << "RST 38H"; break;
+			
+        	case 0xCB:
+            switch (opcode[1]) {
+                case 0x00: ss << "RLC B"; break;
+                case 0x01: ss << "RLC C"; break;
+                case 0x07: ss << "RLC A"; break;
+                case 0x10: ss << "RL B"; break;
+                case 0x11: ss << "RL C"; break;
+                case 0x17: ss << "RL A"; break;
+                case 0x20: ss << "SLA B"; break;
+                case 0x21: ss << "SLA C"; break;
+                case 0x27: ss << "SLA A"; break;
+                case 0x30: ss << "SRA B"; break;
+                case 0x31: ss << "SRA C"; break;
+                case 0x37: ss << "SRA A"; break;
+                case 0x38: ss << "SRL B"; break;
+                case 0x39: ss << "SRL C"; break;
+                case 0x3F: ss << "SRL A"; break;
+                case 0x7C: ss << "BIT 7, H"; break;
+                case 0x40: ss << "BIT 0, B"; break;
+                case 0x41: ss << "BIT 0, C"; break;
+                case 0x47: ss << "BIT 0, A"; break;
+                case 0x7F: ss << "BIT 7, A"; break;
+                default: ss << "CB $" << std::setw(2) << (int)opcode[1]; break;
+            }
+			
+            break;
+			
+			default: ss << "DB $" << std::setw(2) << (int)opcode[0]; break;
+		}
+		
+		return ss.str();
+	}
+	
+	static void disassembleRange(uint16_t startAddress, uint16_t endAddress, MMU& mmu, std::vector<Instruction>& output) {
+		uint16_t currentAddress = startAddress;
+		while (currentAddress <= endAddress) {
+			uint8_t opcode[3] = {0};
+			
+			for (int i = 0; i < 3; ++i) {
+				opcode[i] = mmu.fetch8(currentAddress + i);
+			}
+			
+			std::string instruction = disassemble(opcode, 3);
+			output.push_back({ currentAddress, instruction });
+			currentAddress += instructionLength(opcode[0]);
+		}
+	}
+	
+	static void renderDebugWindow(MMU& mmu, CPU& cpu) {
+		ImGui::Begin("Disassembly");
+		
+		uint16_t pc = cpu.PC;
+		std::vector<Instruction> disassembledCode;
+		std::map<uint16_t, std::string> functions;
+		
+		uint16_t start = pc > 0x100 ? pc - 0x100 : 0;
+		uint16_t end = pc + 0x100;
+		
+		disassembleRange(start, end, mmu, disassembledCode);
+		
+		// Find the instruction that contains the current PC
+		size_t currentInstructionIndex = 0;
+		for (; currentInstructionIndex < disassembledCode.size(); currentInstructionIndex++) {
+			if (disassembledCode[currentInstructionIndex].address == pc) {
+				break;
+			}
+		}
+		
+		for(auto& i : disassembledCode) {
+			uint8_t opcode[3] = {0};
+			for (int j = 0; j < 3; j++) {
+				opcode[j] = mmu.fetch8(i.address + j);
+			}
+			
+			uint16_t target = getJumpTarget(opcode, i.address, cpu);
+			if (target != 0 && functions.find(target) == functions.end()) {
+				std::stringstream functionName;
+				functionName << "loc_" << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << target;
+				functions[target] = functionName.str();
+			}
+		}
+		
+		for (const auto& instr : disassembledCode) {
+			// Functions
+			if (functions.count(instr.address)) {
+				coloredText(functions.at(instr.address).c_str(), ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+			}
+			
+			if (instr.address == pc) {
+				coloredText("-> ", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+				ImGui::SameLine();
+				coloredText(("0x" + toHex(instr.address) + ": ").c_str(), ImVec4(0.5f, 0.5f, 1.0f, 1.0f));
+				ImGui::SameLine();
+				coloredText(instr.instruction.c_str(), ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+			} else {
+				ImGui::Text("   0x%s: %s", toHex(instr.address).c_str(), instr.instruction.c_str());
+			}
+		}
+		
+		// TODO; Scroll to the PC location
+		/*if (currentInstructionIndex > 0 && currentInstructionIndex < disassembledCode.size() - 5) {
+			float y = static_cast<float>(currentInstructionIndex) / (disassembledCode.size() - 1);
+			ImGui::SetScrollHereY(y);
+		}*/
+		
+		ImGui::End();
+	}
+	
+	static void coloredText(const char* text, ImVec4 color) {
+		ImGui::TextColored(color, "%s", text);
+	}
+	
+	static std::string toHex(uint16_t n) {
+		std::stringstream ss;
+		ss << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << n;
+		return ss.str();
+	}
+	
+private:
+	std::vector<Instruction> instructions;
+};
 
 int main(int argc, char* argv[]) {
     using std::ifstream;
@@ -150,14 +391,14 @@ int main(int argc, char* argv[]) {
      * 
      * So, issue is back idk how it got fixed in the first place.
      * From my understanding, input is registered via interrupt,
-     * when pressing up arrow, it doesn't cause an interrupt.
+     * when pressing up arrow, it doesn't cause an interrupt?
      * 
      * Though, every other button it does?
      * 
      * Also, it's quite weird that this is ONLY happening,
      * in this game. Every other game, it works correctly.
      */
-    std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
+    //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
     
     //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
@@ -187,24 +428,29 @@ int main(int argc, char* argv[]) {
      */
     //std::string filename = "Roms/Legend of Zelda, The - Link's Awakening (U) (V1.2) [!].gb";
     //std::string filename = "Roms/Amazing Spider-Man 2, The (UE) [!].gb";
-    //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb";
+    //std::string filename = "Roms/Yu-Gi-Oh! Duel Monsters (J) [S].gb"; // MBC1
     
     /**
      * It runs but then freezes;
      * 
      * Issue was with 0xFF55 returning wrong value.
-     *
+     * 
      * Runs correctly now
      */
     //std::string filename = "Roms/Disney's Tarzan (U) [C][!].gbc"; // Uses MBC5
-    
-    // Games that don't work :(
-    // TODO; These do run, just don't go past the main screen. Probably bc MBC3 is wrongly implemented(I just copied MBC1)
+	
+	/**
+	 * Those games finally works after I fixed MBC3(still not fully fixed).
+	 * 
+	 * However, all of the color versions contain this bug:
+	 * all of the chracters are very dark, expect when,
+	 * they get into a cutscene, they're colors become normal
+	 */
+    //std::string filename = "Roms/Pokemon - Yellow Version (UE) [C][!].gbc"; // Uses MBC5
+    std::string filename = "Roms/Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc"; // Uses MBC3..
     //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
-    //std::string filename = "Roms/Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc"; // Uses MBC3..
-    //std::string filename = "Roms/Pokemon - Yellow Version (UE) [C][!].gbc"; // Uses MBC3..
     
     // TESTS
     
@@ -234,7 +480,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/01-registers.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/02-len ctr.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/03-trigger.gb"; // TODO;
-    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
+    ///std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/05-sweep details.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/06-overflow on trigger.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/07-len sweep period sync.gb"; // TODO;
@@ -423,6 +669,8 @@ int main(int argc, char* argv[]) {
     ppu = &mmu.ppu;
     
     CPU cpu(interruptHandler, mmu);
+
+	Disassembler disassembler;
     
     serial.set_callback(stdoutprinter);
     
@@ -492,11 +740,14 @@ int main(int argc, char* argv[]) {
      * for the divider when resetting,
      * the divider value.. :)
      */
+	    
+    bool singleStep = false;
+    bool step       = false;
+    
+    uint64_t totalCyclesThisFrame = 0;
     
     while (running) {
         double cyclesPerFrame = cpu.mmu.doubleSpeed ? CLOCK_SPEED_DOUBLE / FPS : CLOCK_SPEED_NORMAL / FPS;
-        
-        uint64_t totalCyclesThisFrame = 0;
         
         SDL_Event e;
         
@@ -566,14 +817,27 @@ int main(int argc, char* argv[]) {
             }
         }
         
-        while (totalCyclesThisFrame < cyclesPerFrame) {
+        while (totalCyclesThisFrame < cyclesPerFrame && (singleStep ? step : true)) {
+            if(singleStep) {
+                if(!step)
+                    continue;
+                
+                step = false;
+            }
+            
             uint16_t cycles = cpu.cycle();
             
             //if(!cpu.mmu.bootRomActive) {
                 cpu.mmu.tick(cycles);
                 timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
             //}
-            
+			
+        	if(cpu.PC == 0x0100) {
+        		printf("");
+        		singleStep = true;
+        		break;
+        	}
+			
             cpu.mmu.apu.tick(cycles);
             ppu->tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
             
@@ -593,22 +857,39 @@ int main(int argc, char* argv[]) {
             cpu.mmu.cycles = 0;
         }
         
+        if(totalCyclesThisFrame >= cyclesPerFrame) {
+            totalCyclesThisFrame = 0;
+        }
+        
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        
+    	
         ImGui::Begin("Game Boy");
             ImGui::Image((void*)(intptr_t)ppu->texture, ImVec2(ImGui::GetWindowSize().y, ImGui::GetWindowSize().y - 48));
         ImGui::End();
-
+        
         ImGui::Begin("CPU");
         
-        
-        
+        ImGui::Checkbox("Single step: ", &singleStep);
+        if(ImGui::Button("Step")) { step = true; }
+		
+    	ImGui::Spacing();
+		
+    	// TODO; Make this prettier
+    	ImGui::Text("Registers;");
+    	ImGui::Text(("AF: " + std::to_string(cpu.AF.A) + " - " + std::to_string(cpu.AF.F) + " = " + std::to_string(cpu.AF.get())).c_str());
+    	ImGui::Text(("BC: " + std::to_string(cpu.BC.B) + " - " + std::to_string(cpu.BC.C) + " = " + std::to_string(cpu.BC.get())).c_str());
+    	ImGui::Text(("DE: " + std::to_string(cpu.DE.D) + " - " + std::to_string(cpu.DE.E) + " = " + std::to_string(cpu.DE.get())).c_str());
+    	ImGui::Text(("HL: " + std::to_string(cpu.HL.H) + " - " + std::to_string(cpu.HL.L) + " = " + std::to_string(cpu.HL.get())).c_str());
+    	ImGui::Text(("SP: " + std::to_string(cpu.SP)).c_str());
+    	
         ImGui::End();
         
         ImGui::Begin("APU");
-            if(ImGui::TreeNode("Pulse Waveform - Channel 1")) {
+			ImGui::Checkbox("Enable audio", &apu.enableAudio);
+    		
+            if(ImGui::TreeNode("Audio output")) {
                 ImGui::Text(("Duty cycles: " + std::to_string(apu.ch1.waveDuty) + " = " + std::to_string(apu.ch1.sequencePointer) + " = " + std::to_string(apu.ch1.currentVolume) + "/" + std::to_string(apu.ch1.initialVolume)).c_str());
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
                 const ImVec2 windowPos = ImGui::GetCursorScreenPos();
@@ -622,7 +903,7 @@ int main(int argc, char* argv[]) {
                 const auto& samples = cpu.mmu.apu.newSamples;
                 
                 // Draw waveform
-                for (size_t i = 0; i < samples.size() - 1; ++i) {
+                for (size_t i = 0; i < (samples.empty() ? 0 : samples.size() - 1); i++) {
                     float x1 = windowPos.x + (i * width / (samples.size() - 1));
                     float y1 = windowPos.y + height / 2 - (samples[i] / 255.0f * height / 2);
                     float x2 = windowPos.x + ((i + 1) * width / (samples.size() - 1));
@@ -634,6 +915,8 @@ int main(int argc, char* argv[]) {
                 ImGui::TreePop();
             }
         ImGui::End();
+		
+    	disassembler.renderDebugWindow(mmu, cpu);
         
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
             SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();

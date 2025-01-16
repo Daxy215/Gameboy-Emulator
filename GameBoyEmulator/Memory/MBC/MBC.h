@@ -1,4 +1,5 @@
 #pragma once
+
 #include <cstdint>
 #include <memory>
 
@@ -10,8 +11,6 @@ public:
 	MBC(Cartridge cartridge, std::vector<uint8_t> rom);
 	
 	virtual ~MBC() = default;
-	
-	void tick(uint16_t cycles);
 	
 	uint8_t read(uint16_t address);
 	void write(uint16_t address, uint8_t data);
@@ -30,14 +29,10 @@ protected:
 	// Technically, this CAN be a uint8
 	uint16_t ramBanks = 0;
 	
-	bool ramUpdatd;
-	
 	std::vector<uint8_t> rom;
 	std::vector<uint8_t> eram;
-
-private:
-	uint32_t ticks;
 	
+private:
 	// Used for saving.. Ik it's scuffed
 	std::string title;
 	

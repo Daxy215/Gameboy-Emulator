@@ -45,11 +45,13 @@ public:
 	static void fill_audio(void *udata, Uint8 *stream, int len);
 	
 private:
+	
 	uint32_t ticks = 0;
 	uint8_t counter = 0;
 	
 public:
 	bool enabled = false;
+	bool enableAudio = false;
 	
 	bool vinLeft = false, vinRight = false;
 	
@@ -61,8 +63,8 @@ public:
 	WaveChannel ch3;
 	NoiseChanel ch4;
 	
-	uint8_t wavePattern[16];
-
+	//uint8_t wavePattern[16];
+	
 public:
 	// TEST
 	int sampleCounter = 0;

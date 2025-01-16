@@ -14,10 +14,10 @@
 uint8_t Joypad::fetch8(uint16_t address) {
 	/**
 	 * https://gbdev.io/pandocs/Joypad_Input.html#ff00--p1joyp-joypad
-	 *
+	 * 
 	 * Select buttons: If this bit is 0,
 	 * then buttons (SsBA) can be read from the lower nibble.
-     *
+     * 
 	 * Select d-pad: If this bit is 0,
 	 * then directional keys can be read from the lower nibble.
 	 * 
@@ -29,18 +29,10 @@ uint8_t Joypad::fetch8(uint16_t address) {
 	 * then the low nibble reads $F (all buttons released).
 	 */
 	
-	//return 0xFF;
-	
-	/*uint8_t result = P1 | 0xF;
-	
-	if (!(P1 & 0x20)) { // Bit 5 - Buttons mode selected
-		result |= (buttonState | 0xF0); // Apply button presses to lower nibble
-	} else if (!(P1 & 0x10)) { // Bit 4 - D-pad mode selected
-		result |= (dpadState | 0xF0); // Apply d-pad presses to lower nibble
-	}*/
-	
-	//return result;
-	
+	/*
+	 * If neither buttons nor d-pad is selected ($30 was written),
+	 * then the low nibble reads $F (all buttons released).
+	 */
 	uint8_t buttons = 0b1111;
 	
 	if (direction_switch) {
@@ -50,7 +42,7 @@ uint8_t Joypad::fetch8(uint16_t address) {
 		buttons = set_bit_to(buttons, 3, !down);
 	}
 	
-	if (button_switch) {
+	if (button_switch == true) {
 		buttons = set_bit_to(buttons, 0, !a);
 		buttons = set_bit_to(buttons, 1, !b);
 		buttons = set_bit_to(buttons, 2, !select);
@@ -64,8 +56,6 @@ uint8_t Joypad::fetch8(uint16_t address) {
 }
 
 void Joypad::write8(uint16_t address, uint8_t data) {
-	//P1 = data;
-	
 	direction_switch = !check_bit(data, 4);
 	button_switch = !check_bit(data, 5);
 }
@@ -92,13 +82,14 @@ void Joypad::checkForInterrupts() {
 	
 	bool inter = false;
 	
+	// Check for transitions in buttons
 	for (int i = 0; i < 4; ++i) {
 		if ((current_buttons_state & (1 << i)) == 0 && (prev_buttons_state & (1 << i)) != 0) {
 			inter = true;
 		}
 	}
 	
-	// Check for transitions in D-pad
+	// Check for transitions in d-pad
 	for (int i = 0; i < 4; ++i) {
 		if ((current_dpad_state & (1 << i)) == 0 && (prev_dpad_state & (1 << i)) != 0) {
 			inter = true;

@@ -1,7 +1,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <filesystem>
 
 #include "MBCS/MBC0/MBC0.h"
 #include "MBCS/MBC1/MBC1.h"
@@ -55,19 +54,6 @@ MBC::MBC(Cartridge cartridge, std::vector<uint8_t> rom) : data(rom) {
 		
 		break;
 	}
-}
-
-void MBC::tick(uint16_t cycles) {
-	/*ticks += cycles;
-	
-	if(ticks > 419430) {
-		ticks = 0;
-		
-		if(curMBC->ramUpdatd) {
-			curMBC->ramUpdatd = false;
-			
-		}
-	}*/
 }
 
 uint8_t MBC::read(uint16_t address) {

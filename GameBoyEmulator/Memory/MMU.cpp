@@ -262,10 +262,6 @@ void MMU::write8(uint16_t address, uint8_t data) {
     } else if(address >= 0xE000 && address <= 0xFDFF) {
         wram.write8(address & 0x0FFF, data);
     } else if (address >= 0xFE00 && address <= 0xFE9F) {
-        if(!bootRomActive) {
-            printf("");
-        }
-        
         oam.write8(address - 0xFE00, data);
     } else if(address >= 0xFEA0 && address <= 0xFEFF) {
         // Not usable
@@ -351,7 +347,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
                  * ldh  a,(LY-$FF00)   ; just after LY increments
                  * cp   1
                  * jp   nz,test_failed
-                 *
+                 * 
                  * Passing test 2 correctly but stuck on test 1.
                  * Seems the issue to be that one of my CPU instructions,
                  * are wrongly implemented, as while it does ldh  a,(LY-$FF00),
@@ -372,7 +368,6 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
                     ppu.reset(4);
                 }
             }
-            
         } else if(address == 0xFF46) {
             // TODO;
             /*if(cpu.halt) {
@@ -456,8 +451,6 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         
         sourceIndex = static_cast<uint16_t>(sourceLow << 8) | static_cast<uint16_t>(sourceHigh);
         destIndex = (static_cast<uint16_t>(destLow << 8) | static_cast<uint16_t>(destHigh)) | 0x8000;
-        
-        printf("");
     } else if(address >= 0xFF68 && address <= 0xFF6C) {
         ppu.write8(address, data);
     } else if(address == 0xFF70) {
@@ -466,7 +459,7 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         wramBank = (data & 0x7) == 0 ? 1 : static_cast<uint8_t>(data & 0x7);
     }
     
-    // TODO; Addresses that doesn't exist
+    // TODO; Addresses that don't exist
     else if(address != 0xFF03 && address != 0xFF08 && address != 0xFF0A &&
             address != 0xFF0B && address != 0xFF0C && address != 0xFF0D &&
             address != 0xFF0E && address != 0xFF27 && address != 0xFF28 &&
@@ -494,4 +487,3 @@ void MMU::clear() {
     // TODO;
     //std::fill(std::begin(memory), std::end(memory), 0);
 }
-
