@@ -3,41 +3,50 @@
 #include <cstdio>
 #include <iostream>
 
-void Timer::tick(uint16_t cycles) {
-	divTimer += cycles;
-	
-	/**
-	 * https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
-	 * 16384Hz which is 256T cycles
+void Timer::tick(uint16_t cycles, bool tickDiv) {
+	/*+
+	 * TODO; Not sure if timers should still,
+	 * tick whilst "Timer" is disabled?
 	 */
-	while (divTimer >= 256) {
-		divider++;
-		divTimer -= 256;
+	if(!enabled)
+		return;
+	
+	if(true) {
+		divTimer += cycles;
+		
+		/**
+		 * https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff04--div-divider-register
+		 * 16384Hz which is 256 T-Cycles
+		 */
+		while(divTimer >= 256) {
+			divider++;
+			divTimer -= 256;
+		}
 	}
 	
-	if(enabled) {
-		counterTimer += cycles;
+	
+	
+	counterTimer += cycles;
+	
+	while(counterTimer >= clockSpeed) {
+		counter++;
 		
-		while(counterTimer >= clockSpeed) {
-			counter++;
-			
-			/**
-			 * According to https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff05--tima-timer-counter
-			 *
-			 *  When the value overflows (exceeds $FF),
-			 *  it is reset to the value specified in TMA (FF06),
-			 *  and an interrupt is requested
-			 */
-			
-			// Overflow
-			// TODO; Check if this is correct
-			if(counter == 0) {
-				counter = modulo;
-				interrupt |= 0x04; // Timer interrupt
-			}
-			
-			counterTimer -= clockSpeed;
+		/**
+		 * According to https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff05--tima-timer-counter
+		 *
+		 *  When the value overflows (exceeds $FF),
+		 *  it is reset to the value specified in TMA (FF06),
+		 *  and an interrupt is requested
+		 */
+		
+		// Overflow
+		// TODO; Check if this is correct
+		if(counter >= 0xFF) {
+			counter = modulo;
+			interrupt |= 0x04; // Timer interrupt
 		}
+		
+		counterTimer -= clockSpeed;
 	}
 }
 
@@ -47,7 +56,7 @@ uint8_t Timer::fetch8(uint16_t address) {
 		return divider;
 	} else if(address == 0xFF05) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff05--tima-timer-counter
-		return counter;
+		return static_cast<uint8_t>(counter);
 	} else if(address == 0xFF06) {
 		// https://gbdev.io/pandocs/Timer_and_Divider_Registers.html#ff06--tma-timer-modulo
 		return modulo;
@@ -92,6 +101,7 @@ void Timer::write8(uint16_t address, uint8_t data) {
 		
 		// I wrote '0x011' instead of '0b0011' :)
 		clockSelected = data & 0b0011; // 1st & 2nd bit
+		const int CLOCK_RATE = 4194304;
 		
 		// 1 M = 4 T
 		switch (clockSelected) {

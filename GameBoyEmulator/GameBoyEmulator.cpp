@@ -441,13 +441,13 @@ int main(int argc, char* argv[]) {
 	
 	/**
 	 * Those games finally works after I fixed MBC3(still not fully fixed).
-	 * 
+	 *  
 	 * However, all of the color versions contain this bug:
 	 * all of the chracters are very dark, expect when,
 	 * they get into a cutscene, they're colors become normal
 	 */
     //std::string filename = "Roms/Pokemon - Yellow Version (UE) [C][!].gbc"; // Uses MBC5
-    std::string filename = "Roms/Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc"; // Uses MBC3..
+    //std::string filename = "Roms/Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc"; // Uses MBC3..
     //std::string filename = "Roms/Pokemon TRE Team Rocket Edition (Final).gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon Red (UE) [S][!].gb"; // Uses MBC3
     //std::string filename = "Roms/Pokemon - Blue Version (UE) [S][!].gb"; // Uses MBC3..
@@ -459,7 +459,7 @@ int main(int argc, char* argv[]) {
     
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
     
-    //std::string filename = "Roms/tests/age-test-roms/vram/vram-read-cgbBCE.gb"; // TODO: ?
+    //std::string filename = "Roms/tests/age-test-roms/vram/vram-read-cgbBCE.gb"; // TODO: Not sure what this tests?
     
     // CPU INSTRUCTIONS
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
@@ -480,7 +480,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/01-registers.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/02-len ctr.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/03-trigger.gb"; // TODO;
-    ///std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/05-sweep details.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/06-overflow on trigger.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/07-len sweep period sync.gb"; // TODO;
@@ -510,7 +510,12 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/mem_timing/individual/01-read_timing.gb"; // TODO;
     //std::string filename = "Roms/mem_timing/individual/02-write_timing.gb"; // TODO;
     //std::string filename = "Roms/mem_timing/individual/03-modify_timing.gb"; // TODO;
-    
+	
+	// TODO; Not sure where I fucked up but now it just crashes?
+	// Issue was caused by the more realistic DMA,
+	// though, I think that it is causing more issues,
+	// as I don't have "busy conflict" simulated?
+	// That is what the test is, but unsure..
     //std::string filename = "Roms/tests/bully/bully.gb"; // TODO; DMA bus conflict always reads $FF??
     
     //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // Passed
@@ -521,7 +526,8 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mbc3-tester/mbc3-tester.gb"; // TODO;
     
     // Mooneye
-    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/div_timing.gb"; // Passed
+	// Fix something 10 other things break ;-;
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/div_timing.gb"; // TODO; D is 1 when it needs to be 0?
     
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/bits/mem_oam.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/bits/reg_f.gb"; // Passed I think?
@@ -551,9 +557,15 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tima_reload.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tima_write_reloading.gb"; // TODO;
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tma_write_reloading.gb"; // TODO;
-    
+	
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/div_timing.gb"; // TODO; D is 0 and not 1
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/intr_timing.gb"; // TODO; E is 0 and not 1
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma_restart.gb"; // TODO; Everything crashes? (Infinite loop)
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma_start.gb"; // TODO; FAIL: Round 1 RST $1?
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma_timing.gb"; // TODO; Everything crashes? (Infinite loop)
+	
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank1.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TOOD; It passed but doesn't show up?
+    //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_bank2.gb"; // TODO; It passed but doesn't show up?
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_mode.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/bits_ramg.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/emulator-only/mbc1/multicart_rom_8MB.gb"; // TODO; Wrong bank number
@@ -733,7 +745,7 @@ int main(int argc, char* argv[]) {
      * But to pass bully test rom,
      * 425 doesn't work.. ;-;
      */
-    //int32_t timerDelay = 0;//456 * 2;
+    //int32_t timerDelay = 456 * 2;
     
     /**
      * Forgot to reset the counter,
@@ -826,19 +838,25 @@ int main(int argc, char* argv[]) {
             }
             
             uint16_t cycles = cpu.cycle();
-            
-            //if(!cpu.mmu.bootRomActive) {
-                cpu.mmu.tick(cycles);
-                timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1));
-            //}
+			
+        	if(cpu.stop) {
+        		cpu.stopTimer -= cycles;
+				
+        		if(cpu.stopTimer <= 0) {
+        			cpu.stop = false;
+        		}
+        	}
 			
         	if(cpu.PC == 0x0100) {
         		printf("");
-        		singleStep = true;
+        		//singleStep = true;
         		break;
         	}
-			
-            cpu.mmu.apu.tick(cycles);
+        	
+        	timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1), !cpu.stop);
+        	
+        	cpu.mmu.tick(cycles);
+        	
             ppu->tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
             
             cpu.interruptHandler.IF |= timer.interrupt;
@@ -885,9 +903,14 @@ int main(int argc, char* argv[]) {
     	ImGui::Text(("SP: " + std::to_string(cpu.SP)).c_str());
     	
         ImGui::End();
-        
+		
+    	// TODO; Move this to the APU
         ImGui::Begin("APU");
 			ImGui::Checkbox("Enable audio", &apu.enableAudio);
+    		ImGui::Checkbox("Enable CH1", &apu.enableCh1);
+    		ImGui::Checkbox("Enable CH2", &apu.enableCh2);
+    		ImGui::Checkbox("Enable CH3", &apu.enableCh3);
+    		ImGui::Checkbox("Enable CH4", &apu.enableCh4);
     		
             if(ImGui::TreeNode("Audio output")) {
                 ImGui::Text(("Duty cycles: " + std::to_string(apu.ch1.waveDuty) + " = " + std::to_string(apu.ch1.sequencePointer) + " = " + std::to_string(apu.ch1.currentVolume) + "/" + std::to_string(apu.ch1.initialVolume)).c_str());

@@ -69,6 +69,11 @@ public:
 	// TEST
 	int sampleCounter = 0;
 	
+	bool enableCh1 = true;
+	bool enableCh2 = true;
+	bool enableCh3 = true;
+	bool enableCh4 = true;
+	
 	std::queue<uint8_t> samples;
 	std::vector<uint8_t> newSamples;
 	

@@ -57,6 +57,7 @@ void APU::tick(uint32_t cycles) {
 	 * goes from 1 to 0, therefore at a frequency of 512 Hz
 	 * (regardless of whether double-speed is active).
 	 */
+	
 	ticks += cycles;
 	
 	// 512hz -> 8192 T-Cycles
@@ -76,8 +77,6 @@ void APU::tick(uint32_t cycles) {
 		// Clock sweep ever 2 and 6 steps
 		if(counter == 2 || counter == 6) {
 			ch1.updateSweep();
-			//ch3.updateSweep();
-			//ch4.updateSweep();
 		}
 		
 		// Clock volume envelopes every 7 steps
@@ -134,8 +133,9 @@ uint8_t APU::fetch8(uint16_t address) {
         // NR10 - Channel 1 Sweep
         uint8_t result = 0;
     	
+        result |= (1 << 7);              // Bits 7   - Always set
         result |= (ch1.pace << 4);       // Bits 6-4 - Sweep pace
-        result |= (ch1.direction << 3);  // Bit  3 - Sweep direction
+        result |= (ch1.direction << 3);  // Bit  3   - Sweep direction
         result |= (ch1.individualStep);  // Bits 2-0 - Individual step
     	
         return result;
@@ -143,8 +143,8 @@ uint8_t APU::fetch8(uint16_t address) {
         // NR11 - Channel 1 Length Timer & Duty Cycle
         uint8_t result = 0;
     	
-        result |= (ch1.waveDuty << 6);             // Bits 7-6 - Wave duty
-        result |= (ch1.lengthTimer & 0b00111111);  // Bits 5-0 - Length timer (write-only)
+        result |= (ch1.waveDuty << 6); // Bits 7-6 - Wave duty
+        result |= (0b111111     << 0); // Bits 5-0 - Length timer (write-only)
     	
         return result;
     } else if (address == 0xFF12) {
@@ -163,9 +163,9 @@ uint8_t APU::fetch8(uint16_t address) {
         // NR14 - Channel 1 Period High & Control
         uint8_t result = 0;
     	
-        //result |= (ch1.trigger << 7);            // Bit 7 - Trigger        - Write Only
-        result |= (ch1.lengthEnable << 6);         // Bit 6 - Length enable
-        //result |= (ch1.periodHigh & 0b00000111); // Bits 2-0 - Period high - Write Only
+        result |= (1                << 7); // Bit 7 - Trigger        - Write Only
+        result |= (ch1.lengthEnable << 6); // Bit 6 - Length enable
+        result |= (0b00111111       << 0); // Bits 2-0 - Period high - Write Only
     	
         return result;
     } else if(address == 0xFF15) {
@@ -173,11 +173,11 @@ uint8_t APU::fetch8(uint16_t address) {
     	// I suppose we are supposed to ignore this?
     	return 0xFF;
     } else if(address == 0xFF16) {
-    	// NR1
+    	// NR21
     	uint8_t result = 0;
     	
-    	result |= (ch2.waveDuty << 6);             // Bits 7-6 - Wave duty
-    	result |= (ch2.lengthTimer & 0b00111111);  // Bits 5-0 - Length timer (write-only)
+    	result |= (ch2.waveDuty << 6); // Bits 7-6 - Wave duty
+    	result |= (0b111111     << 0); // Bits 5-0 - Length timer (write-only)
     	
     	return result;
     } else if(address == 0xFF17) {
@@ -196,16 +196,17 @@ uint8_t APU::fetch8(uint16_t address) {
     	// NR24
     	uint8_t result = 0;
     	
-    	result |= (ch2.trigger << 7);             // Bit 7    - Trigger
-    	result |= (ch2.lengthEnable << 6);        // Bit 6    - Length enable
-    	result |= (ch2.periodHigh & 0b00000111);  // Bits 2-0 - Period high
+    	result |= (1                << 7); // Bit 7 - Trigger        - Write Only
+    	result |= (ch2.lengthEnable << 6); // Bit 6 - Length enable
+    	result |= (0b00111111       << 0); // Bits 2-0 - Period high - Write Only
     	
     	return result;
     } else if (address == 0xFF1A) {
         // NR30 - Channel 3 DAC Enable
         uint8_t result = 0;
     	
-        result |= (ch3.DAC << 7);  // Bit 7 - DAC Enable
+        result |= (ch3.DAC   << 7); // Bit 7 - DAC Enable
+    	result |= (0b1111111 << 0); // Bits 6-0 - Always set
     	
         return result;
     } else if (address == 0xFF1B) {
@@ -215,7 +216,9 @@ uint8_t APU::fetch8(uint16_t address) {
         // NR32 - Channel 3 Output Level
         uint8_t result = 0;
     	
-        result |= (ch3.outputLevel << 5);  // Bits 6-5 - Output level
+    	result |= (1               << 7); // Bit  7   - Always set 
+        result |= (ch3.outputLevel << 5); // Bits 6-5 - Output level
+		result |= (0b11111         << 0); // Bits 0-4 - Always set
     	
         return result;
     } else if (address == 0xFF1D) {
@@ -224,10 +227,12 @@ uint8_t APU::fetch8(uint16_t address) {
     } else if (address == 0xFF1E) {
         // NR34 - Channel 3 Period High & Control
         uint8_t result = 0;
-    	
-        result |= (ch3.trigger << 7);             // Bit 7    - Trigger
-        result |= (ch3.lengthEnable << 6);        // Bit 6    - Length enable
-        result |= (ch3.periodHigh & 0b00000111);  // Bits 2-0 - Period high
+		
+    	// 0b10111111 - 191
+        result |= (1                << 7); // Bit 7    - Trigger
+        result |= (ch3.lengthEnable << 6); // Bit 6    - Length enable
+    	result |= (0b111            << 3); // Bits 3-6 - Always set      
+        result |= (0b111            << 0); // Bits 2-0 - Period high
     	
         return result;
     } else if (address >= 0xFF30 && address <= 0xFF3F) {
@@ -235,23 +240,29 @@ uint8_t APU::fetch8(uint16_t address) {
         return ch3.waveform[address - 0xFF30];
     } else if (address == 0xFF20) {
         // NR41 - Channel 4 Length Timer (Write-only)
-        return ch4.lengthTimer;
+        return 0xFF;
     } else if (address == 0xFF21) {
         // NR42 - Channel 4 Volume Envelope
         uint8_t result = 0;
     	
-        result |= (ch4.initialVolume << 4);      // Bits 7-4 - Initial volume
-        result |= (ch4.envDir << 3);             // Bit 3    - Envelope direction
-        result |= (ch4.sweepPace & 0b00000111);  // Bits 2-0 - Sweep pace
+        result |= (ch4.initialVolume << 4); // Bits 7-4 - Initial volume
+        result |= (ch4.envDir        << 3); // Bit  3   - Envelope direction
+        result |= (ch4.sweepPace     << 0); // Bits 2-0 - Sweep pace
     	
         return result;
     } else if (address == 0xFF22) {
         // NR43 - Channel 4 Frequency & Polynomial Counter
         // TODO; I'm going to cry
-        return 0xFF;
+        return 0;
     } else if (address == 0xFF23) {
         // NR44 - Channel 4 Control - write-only(I think)
-        return 0xFF;
+        uint8_t result = 0;
+		
+    	result |= (1 << 7);                // Bit  7    - Always set
+    	result |= (ch4.lengthEnable << 6); // Bit  6    - Length enable
+    	result |= (0b111111 << 0);         // Bits 5-0 - Always set
+    	
+    	return result;
     }
 	
     return 0xFF;
@@ -279,7 +290,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		enabled = check_bit(data, 7);
 		
 		// Apparently this is ready-only:
-		// CHn on? (Read-only): Each of these four bits allows checking whether channels are active2.
+		// CHn on? (Read-only): Each of these four bits allows checking whether channels are active.
 		// Writing to those does not enable or disable the channels, despite many emulators behaving as if.
 		
 		// Bit 3 - CH4 on?
@@ -305,10 +316,6 @@ void APU::write8(uint16_t address, uint8_t data) {
 			vinRight = false;
 			leftVolume = 0;
 			rightVolume = 0;
-			
-			// TODO; Clear WRAM?
-			/*for(auto& i : ch3.waveform)
-				i = 0;*/
 		}
 	} else if(address == 0xFF25) {
 		// 	https://gbdev.io/pandocs/Audio_Registers.html#ff25--nr51-sound-panning
@@ -387,7 +394,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * This is a write only!
 		 * https://gbdev.io/pandocs/Audio.html#length-timer
 		*/
-		ch1.lengthTimer = data & 0b00111111;
+		ch1.initalLength = data & 0b00111111;
 	} else if(address == 0xFF12) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff12--nr12-channel-1-volume--envelope
 		
@@ -462,7 +469,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * This is a write only!
 		 * https://gbdev.io/pandocs/Audio.html#length-timer
 		*/
-		ch2.lengthTimer = data & 0b00111111;
+		ch2.initalLength = data & 0b00111111;
 	} else if(address == 0xFF17) {
 		// NR22, exact same behaviour as NR12 but for CH2.
 		
@@ -529,7 +536,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff1b--nr31-channel-3-length-timer-write-only
 		
 		// Bit 7 through 0 - Initial length timer
-		ch3.lengthTimer = data;
+		ch3.initalLength = data;
 	} else if(address == 0xFF1C) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff1b--nr31-channel-3-length-timer-write-only
 		
@@ -558,7 +565,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff20--nr41-channel-4-length-timer-write-only
 		
 		// Bit 5 through 0 - Initial timer
-		ch4.lengthTimer = data & 0b00111111;
+		ch4.initialTimer = data & 0b00111111;
 	} else if(address == 0xFF21) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff21--nr42-channel-4-volume--envelope
 		
@@ -595,7 +602,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		ch4.lsfrWidth = check_bit(data, 3);
 		
 		// Bit 2, 1 and 0 - Clock divider
-		ch4. clockDivider = data & 0b00000111;
+		ch4.clockDivider = data & 0b00000111;
 	} else if(address == 0xFF23) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff23--nr44-channel-4-control
 		
@@ -604,6 +611,8 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 6 - Length enable - W/R
 		ch4.lengthEnable = check_bit(data, 6);
+	} else if(address == 0xFF1F) {
+		// Unused
 	} else {
 		printf("Unknown APU address: %x\n", address);
 		std::cerr << "";
@@ -633,27 +642,36 @@ void APU::fill_audio(void* udata, Uint8* stream, int len) {
 		uint8_t ch4 = 0;
 		
 		for(int j = 0; j <= sampleRate; j++) {
+			apu->tick(4);
+			
+			// TODO; Ensure those are mapped to [0, 1.0] instead
 			ch1 = apu->ch1.sample(1);
 			ch2 = apu->ch2.sample(1);
 			ch3 = apu->ch3.sample(1);
 			ch4 = apu->ch4.sample(1);
 		}
 		
+		// Ik this is scuffy
+		if(!apu->enableCh1) ch1 = 0;
+		if(!apu->enableCh2) ch2 = 0;
+		if(!apu->enableCh3) ch3 = 0;
+		if(!apu->enableCh4) ch4 = 0;
+		
 		// TODO; What is vin left/right?
 		
-		if(!apu->enableAudio) {
+		if(!apu->enableAudio || !apu->enabled) {
 			continue;
 		}
 		
- 		out[i + 0] = apu->enabled ?
+ 		out[i + 0] = 
 			(((ch1 * apu->ch1.left )  + (ch2 * apu->ch2.left))) +
 			(((ch3 * apu->ch3.left )  + (ch4 * apu->ch4.left)))
-			+ (apu->leftVolume  + 1) : 0;
+			+ (apu->leftVolume  + 1) / 4;
 		
-		out[i + 1] = apu->enabled ?
+		out[i + 1] =
 			(((ch1 * apu->ch1.right) + (ch2 * apu->ch2.right))) +
 			(((ch3 * apu->ch3.right) + (ch4 * apu->ch4.right)))
-			+ (apu->rightVolume + 1) : 0;
+			+ (apu->rightVolume + 1) / 4;
 		
 		apu->newSamples[x++] = out[i] * 10;
 	}

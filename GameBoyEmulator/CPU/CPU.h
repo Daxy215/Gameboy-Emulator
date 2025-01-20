@@ -319,7 +319,9 @@ public:
 public:
     bool halted = false;
     bool hatlBug = false;
+    
     bool stop = false;
+    int16_t stopTimer = 0;
     
     int8_t ei = -1;
     

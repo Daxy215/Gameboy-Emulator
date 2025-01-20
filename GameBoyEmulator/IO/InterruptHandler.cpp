@@ -13,12 +13,6 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		if(IME && cpu.hatlBug)
 			cpu.hatlBug = false;
 		
-		/*std::cerr << "PC: " << std::hex << cpu.PC 
-		  << " IME: " << std::hex << cpu.interruptHandler.IME
-		  << " IF: " << std::hex << (int)cpu.interruptHandler.IF 
-		  << " IE: " << std::hex << (int)cpu.interruptHandler.IE 
-		  << " halted: " << cpu.halted << '\n';*/
-		
 		if(cpu.halted) {
 			// TODO; Halt bug
 			if(!IME && interrupt) {
@@ -54,13 +48,8 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		IF &= ~interrupt;
 		cpu.halted = false;
 		
-		/**
-		 * I just want to say I spent a few hours,
-		 * debugging why my emulator has some missing cycles.
-		 * 
-		 * I somehow calculate 4 * 4 = 12 :)
-		 */
-		return 16;
+		// The entire process lasts 5 M-cycles.
+		return 5 * 4;
 	}
 	
 	return 0;

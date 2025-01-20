@@ -5,7 +5,7 @@
 
 class Timer {
 public:
-	void tick(uint16_t cycles);
+	void tick(uint16_t cycles, bool tickDiv = true);
 	
 	uint8_t fetch8(uint16_t address);
 	void write8(uint16_t address, uint8_t data);
@@ -21,7 +21,7 @@ private:
 	 * should be 0xAD for DMG.
 	 */
 	uint8_t divider = 0xAD;
-	uint8_t counter = 0;
+	uint16_t counter = 0;
 	uint8_t modulo = 0;
 	uint8_t control = 0;
 	

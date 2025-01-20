@@ -26,8 +26,12 @@ struct NoiseChanel {
 		trigger = false;
 		
 		// When the length timer reaches 64 (CH1, CH2, and CH4) the channel is turned off.
-		if (lengthTimer >= 64) {
+		// If length timer expired it is reset.
+		/*if (lengthTimer >= 64) {
 			lengthTimer = 0;
+		}*/
+		if (lengthEnable) {
+			lengthTimer = 64 - initialTimer;
 		}
 		
 		/*sweepFrequency = (periodHigh << 8) | periodLow;
@@ -49,9 +53,9 @@ struct NoiseChanel {
 	 */
 	void updateCounter() {
 		if (lengthEnable) {
-			lengthTimer++;
+			lengthTimer--;
 			
-			if(lengthTimer >= 64) {
+			if(lengthTimer <= 0) {
 				enabled = false;
 			}
 		}
@@ -81,7 +85,8 @@ struct NoiseChanel {
 	}
 	
 	// NR41
-	uint8_t lengthTimer = 0;
+	uint8_t initialTimer = 0;
+	int8_t lengthTimer = 0;
 	
 	// NR42
 	uint8_t initialVolume = 0;

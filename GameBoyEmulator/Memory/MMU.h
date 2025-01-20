@@ -19,23 +19,80 @@ class OAM;
 
 class APU;
 
-struct DMA {
-    void activate(uint16_t source) {
-        this->source = source;
-        
-        // 160 M cycles - 640 T cycles
-        remainingCycles = 640;
-        
-        active = true;
-    }
-    
-    uint16_t source = 0;
-    uint32_t remainingCycles = 0;
-    
-    bool active = false;
-};
-
 class MMU {
+public:
+    /**
+     * TODO; If a DMA transfer already is active,
+     * some roms still send another transfer?
+     * Maybe it isn't meant to reset but rather to,
+     * process them all?
+     */
+    struct DMA {
+        void process(MMU& mmu, uint32_t cycles) {
+            if(active) {
+                // DMA has a 4 T-Cycles initial delay
+                if(initialDelay > 0) {
+                    initialDelay -= cycles;
+                
+                    // Ik scummy way of doing this
+                    if(initialDelay <= 0) {
+                        cycles -= 4;
+                    } else {
+                        return;
+                    }
+                }
+            
+                remainingCycles -= cycles;
+                ticks += cycles;
+            
+                // Transfer every 4 T-Cycles
+                uint8_t transfersToProcess = cycles / 4;
+            
+                while(transfersToProcess-- > 0) {
+                    uint8_t val = mmu.fetch8(source + index);
+                    mmu.write8(0xFE00 + index, val);
+                    
+                    index++;
+                }
+            
+                // Disable after 644 T-Cycles
+                if(remainingCycles <= 0) {
+                    //assert(ticks == 640);
+                    //assert(dma.index == 160);
+                
+                    active = false;
+                    index = 0;
+                
+                    ticks = 0;
+                }
+            }
+        }
+    
+        void activate(uint16_t source) {
+            this->source = source;
+        
+            // Transfers 4 bytes every 4 T-cycles
+            remainingCycles = 640;
+        
+            // DMA has 4 T-Cycles delay
+            initialDelay = 4;
+        
+            index = 0;
+        
+            active = true;
+        }
+    
+        uint16_t source = 0;
+        uint16_t index = 0;
+        uint32_t remainingCycles = 0;
+        int8_t initialDelay = 0;
+    
+        // Used for testing
+        uint32_t ticks = 0;
+    
+        bool active = false;
+    };
+    
 public:
     MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC& mbc, WRAM& wram,
         HRAM& hram, VRAM& vram, LCDC& lcdc, Timer& timer, OAM& oam, PPU& ppu, APU& apu,
@@ -121,7 +178,8 @@ public:
     OAM& oam;
     
 public:
-    DMA dma;
+    //DMA dma;
+    std::vector<DMA> dmas;
     
 public:
     PPU& ppu;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <cstdint>
 #include <vector>
 
@@ -14,17 +15,59 @@ struct WaveChannel {
 		
 		// TODO; What is DAC?
 		
-		if(!enabled || !DAC)
+		if(!enabled/* || !DAC*/)
 			return 0;
 		
-		return 0;
+		ticks += cycles;
 		
-		/*
-		float smapleRate = 1.0f / sweepFrequency;
-		uint8_t samplePos = (uint8_t)(cycles / smapleRate) % waveform.size();
+		while(ticks >= period) {
+			ticks = 0;
+			
+			period          = (2048 - sweepFrequency) * 4;
+			sequencePointer = (sequencePointer + 1) % 32;
+		}
 		
-		uint8_t sample = waveform[samplePos] % 0xF;
-		return (sample / 15.0f);*/
+		uint8_t sampleIndex = sequencePointer / 2;
+		uint8_t wave = waveform[sampleIndex];
+		uint8_t sample;
+		
+		if (sequencePointer % 2 == 0) {
+			// Upper nibble
+			sample = (wave >> 4) & 0x0F;
+		} else {
+			// Lower nibble
+			sample = wave & 0x0F;
+		}
+		
+		/**
+		 * 0  - Mute
+		 * 01 - 100% Volume (Normal use of WAVE Ram)
+		 * 10 -  50% Volume (Shifts samples read from WAVE Ram right once)
+		 * 11 -  25% Volume (Shifts samples read from WAVE Ram right twice)
+		 */
+		switch(outputLevel) {
+			case 0: {
+				sample = 0;
+				break;
+			}
+			case 1: {
+				break;
+			}
+			case 2: {
+				sample = sample >> 1;
+				break;
+			}
+			case 3: {
+				sample = sample >> 2;
+				break;
+			}
+			default: {
+				assert(false);
+				break;
+			}
+		}
+		
+		return ((sample) & 0x0F);
 	}
 	
 	void updateTrigger() {
@@ -32,46 +75,18 @@ struct WaveChannel {
 		trigger = false;
 		
 		// When the length timer reaches 256 (CH3), the channel is turned off.
-		if (lengthTimer >= 256) {
+		// If the length timer expired it is reset.
+		/*if (lengthTimer >= 256) {
 			lengthTimer = 0;
+		}*/
+		if (lengthEnable) {
+			lengthTimer = 256 - initalLength;
 		}
 		
 		sweepFrequency = (periodHigh << 8) | periodLow;
-		//period = (2048 - sweepFrequency) * 4;
+		sequencePointer = 0;
 		
-		/*currentVolume = initialVolume;
-		envelopeCounter = sweepPace;
-		
-		if(envelopeCounter == 0)
-			envelopeCounter = 8;
-		
-		sequencePointer = 0;*/
-	}
-	
-	void updateSweep() {
-		/*if (sweepPace != 0) {
-			sweepCounter--;
-			
-			if(sweepCounter <= 0) {
-				sweepCounter = sweepPace;
-        		
-				if (direction) {
-					sweepFrequency += individualStep;
-            		
-					if (sweepFrequency == 2047) {
-						enabled = false;
-					}
-				} else {
-					sweepFrequency -= individualStep;
-            		
-					if (sweepFrequency == 0) {
-						enabled = false;
-					}
-				}
-				
-				sweepFrequency &= 2047;
-			}
-		}*/
+		period = (2048 - sweepFrequency) * 4;
 	}
 	
 	/**
@@ -81,9 +96,9 @@ struct WaveChannel {
 	 */
 	void updateCounter() {
 		if (lengthEnable) {
-			lengthTimer++;
+			lengthTimer--;
 			
-			if(lengthTimer >= 256) {
+			if(lengthTimer <= 0) {
 				enabled = false;
 			}
 		}
@@ -94,7 +109,7 @@ struct WaveChannel {
 		DAC = false;
 		
 		// NR31
-		lengthTimer = 0;
+		//lengthTimer = 0;
 		
 		// NR32
 		outputLevel = 0;
@@ -112,6 +127,8 @@ struct WaveChannel {
 		right = false;
 		
 		sweepFrequency = (periodHigh << 8) | periodLow;
+		period          = (2048 - sweepFrequency) * 4;
+		sequencePointer = 1;
 		
 		// TODO; Clear waveform?
 	}
@@ -120,6 +137,7 @@ struct WaveChannel {
 	bool DAC = false;
 	
 	// NR31
+	uint16_t initalLength = 0;
 	uint16_t lengthTimer = 0;
 	
 	// NR 32
@@ -140,6 +158,10 @@ struct WaveChannel {
 	uint8_t periodHigh = 0;
 	
 	uint16_t sweepFrequency = 0;
+	
+	uint32_t period = 0;
+	uint8_t sequencePointer = 0;
+	uint32_t ticks = 0;
 	
 	bool enabled = false;
 	bool left = false;

@@ -47,12 +47,16 @@ void MBC1::write8(uint16_t address, uint8_t data) {
 	if(address <= 0x1FFF) {
 		ramEnabled = (data & 0xF) == 0xA;
 	} else if(address <= 0x3FFF) {
+		// Those aren't supported for MBC1
+		if (data == 0x20) { curRomBank = data + 1; return; }
+		if (data == 0x40) { curRomBank = data + 1; return; }
+		if (data == 0x60) { curRomBank = data + 1; return; }
+		
 		uint8_t lowerBits = (data & 0x1F);
 		
-		if(lowerBits == 0)
-			lowerBits = 1;
+		if(lowerBits == 0) lowerBits = 1;
 		
-		curRomBank = ((curRomBank & 0x60) | lowerBits) % romBanks;
+		curRomBank = ((curRomBank & 0x60) | (lowerBits)) % romBanks;
 	} else if(address >= 0x4000 && address <= 0x5FFF) {
 		if(romBanks > 0x20) {
 			uint16_t upperBits = (data & 0x03) % (romBanks >> 5);

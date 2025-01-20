@@ -39,7 +39,9 @@ struct PulseChannel {
 		
 		uint8_t isHigh = dutyCycles[waveDuty][sequencePointer];
 		
-		return (isHigh * (currentVolume))/* * enabled*/;
+		// TODO; Convert to a value between [-1.0, 1.0]
+		uint8_t output = (isHigh * (currentVolume));
+		return output;
     }
 	
     void updateTrigger() {
@@ -47,46 +49,42 @@ struct PulseChannel {
 		trigger = false;
 		
 		// When the length timer reaches 64 (CH1, CH2, and CH4) the channel is turned off.
-        if (lengthTimer >= 64) {
-            lengthTimer = 0;
+		// If length timer expired it is reset.
+        if (lengthEnable) {
+            lengthTimer = 64 - initalLength;
         }
 		
 		sweepFrequency = (periodHigh << 8) | periodLow;
-		//period = (2048 - sweepFrequency) * 4;
+		period = (2048 - sweepFrequency) * 4;
 		
         currentVolume = initialVolume;
         envelopeCounter = sweepPace;
 		
-		if(envelopeCounter == 0)
-			envelopeCounter = 8;
-		
-        sequencePointer = 0;
+		// If the individual step is non-zero,
+		// frequency calculation and overflow check are performed immediately.
+		//updateSweep();
     }
 	
     void updateSweep() {
-        if (sweepPace != 0) {
-        	sweepCounter--;
+	    if(sweepCounter <= 0) {
+		    sweepCounter = sweepPace;
 			
-        	if(sweepCounter <= 0) {
-        		sweepCounter = sweepPace;
-        		
-        		if (direction) {
-        			sweepFrequency += individualStep;
-            		
-        			if (sweepFrequency == 2047) {
-        				enabled = false;
-        			}
-        		} else {
-        			sweepFrequency -= individualStep;
-            		
-        			if (sweepFrequency == 0) {
-        				enabled = false;
-        			}
-        		}
+		    if(direction) {
+			    sweepFrequency += individualStep;
 				
-        		sweepFrequency &= 2047;
-        	}
-        }
+			    if(sweepFrequency >= 2047) {
+				    enabled = false;
+			    }
+		    } else {
+			    sweepFrequency -= individualStep;
+				
+			    if(sweepFrequency <= 0) {
+				    enabled = false;
+			    }
+		    }
+	    } else {
+		    sweepCounter--;
+	    }
     }
 	
     void updateEnvelope() {
@@ -98,9 +96,6 @@ struct PulseChannel {
             }
         	
             envelopeCounter = sweepPace;
-        	
-        	if(envelopeCounter == 0)
-        		envelopeCounter = 8;
         } else if (sweepPace > 0) {
             envelopeCounter--;
         }
@@ -113,9 +108,9 @@ struct PulseChannel {
 	 */
 	void updateCounter() {
         if (lengthEnable) {
-            lengthTimer++;
+            lengthTimer--;
 			
-        	if(lengthTimer >= 64) {
+        	if(lengthTimer <= 0) {
         		enabled = false;
         	}
         }
@@ -149,6 +144,11 @@ struct PulseChannel {
 		right = false;
 		
 		sweepFrequency = (periodHigh << 8) | periodLow;
+		period          = (2048 - sweepFrequency) * 4;
+		
+		//  Except for pulse channels, whose phase position is only ever reset by turning the APU off.
+		//  This is usually not noticeable unless changing the duty cycle mid-note.
+		sequencePointer = 0;
 	}
 	
 	// NR10
@@ -158,6 +158,7 @@ struct PulseChannel {
 	
 	// NR11
 	uint8_t waveDuty = 0;
+	uint8_t initalLength = 0;
 	int8_t lengthTimer = 0;
 	
 	// NR12
@@ -180,7 +181,7 @@ struct PulseChannel {
 	
 	uint32_t period = 0;
 	
-	uint8_t sweepCounter = 0;
+	int8_t sweepCounter = 0;
 	uint16_t sweepFrequency = 0;
 	
 	bool enabled = false;

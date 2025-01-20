@@ -37,21 +37,19 @@ MMU::MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC
     bootRomActive = (Cartridge::mode == DMG);
 }
 
+// TODO; Remove
+int16_t ticks = 0;
+
 void MMU::tick(uint32_t cycles) {
-    //joypad.checkForInterrupts();
+    //apu.tick(cycles);
     
-    /*if(dma.active) {
-        dma.remainingCycles -= cycles;
+    for(int i = 0; i < dmas.size(); i++) {
+        dmas[i].process(*this, cycles * (doubleSpeed ? 2 : 1));
         
-        if(dma.remainingCycles <= 0) {
-            dma.active = false;
-            
-            for(uint16_t i = 0; i < 160; i++) {
-                uint8_t val = fetch8(dma.source + i);
-                write8(0xFE00 + i, val);
-            }
+        if(!dmas[i].active) {
+            dmas.erase(dmas.begin() + i);
         }
-    }*/
+    }
     
     // HDMA
     // TODO; Check if this correct
@@ -105,6 +103,10 @@ uint8_t MMU::fetch8(uint16_t address) {
      * https://gbdev.io/pandocs/Memory_Map.html
      */
     
+    if(address >= 0xFF30 && address <= 0xFF3F) {
+        printf("");
+    }
+    
     if(bootRomActive && address < 0x100) {
         return bootRom[address];
     }
@@ -114,6 +116,12 @@ uint8_t MMU::fetch8(uint16_t address) {
     }*/
     
     if(address <= 0x7FFF) {
+        /*if(dma.active) {
+            // DMA Conflict
+            uint8_t val = fetch8(dma.source + dma.index);
+            return val;
+        }*/
+        
         return mbc.read(address);
     } else if(address >= 0x8000 && address <= 0x9FFF) {
         return vram.fetch8(address/* - 0x8000*/);
@@ -245,7 +253,7 @@ uint16_t MMU::fetch16(uint16_t address) {
 }
 
 void MMU::write8(uint16_t address, uint8_t data) {
-    if(address == 65429) {
+    if(address >= 0xFF30 && address <= 0xFF3F) {
         printf("");
     }
     
@@ -371,20 +379,24 @@ void MMU::writeIO(uint16_t address, uint8_t data) {
         } else if(address == 0xFF46) {
             // TODO;
             /*if(cpu.halt) {
-                // NOT ALLOWED!
+                // TODO; NOT ALLOWED?
             }*/
             
             //  $FF46	DMA	OAM DMA source address & start
             lastDma = data;
             
-            //dma.activate(static_cast<uint16_t>(data) << 8);
+            // TODO; Please don't use pointers
+            // but im currently too lazy
+            DMA dma;
+            dma.activate(static_cast<uint16_t>(data << 8));
+            dmas.push_back(dma);
             
-            uint16_t u16 = static_cast<uint16_t>(data) << 8;
+            /*uint16_t u16 = static_cast<uint16_t>(data << 8);
             
             for(uint16_t i = 0; i < 160; i++) {
                 uint8_t val = fetch8(u16 + i);
                 write8(0xFE00 + i, val);
-            }
+            }*/
         } else if(address >= 0xFF47 && address <= 0xFF49) {
             // https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
             // https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data

@@ -345,9 +345,26 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * - - - -
 			 */
 			
+        	/*
+        	 * The CPU stops for 2050 M-cycles (= 8200 T-cycles)
+        	 * after the stop instruction is executed.
+        	 * During this time, the CPU is in a strange state.
+        	 * DIV does not tick, so some audio events are not processed.
+        	 * Additionally, VRAM/OAM/… locking is “frozen”,
+        	 * yielding different results depending on the PPU mode it’s started in:
+        	 * 
+             * HBlank / VBlank (Mode 0 / Mode 1): The PPU cannot access any video memory, and produces black pixels
+             * OAM scan (Mode 2): The PPU can access VRAM just fine, but not OAM, leading to rendering background, but not objects (sprites)
+             * Rendering (Mode 3): The PPU can access everything correctly, and so rendering is not affected
+        	 */
+        	stop = true;
+        	stopTimer = 8200;
+			
         	// https://gbdev.io/pandocs/CGB_Registers.html#ff4d--key1-cgb-mode-only-prepare-speed-switch
         	mmu.switchSpeed();
-			//stop = true;
+        	
+        	// Timer is reset to 0, when STOP is executed
+        	mmu.write8(0xFF04, 0);
         	
         	return 4;
         }
@@ -1999,8 +2016,13 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
 			 * Z 1 H C
 			 */
 			
+        	uint16_t ad = HL.get();
         	uint8_t val = mmu.fetch8(HL.get());
         	uint8_t result = AF.A - val;
+			
+        	if(result != 0) {
+        		printf("");
+        	}
         	
         	AF.setZero(result == 0);
         	AF.setSubtract(true);

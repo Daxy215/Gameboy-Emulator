@@ -11,8 +11,8 @@
 #include "../Memory/MMU.h"
 #include "../Utility/Bitwise.h"
 
-constexpr int WIDTH = 160 * 4;
-constexpr int HEIGHT = 144 * 4;
+constexpr int WIDTH = 160;
+constexpr int HEIGHT = 144;
 
 PPU::PPUMode PPU::mode = PPU::HBlank;
 
@@ -632,9 +632,9 @@ void PPU::createWindow() {
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL/* | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI*/);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     window = SDL_CreateWindow("Game Boy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        WIDTH * 2, 940, window_flags);
+        WIDTH * 6, HEIGHT * 6, window_flags);
     
     if (window == nullptr) {
         std::cerr << "Window could not be created SDL_Error: " << SDL_GetError() << '\n';
@@ -681,7 +681,7 @@ void PPU::createWindow() {
 }
 
 void PPU::updatePixel(uint32_t x, uint32_t y, uint32_t color) {
-	float scale = 4;
+	float scale = 1;
 	
 	int startX = static_cast<int>(x * scale);
 	int startY = static_cast<int>(y * scale);
