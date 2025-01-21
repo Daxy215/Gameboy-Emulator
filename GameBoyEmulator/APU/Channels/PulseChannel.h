@@ -62,7 +62,7 @@ struct PulseChannel {
 		
 		// If the individual step is non-zero,
 		// frequency calculation and overflow check are performed immediately.
-		//updateSweep();
+		updateSweep();
     }
 	
     void updateSweep() {

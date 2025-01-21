@@ -487,7 +487,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/08-len ctr during power.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/09-wave read while on.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/10-wave trigger while on.gb"; // TODO;
-    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/11-regs after power.gb"; // TODO;
+    std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/11-regs after power.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/12-wave write while on.gb"; // TODO;
     
     //std::string filename = "Roms/halt_bug.gb"; // TODO;
@@ -514,8 +514,10 @@ int main(int argc, char* argv[]) {
 	// TODO; Not sure where I fucked up but now it just crashes?
 	// Issue was caused by the more realistic DMA,
 	// though, I think that it is causing more issues,
-	// as I don't have "busy conflict" simulated?
+	// as I don't have "bus conflict" simulated?
 	// That is what the test is, but unsure..
+	// 
+	// Yeah, emulating "bus conflict" seems to fix it? (I think?)
     //std::string filename = "Roms/tests/bully/bully.gb"; // TODO; DMA bus conflict always reads $FF??
     
     //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // Passed
@@ -561,6 +563,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/div_timing.gb"; // TODO; D is 0 and not 1
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/intr_timing.gb"; // TODO; E is 0 and not 1
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma_restart.gb"; // TODO; Everything crashes? (Infinite loop)
+	// TODO; Now this is stuck at an infinite loop as well..
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma_start.gb"; // TODO; FAIL: Round 1 RST $1?
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma_timing.gb"; // TODO; Everything crashes? (Infinite loop)
 	

@@ -97,7 +97,7 @@ void MMU::tick(uint32_t cycles) {
     }
 }
 
-uint8_t MMU::fetch8(uint16_t address) {
+uint8_t MMU::fetch8(uint16_t address, bool isDma) {
     /**
      * Information of memory map is taken from;
      * https://gbdev.io/pandocs/Memory_Map.html
@@ -116,28 +116,79 @@ uint8_t MMU::fetch8(uint16_t address) {
     }*/
     
     if(address <= 0x7FFF) {
-        /*if(dma.active) {
+        auto dma = isWithinRange(0, 0x7FFF, dmas);
+        
+        if(!isDma && dma.active) {
             // DMA Conflict
-            uint8_t val = fetch8(dma.source + dma.index);
+            uint8_t val = fetch8(dma.source + dma.index, true);
             return val;
-        }*/
+        }
         
         return mbc.read(address);
     } else if(address >= 0x8000 && address <= 0x9FFF) {
         return vram.fetch8(address/* - 0x8000*/);
     } else if (address >= 0xA000 && address <= 0xBFFF) {
+        auto dma = isWithinRange(0xA000, 0xBFFF, dmas);
+        
+        if(!isDma && dma.active) {
+            // DMA Conflict
+            uint8_t val = fetch8(dma.source + dma.index, true);
+            return val;
+        }
+        
         return mbc.read(address);
     } else if(address >= 0xC000 && address <= 0xCFFF) {
+        auto dma = isWithinRange(0xC000, 0xCFFF, dmas);
+        
+        if(!isDma && dma.active) {
+            // DMA Conflict
+            uint8_t val = fetch8(dma.source + dma.index, true);
+            return val;
+        }
+        
         return wram.fetch8(address - 0xC000);
     } else if(address >= 0xD000 && address <= 0xDFFF) {
+        auto dma = isWithinRange(0xD000, 0xDFFF, dmas);
+        
+        if(!isDma && dma.active) {
+            // DMA Conflict
+            uint8_t val = fetch8(dma.source + dma.index, true);
+            return val;
+        }
+        
         return wram.fetch8((wramBank * 0x1000) | (address & 0x0FFF));
     } else if(address >= 0xE000 && address <= 0xFDFF) {
+        auto dma = isWithinRange(0xE000, 0xFDFF, dmas);
+        
+        if(!isDma && dma.active) {
+            // DMA Conflict
+            uint8_t val = fetch8(dma.source + dma.index, true);
+            return val;
+        }
+        
         return wram.fetch8(address & 0x0FFF);
     } else if(address >= 0xFE00 && address <= 0xFE9F) {
+        auto dma = isWithinRange(0xFE00, 0xFE9F, dmas);
+        
+        if(!isDma && dma.active) {
+            // DMA Conflict
+            uint8_t val = fetch8(dma.source + dma.index, true);
+            return val;
+        }
+        
         return oam.fetch8(address);
     } else if(address >= 0xFEA0 && address <= 0xFEFF) {
         // Not usable
     } else if(address >= 0xFF00 && address <= 0xFF7F) {
+        /*auto dma = isWithinRange(0xFE00, 0xFF7F, dmas);
+        
+        if(!isDma && dma.active) {
+            //assert(false);
+            // DMA Conflict
+            uint8_t val = fetch8(dma.source + dma.index, true);
+            return val;
+        }*/
+        
         return fetchIO(address);
     } else if(address >= 0xFF80 && address <= 0xFFFE) {
         return hram.fetch8(address & 0x007F);
@@ -151,7 +202,7 @@ uint8_t MMU::fetch8(uint16_t address) {
     return 0xFF;
 }
 
-uint8_t MMU::fetchIO(uint16_t address) {
+uint8_t MMU::fetchIO(uint16_t address, bool isDma) {
     if(address == 0xFF00) {
         return joypad.fetch8(address);
     } else if(address >= 0xFF01 && address <= 0xFF02) {
@@ -252,7 +303,7 @@ uint16_t MMU::fetch16(uint16_t address) {
     return static_cast<uint16_t>(fetch8(address)) | (static_cast<uint16_t>(fetch8(address + 1) << 8));
 }
 
-void MMU::write8(uint16_t address, uint8_t data) {
+void MMU::write8(uint16_t address, uint8_t data, bool isDma) {
     if(address >= 0xFF30 && address <= 0xFF3F) {
         printf("");
     }
@@ -285,7 +336,7 @@ void MMU::write8(uint16_t address, uint8_t data) {
     }
 }
 
-void MMU::writeIO(uint16_t address, uint8_t data) {
+void MMU::writeIO(uint16_t address, uint8_t data, bool isDma) {
     // https://gbdev.io/pandocs/Hardware_Reg_List.html
     
      if(address == 0xFF00) {

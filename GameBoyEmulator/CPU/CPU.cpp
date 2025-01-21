@@ -6599,17 +6599,31 @@ void CPU::sra(uint8_t& reg) {
 }
 
 void CPU::pushToStack(uint16_t value) {
+	/*SP--;
+	mmu.write8(SP, (value >> 8));
+	SP--;
+	mmu.write8(SP, static_cast<uint8_t>(value));*/
 	SP--;
 	mmu.write8(SP, (value >> 8));
+	
 	SP--;
 	mmu.write8(SP, static_cast<uint8_t>(value));
 	
-	/*mmu.write8(--SP, value & 0xFF);
-    mmu.write8(--SP, (value >> 8) & 0xFF);
-    */
-    
-	/*SP -= 2;
-    mmu.write16(SP, value);*/
+	// This isn't affected by Color version
+	if(Cartridge::mode != DMG)
+		return;
+	
+	if (SP >= 0xFE00 && SP < 0xFF00) {
+		printf("");
+	}
+	
+	if (value >= 0xFE00 && value < 0xFF00) {
+		printf("");
+	}
+	
+	if (PC >= 0xFE00 && PC < 0xFF00) {
+		printf("");
+	}
 }
 
 uint16_t CPU::popStack() {

@@ -27,13 +27,17 @@ public:
      * Maybe it isn't meant to reset but rather to,
      * process them all?
      */
-    struct DMA {
+    class DMA {
+    public:
+        DMA() = default;
+        DMA(bool active) : active(active) {}
+        
         void process(MMU& mmu, uint32_t cycles) {
             if(active) {
                 // DMA has a 4 T-Cycles initial delay
                 if(initialDelay > 0) {
                     initialDelay -= cycles;
-                
+                    
                     // Ik scummy way of doing this
                     if(initialDelay <= 0) {
                         cycles -= 4;
@@ -41,56 +45,67 @@ public:
                         return;
                     }
                 }
-            
+                
                 remainingCycles -= cycles;
                 ticks += cycles;
-            
+                
                 // Transfer every 4 T-Cycles
                 uint8_t transfersToProcess = cycles / 4;
-            
+                
                 while(transfersToProcess-- > 0) {
-                    uint8_t val = mmu.fetch8(source + index);
-                    mmu.write8(0xFE00 + index, val);
+                    uint8_t val = mmu.fetch8(source + index, true);
+                    mmu.write8(0xFE00 + index, val, true);
                     
                     index++;
                 }
-            
+                
                 // Disable after 644 T-Cycles
                 if(remainingCycles <= 0) {
                     //assert(ticks == 640);
                     //assert(dma.index == 160);
-                
+                    
                     active = false;
                     index = 0;
-                
+                    
                     ticks = 0;
                 }
             }
         }
-    
+        
         void activate(uint16_t source) {
             this->source = source;
-        
+            
             // Transfers 4 bytes every 4 T-cycles
             remainingCycles = 640;
-        
+            
             // DMA has 4 T-Cycles delay
             initialDelay = 4;
-        
+            
             index = 0;
-        
+            
             active = true;
         }
-    
+        
+        /*static inline DMA isWithinRange(uint16_t start, uint16_t end, std::vector<DMA> dmas) {
+            for(auto dma : dmas) {
+                if(dma.source >= start || dma.source <= end) {
+                    return dma;
+                }
+            }
+            
+            return { false };
+        }*/
+        
+    public:
+        bool active = false;
+        
         uint16_t source = 0;
         uint16_t index = 0;
         uint32_t remainingCycles = 0;
         int8_t initialDelay = 0;
-    
+        
         // Used for testing
         uint32_t ticks = 0;
-    
-        bool active = false;
     };
     
 public:
@@ -100,18 +115,29 @@ public:
     
     void tick(uint32_t cycles);
     
-    uint8_t fetch8(uint16_t address);
-    uint8_t fetchIO(uint16_t address);
+    uint8_t fetch8(uint16_t address, bool isDma = false);
+    uint8_t fetchIO(uint16_t address, bool isDma = false);
     
     uint16_t fetch16(uint16_t address);
     
-    void write8(uint16_t address, uint8_t data);
-    void writeIO(uint16_t address, uint8_t data);
+    void write8(uint16_t address, uint8_t data, bool isDma = false);
+    void writeIO(uint16_t address, uint8_t data, bool isDma = false);
     
     void write16(uint16_t address, uint16_t data);
     
     void switchSpeed();
     void clear();
+
+    // C++ is being a bitch
+    static inline DMA isWithinRange(uint16_t start, uint16_t end, std::vector<DMA> dmas) {
+        for(auto dma : dmas) {
+            if(dma.source >= start || dma.source <= end) {
+                return dma;
+            }
+        }
+            
+        return { false };
+    }
     
 public:
     uint16_t cycles = 0;
