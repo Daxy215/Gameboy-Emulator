@@ -1,6 +1,9 @@
 ﻿#pragma once
+
+#include <iostream>
 #include <vector>
 
+#include "Cartridge.h"
 #include "../IO/Joypad.h"
 
 class InterruptHandler;
@@ -33,47 +36,60 @@ public:
         DMA(bool active) : active(active) {}
         
         void process(MMU& mmu, uint32_t cycles) {
-            if(active) {
-                // DMA has a 4 T-Cycles initial delay
-                if(initialDelay > 0) {
-                    initialDelay -= cycles;
-                    
-                    // Ik scummy way of doing this
-                    if(initialDelay <= 0) {
-                        cycles -= 4;
-                    } else {
-                        return;
-                    }
+            if(!active) {
+                return;
+            }
+
+            // DMA has a 4 T-Cycles initial delay
+            if(initialDelay > 0) {
+                initialDelay -= cycles;
+                
+                // Ik scummy way of doing this
+                if(initialDelay <= 0) {
+                    cycles -= 4;
+                } else {
+                    return;
                 }
+            }
+            
+            remainingCycles -= cycles;
+            ticks += cycles;
+            
+            // Transfer every 4 T-Cycles
+            uint8_t transfersToProcess = cycles / 4;
+            
+            while(transfersToProcess-- > 0) {
+                uint8_t val = mmu.fetch8(source + index, true);
+                mmu.write8(0xFE00 + index, val, true);
                 
-                remainingCycles -= cycles;
-                ticks += cycles;
+                index++;
+            }
+            
+            // Disable after 644 T-Cycles
+            if(remainingCycles <= 0) {
+                //assert(ticks == 640);
+                //assert(index == 160);
                 
-                // Transfer every 4 T-Cycles
-                uint8_t transfersToProcess = cycles / 4;
-                
-                while(transfersToProcess-- > 0) {
-                    uint8_t val = mmu.fetch8(source + index, true);
-                    mmu.write8(0xFE00 + index, val, true);
-                    
-                    index++;
-                }
-                
-                // Disable after 644 T-Cycles
-                if(remainingCycles <= 0) {
-                    //assert(ticks == 640);
-                    //assert(dma.index == 160);
-                    
-                    active = false;
-                    index = 0;
-                    
-                    ticks = 0;
-                }
+                active = false;
+
+                index = 0;
+                ticks = 0;
             }
         }
         
-        void activate(uint16_t source) {
-            this->source = source;
+        void activate(uint8_t source) {
+            //this->source = source;
+
+            // Unsure but I think this only applies,
+            // to DMG? TODO; Double check this.
+
+            if(Cartridge::mode == Mode::DMG)
+                this->source = source >= 0xFE ? (0xDE00 + ((source - 0xFE) * 0x100)) : (source * 0x100);
+            else
+                this->source = source * 0x100;
+
+            printf("Starting DMA at %x\n", this->source);
+            std::cerr << "";
             
             // Transfers 4 bytes every 4 T-cycles
             remainingCycles = 640;

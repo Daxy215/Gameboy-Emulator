@@ -374,7 +374,7 @@ int main(int argc, char* argv[]) {
     // Idk what I did but now it's completely fucked
     // Ok nvm just when a pop up shows up or a text, everything becomes blue?
     // Ok issue was caused by the window rendering bug. I commented some code.. and forgot about it
-    //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
+    std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
     
     /**
      * Fixing the issue with,
@@ -400,7 +400,7 @@ int main(int argc, char* argv[]) {
      */
     //std::string filename = "Roms/Pokemon Green (U) [p1][!].gb"; // TODO; Up arrow stuck
     
-   	std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
+   	//std::string filename = "Roms/Legend of Zelda, The - Link's Awakening DX (U) (V1.2) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Golf (U) [C][!].gbc"; // Uses MBC5
     //std::string filename = "Roms/Mario Tennis (U) [C][!].gbc"; // Uses MBC5
     
@@ -518,7 +518,7 @@ int main(int argc, char* argv[]) {
 	// That is what the test is, but unsure..
 	// 
 	// Yeah, emulating "bus conflict" seems to fix it? (I think?)
-    //std::string filename = "Roms/tests/bully/bully.gb"; // TODO; DMA bus conflict always reads $FF??
+    //std::string filename = "Roms/tests/bully/bully.gb"; // TODO; Bad instruction timing
     
     //std::string filename = "Roms/tests/little-things-gb/tellinglys.gb"; // Passed
     
@@ -537,11 +537,11 @@ int main(int argc, char* argv[]) {
 
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/instr/daa.gb"; // Passed
     
-    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/interrupts/ie_push.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/interrupts/ie_push.gb"; // TODO; R1 not canncled
     
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/basic.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/reg_read.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/sources-GS.gb"; // TODO; Failed FE00
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/oam_dma/sources-GS.gb"; // Passed
     
     // Timer
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/div_write.gb"; // Passed

@@ -632,14 +632,14 @@ void PPU::createWindow() {
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
+	
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-
+	
     //window = SDL_CreateWindow("Game Boy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
     //    WIDTH * 6, HEIGHT * 6, window_flags);
-
+	
     SDL_CreateWindowAndRenderer(WIDTH * 6, HEIGHT * 6, window_flags, &window, &renderer);
-
+    
     if (window == nullptr) {
         std::cerr << "Window could not be created SDL_Error: " << SDL_GetError() << '\n';
         return;
@@ -654,16 +654,12 @@ void PPU::createWindow() {
 	SDL_GL_MakeCurrent(window, sdl_context);
 	SDL_GL_SetSwapInterval(1); // Enable vsync
     
-    std::cerr << "F\n";
-
     //renderer = SDL_CreateRenderer(window, -1, /*SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED*/SDL_RENDERER_SOFTWARE);
     //renderer = SDL_CreateRenderer(window, -1, 0);
     if(renderer == nullptr) {
         std::cerr << "ig not?\n";
     }
 
-    std::cerr << "yay?\n";
-    
 	surface = SDL_GetWindowSurface(window);
 	if (!surface) {
 		std::cerr << "SDL_CreateRGBSurface Error: " << SDL_GetError() << '\n';

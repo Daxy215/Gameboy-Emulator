@@ -1,7 +1,6 @@
 ﻿#include "MMU.h"
 
 #include <iomanip>
-#include <iostream>
 
 #include "HRAM.h"
 #include "../Pipeline/VRAM.h"
@@ -53,6 +52,7 @@ void MMU::tick(uint32_t cycles) {
     
     // HDMA
     // TODO; Check if this correct
+    // TODO; Please rewrite this
     if(enabled) {
         // GDMA
         if (mode == 0) {
@@ -103,17 +103,9 @@ uint8_t MMU::fetch8(uint16_t address, bool isDma) {
      * https://gbdev.io/pandocs/Memory_Map.html
      */
     
-    if(address >= 0xFF30 && address <= 0xFF3F) {
-        printf("");
-    }
-    
     if(bootRomActive && address < 0x100) {
         return bootRom[address];
     }
-    
-    /*if (dma.active && (address < 0xFF80 || address > 0xFFFE)) {
-        return 0xFF;
-    }*/
     
     if(address <= 0x7FFF) {
         auto dma = isWithinRange(0, 0x7FFF, dmas);
@@ -357,67 +349,16 @@ void MMU::writeIO(uint16_t address, uint8_t data, bool isDma) {
         if(address >= 0xFF40 && address <= 0xFF45 || address >= 0xFF4A && address <= 0xFF4B) {
             bool wasEnabled = lcdc.enable;
             
-            /* SCX ISSUE
-             * 
-            if(address == 0xFF43 && PPU::mode == PPU::HBlank && data == 0) {
-                /**
-                 * So there really isn't any mention of this..
-                 * As I'm too lazy to debug it further (it's been 6 hours..).
-                 *
-                 * It seems while playing "Super Mario Land" for example,
-                 * that when you move to the right, it writes an opcode,
-                 * 0xE0 - LD (FF00 + U8), A.
-                 *
-                 * But the value of A is always 0, so it's kind of just,
-                 * doing this glitch where SCX is let's say 4, then it,
-                 * goes back to 0, then 4 again, then 0. Etc...
-                 *
-                 * Which causes this weird sudden change mid-scanline...
-                 *
-                 * THIS APPARENTLY DOESN'T FIX IT YAAAYY ;-;
-                 #1#
-                return;
-            }*/
-            
-            /**
-             * After debugging the SCX issue further,
-             *  
-             * I have noticed that if I ignore writes of,
-             * 0 to SCX, the top winodw doesn't move alongside,
-             * the character. So it seems like it's setting it,
-             * to be 0 for the top part of the screen, then,
-             * the origianl value for the game.
-             * 
-             * But I am messeing up something somewhere,
-             * so luckily I wont have to trace a CPU isntruction!!!
-             *
-             * OK so in the end it was just.. a halt issue :DDDDDDDDDDDD
-             */
-            
             lcdc.write8(address, data);
             
             if(address == 0xFF40) {
-                /**
-                 * set_test 3,"Turning LCD on starts too early in scanline"
-                 * call disable_lcd
-                 * ld   a,$81
-                 * ldh  (LCDC-$FF00),a ; LCD on
-                 * delay 110
-                 * ldh  a,(LY-$FF00)   ; just after LY increments
-                 * cp   1
-                 * jp   nz,test_failed
-                 * 
-                 * Passing test 2 correctly but stuck on test 1.
-                 * Seems the issue to be that one of my CPU instructions,
-                 * are wrongly implemented, as while it does ldh  a,(LY-$FF00),
-                 * AF.A is 0 where it's supposed to be 1? If I understood that correctly..
-               */
                 if(wasEnabled && !lcdc.enable) {
                     if(PPU::mode == PPU::VBlank) {
                         //printf("nooo...");
                         //return;
+                            
                     }
-                    
+
                     PPU::mode = PPU::HBlank;
                     lcdc.LY = 0;
                     //lcdc.WY = 0;
@@ -436,18 +377,25 @@ void MMU::writeIO(uint16_t address, uint8_t data, bool isDma) {
             //  $FF46	DMA	OAM DMA source address & start
             lastDma = data;
             
-            // TODO; Please don't use pointers
-            // but im currently too lazy
-            DMA dma;
-            dma.activate(static_cast<uint16_t>(data << 8));
-            dmas.push_back(dma);
+            // TODO; I haven't emulated DMA Conflict for
+            // CGB just yet, and this messes it up, so,
+            // now now, I need to instantly cause a transfer,
+            // rather than the more "accurate" way
+
+            if(Cartridge::mode == Mode::DMG) {
+                DMA dma;
+                dma.activate(data/*static_cast<uint16_t>(data << 8)*/);
+                dmas.push_back(dma);
+
+                return;
+            }
             
-            /*uint16_t u16 = static_cast<uint16_t>(data << 8);
+            uint16_t u16 = static_cast<uint16_t>(data << 8);
             
             for(uint16_t i = 0; i < 160; i++) {
                 uint8_t val = fetch8(u16 + i);
                 write8(0xFE00 + i, val);
-            }*/
+            }
         } else if(address >= 0xFF47 && address <= 0xFF49) {
             // https://gbdev.io/pandocs/Palettes.html#ff47--bgp-non-cgb-mode-only-bg-palette-data
             // https://gbdev.io/pandocs/Palettes.html#ff48ff49--obp0-obp1-non-cgb-mode-only-obj-palette-0-1-data
