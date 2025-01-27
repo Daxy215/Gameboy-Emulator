@@ -151,7 +151,7 @@ public:
 	SDL_Surface* surface;
 	
 	SDL_Texture* texture;
-
+	
 	int pitch;
 	uint32_t* pixels;
 };

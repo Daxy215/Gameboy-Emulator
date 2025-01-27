@@ -3,11 +3,8 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
-GameBoyEmulator/Roms/
-GameBoyEmulator/Saves/
-GameBoyEmulator/x64/
-x64/
 gameboy-doctor-master/
 .vs/
 .idea/
-GameBoyEmulator/cpu_state_log.txt
+build/
+Roms/

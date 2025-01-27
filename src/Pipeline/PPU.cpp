@@ -80,10 +80,10 @@ void PPU::updateMode(PPUMode mode) {
 				interrupt |= 0x02;
 			}
 			
-			//SDL_UpdateTexture(texture, nullptr, pixels, pitch);
+			SDL_UpdateTexture(texture, nullptr, pixels, pitch);
+			SDL_RenderPresent(renderer);
+			//SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 			//SDL_RenderPresent(renderer);
-			/*SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-			SDL_RenderPresent(renderer);*/
 			
 			break;
 		}
@@ -375,13 +375,13 @@ void PPU::drawSprites() {
 		 */
 		uint16_t tileAddr = 0x8000 + tileIndex * 16 + tileY * 2;
 		
-		uint8_t b0 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[(tileAddr & 0x1FFF) + 0x2000] : mmu.vram.RAM[(tileAddr & 0x1FFF)];
+		uint8_t b0 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[((tileAddr & 0x1FFF) + 0x2000) + 0] : mmu.vram.RAM[(tileAddr & 0x1FFF) + 0];
 		uint8_t b1 = (bank && Cartridge::mode == Color) ? mmu.vram.RAM[((tileAddr & 0x1FFF) + 0x2000) + 1] : mmu.vram.RAM[(tileAddr & 0x1FFF) + 1];
 		
 		/**
 		 * From what I understand is that the,
 		 * GameBoy PPU works in pixels rather than tiles.
-		 *
+		 * 
 		 * So 8 here is the width of every sprite.
 		 * As only the height changes from 8-16,
 		 * I don't need any extra checks
@@ -568,7 +568,7 @@ void PPU::write8(uint16_t address, uint8_t data) {
 	} else if(address == 0xFF6B) {
 		// https://gbdev.io/pandocs/Palettes.html#ff6aff6b--ocpsobpi-ocpdobpd-cgb-mode-only-obj-color-palette-specification--obj-palette-index-obj-color-palette-data--obj-palette-data
 		if(Cartridge::mode != Color) return;
-				
+		
 		if(mode == VRAMTransfer) {
 			return;
 		}
@@ -632,10 +632,14 @@ void PPU::createWindow() {
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    window = SDL_CreateWindow("Game Boy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        WIDTH * 6, HEIGHT * 6, window_flags);
-    
+
+    //window = SDL_CreateWindow("Game Boy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    //    WIDTH * 6, HEIGHT * 6, window_flags);
+
+    SDL_CreateWindowAndRenderer(WIDTH * 6, HEIGHT * 6, window_flags, &window, &renderer);
+
     if (window == nullptr) {
         std::cerr << "Window could not be created SDL_Error: " << SDL_GetError() << '\n';
         return;
@@ -650,7 +654,15 @@ void PPU::createWindow() {
 	SDL_GL_MakeCurrent(window, sdl_context);
 	SDL_GL_SetSwapInterval(1); // Enable vsync
     
-	renderer = SDL_CreateRenderer(window, -1, /*SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED*/SDL_RENDERER_SOFTWARE);
+    std::cerr << "F\n";
+
+    //renderer = SDL_CreateRenderer(window, -1, /*SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED*/SDL_RENDERER_SOFTWARE);
+    //renderer = SDL_CreateRenderer(window, -1, 0);
+    if(renderer == nullptr) {
+        std::cerr << "ig not?\n";
+    }
+
+    std::cerr << "yay?\n";
     
 	surface = SDL_GetWindowSurface(window);
 	if (!surface) {
@@ -678,6 +690,8 @@ void PPU::createWindow() {
 	}*/
 	
 	//SDL_RenderPresent(renderer);
+    
+    std::cerr << "Main window created successfully\n";
 }
 
 void PPU::updatePixel(uint32_t x, uint32_t y, uint32_t color) {
