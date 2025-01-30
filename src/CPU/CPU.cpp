@@ -8,6 +8,7 @@
 
 #include "../Memory/MMU.h"
 #include "../Utility/Bitwise.h"
+#include <cassert>
 
 CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
     : interruptHandler(interruptHandler), mmu(mmu) {
@@ -80,17 +81,14 @@ CPU::CPU(InterruptHandler& interruptHandler, MMU& mmu)
 	mmu.write8(0xFF4B, 0x00);
 }
 
+// TODO; Testing
+int counter = 0;
+
 uint16_t CPU::cycle() {
 	if(ei >= 0) ei--;
 	
 	if(ei == 0) {
 		interruptHandler.IME = true;
-	}
-	
-	// TODO; Im so close
-	if(hatlBug) {
-		PC++;
-		hatlBug = false;
 	}
 	
 	uint16_t cycles = interruptHandler.handleInterrupt(*this);
@@ -104,8 +102,7 @@ uint16_t CPU::cycle() {
 		}
 	} else if (halted) {
 		if (cycles > 0) {
-			printf("??");
-			std::cerr << "";
+			assert(false);
 		}
 		
 		cycles = 4;
@@ -115,7 +112,12 @@ uint16_t CPU::cycle() {
 }
 
 uint16_t CPU::fetchOpCode() {
-    uint16_t opcode = mmu.fetch8(PC++);
+    uint16_t opcode = mmu.fetch8(PC);
+
+	if(!haltBug)
+		PC++;
+
+	haltBug = false;
     
     return opcode;
 }
@@ -1227,7 +1229,7 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	halted = true;
 			
         	if(!interruptHandler.IME && (interruptHandler.IF & interruptHandler.IE & 0x1F)) {
-        		hatlBug = true;
+        		haltBug = true;
         	}
         	
         	return 4;

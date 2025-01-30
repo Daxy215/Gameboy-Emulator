@@ -374,7 +374,7 @@ int main(int argc, char* argv[]) {
     // Idk what I did but now it's completely fucked
     // Ok nvm just when a pop up shows up or a text, everything becomes blue?
     // Ok issue was caused by the window rendering bug. I commented some code.. and forgot about it
-    std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
+    //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
     
     /**
      * Fixing the issue with,
@@ -490,7 +490,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/11-regs after power.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/12-wave write while on.gb"; // TODO;
     
-    //std::string filename = "Roms/halt_bug.gb"; // TODO;
+    std::string filename = "Roms/halt_bug.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/instr_timing/instr_timing.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/interrupt_time/interrupt_time.gb"; // TODO;
     
@@ -684,7 +684,7 @@ int main(int argc, char* argv[]) {
     ppu = &mmu.ppu;
     
     CPU cpu(interruptHandler, mmu);
-
+    
 	Disassembler disassembler;
     
     serial.set_callback(stdoutprinter);

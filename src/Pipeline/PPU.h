@@ -1,5 +1,7 @@
 ﻿#pragma once
+
 #include <cstdint>
+
 #include <SDL_render.h>
 #include <SDL_video.h>
 

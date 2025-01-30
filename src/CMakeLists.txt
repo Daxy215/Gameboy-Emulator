@@ -33,7 +33,7 @@ file(GLOB_RECURSE SOURCES
     ${CMAKE_SOURCE_DIR}/libs/imgui-1.91.3/backends/imgui_impl_sdlrenderer2.cpp
 )
 
-# Executable defention
+# Executable definition
 add_executable(GameBoyEmulator ${SOURCES})
 
 # Link SDL2
@@ -61,4 +61,3 @@ target_include_directories(GameBoyEmulator PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Pipleline
     ${CMAKE_SOURCE_DIR}/src/Utility
 )
-

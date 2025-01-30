@@ -10,8 +10,9 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		if(interrupt == 0)
 			return 0;
 		
-		if(IME && cpu.hatlBug)
-			cpu.hatlBug = false;
+		//if(IME && cpu.haltBug) {
+			//cpu.hatlBug = false;
+		//}
 		
 		if(cpu.halted) {
 			// TODO; Halt bug
@@ -57,7 +58,7 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 
 uint8_t InterruptHandler::fetch8(uint16_t address) {
 	if(address == 0xFF0F)
-		return IF;
+		return IF | 0xE0;
 	else if(address == 0xFFFF) {
 		/**
 		 * https://gbdev.io/pandocs/Interrupts.html#ffff--ie-interrupt-enable
@@ -65,7 +66,7 @@ uint8_t InterruptHandler::fetch8(uint16_t address) {
 		 * IE: Interrup enable
 		 */
 		
-		return IE;
+		return IE /*| 0xE0*/;
 	}
 	
 	return 0xFF;

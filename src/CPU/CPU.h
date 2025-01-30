@@ -318,7 +318,7 @@ public:
     
 public:
     bool halted = false;
-    bool hatlBug = false;
+    bool haltBug = false;
     
     bool stop = false;
     int16_t stopTimer = 0;
