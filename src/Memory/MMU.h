@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cassert>
 
 #include "Cartridge.h"
 #include "../IO/Joypad.h"
@@ -67,8 +68,8 @@ public:
             
             // Disable after 644 T-Cycles
             if(remainingCycles <= 0) {
-                //assert(ticks == 640);
-                //assert(index == 160);
+                assert(ticks == 640);
+                assert(index == 160);
                 
                 active = false;
 
@@ -158,7 +159,6 @@ public:
     bool bootRomActive = false;
     
 private:
-    
     uint8_t wramBank = 1;
     
     uint8_t lastDma = 0;

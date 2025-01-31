@@ -15,7 +15,7 @@ WRAM::WRAM() {
 }
 
 uint8_t WRAM::fetch8(uint16_t address) {
-    if(address >= std::size(RAM)) {
+    if(address >= 32 * 1024) {
         std::cerr << "OUT OF RANGE!\n";
     }
     
@@ -23,7 +23,7 @@ uint8_t WRAM::fetch8(uint16_t address) {
 }
 
 void WRAM::write8(uint16_t address, uint8_t data) {
-    if(address >= std::size(RAM)) {
+    if(address >= 32 * 1024) {
         std::cerr << "OUT OF RANGE!\n";
     }
     

@@ -321,7 +321,7 @@ public:
     bool haltBug = false;
     
     bool stop = false;
-    int16_t stopTimer = 0;
+    int32_t stopTimer = 0;
     
     int8_t ei = -1;
     

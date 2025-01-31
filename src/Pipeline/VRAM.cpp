@@ -20,7 +20,7 @@ uint8_t VRAM::fetch8(uint16_t address) {
         return 0b11111110 | vramBank;
     }
     
-    if(address >= std::size(RAM)) {
+    if(address >= 0x4000 * 4) {
         std::cerr << "OUT OF RANGE!\n";
     }
     
@@ -39,7 +39,7 @@ void VRAM::write8(uint16_t address, uint8_t data) {
         return;
     }
     
-    if(address >= std::size(RAM)) {
+    if(address >= 0x4000 * 4) {
         std::cerr << "OUT OF RANGE!\n";
     }
     

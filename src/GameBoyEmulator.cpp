@@ -407,7 +407,7 @@ int main(int argc, char* argv[]) {
     /**
      * Seems to work but has some rendering issues
      */
-    //std::string filename = "Roms/Super Mario Bros. Deluxe (U) (V1.1) [C][!].gbc";
+    std::string filename = "Roms/Super Mario Bros. Deluxe (U) (V1.1) [C][!].gbc";
     
     /*
      * TODO; I believe they require speed switch IRQ
@@ -545,7 +545,7 @@ int main(int argc, char* argv[]) {
     
     // Timer
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/div_write.gb"; // Passed
-    std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/rapid_toggle.gb"; // TODO;
+    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/rapid_toggle.gb"; // TODO;
     
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim00.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim00_div_trigger.gb"; // TODO; E is 5 and not 4 :)
@@ -850,18 +850,16 @@ int main(int argc, char* argv[]) {
         		}
         	}
 			
-        	if(cpu.PC == 0x0100) {
-        		printf("");
-        		//singleStep = true;
-        		break;
-        	}
-        	
-        	timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1), !cpu.stop);
-        	
-        	cpu.mmu.tick(cycles);
-        	
-            ppu->tick(cycles / (cpu.mmu.doubleSpeed ? 2 : 1) + cpu.mmu.cycles);
+            // TODO; I'm unsure about the order, but this makes sense?
+            timer.tick(cycles * (cpu.mmu.doubleSpeed ? 2 : 1), !cpu.stop);
+
+            cpu.mmu.tick(cycles);
+            ppu->tick((cycles / (cpu.mmu.doubleSpeed ? 2 : 1)) + cpu.mmu.cycles);
+        
+            cpu.mmu.cycles = 0;
+            totalCyclesThisFrame += cycles;
             
+            // Apply interrupts
             cpu.interruptHandler.IF |= timer.interrupt;
             timer.interrupt = 0;
             
@@ -873,9 +871,6 @@ int main(int argc, char* argv[]) {
             
             cpu.interruptHandler.IF |= cpu.mmu.serial.interrupt;
             cpu.mmu.serial.interrupt = 0;
-            
-            totalCyclesThisFrame += cycles;
-            cpu.mmu.cycles = 0;
         }
         
         if(totalCyclesThisFrame >= cyclesPerFrame) {

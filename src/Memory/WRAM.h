@@ -10,6 +10,5 @@ public:
     void write8(uint16_t address, uint8_t data);
     
 private:
-    uint8_t ROMBank = 1; // For CGB - It is useless for now
     uint8_t RAM[32 * 1024] = { 0 }; // 8 KB
 };

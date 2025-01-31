@@ -36,15 +36,14 @@ MMU::MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC
     //bootRomActive = (Cartridge::mode == DMG);
 }
 
-// TODO; Remove
-int16_t ticks = 0;
-
 void MMU::tick(uint32_t cycles) {
     apu.tick(cycles);
     
     for(int i = 0; i < dmas.size(); i++) {
+        // Begin transfering one byte at a time
         dmas[i].process(*this, cycles * (doubleSpeed ? 2 : 1));
         
+        // If DMA is no longer active, delete it
         if(!dmas[i].active) {
             dmas.erase(dmas.begin() + i);
         }
@@ -183,7 +182,7 @@ uint8_t MMU::fetch8(uint16_t address, bool isDma) {
         
         return fetchIO(address);
     } else if(address >= 0xFF80 && address <= 0xFFFE) {
-        return hram.fetch8(address & 0x007F);
+        return hram.fetch8(address - 0xFF80);
     } else if(address == 0xFFFF) {
         return interruptHandler.fetch8(address);
     } else {
@@ -269,7 +268,7 @@ uint8_t MMU::fetchIO(uint16_t address, bool isDma) {
         return ppu.fetch8(address);
     } else if(address == 0xFF70) {
         if(Cartridge::mode != Color) return 0xFF;
-        
+
         return wramBank & 0x7;
     }
     
@@ -296,10 +295,6 @@ uint16_t MMU::fetch16(uint16_t address) {
 }
 
 void MMU::write8(uint16_t address, uint8_t data, bool isDma) {
-    if(address >= 0xFF30 && address <= 0xFF3F) {
-        printf("");
-    }
-    
     if (address < 0x8000) {
         mbc.write(address, data);
     } else if(address >= 0x8000 && address <= 0x9FFF) {
@@ -319,7 +314,7 @@ void MMU::write8(uint16_t address, uint8_t data, bool isDma) {
     } else if (address >= 0xFF00 && address <= 0xFF7F) {
         writeIO(address, data);
     } else if (address >= 0xFF80 && address <= 0xFFFE) {
-        hram.write8(address & 0x007F, data);
+        hram.write8(address - 0xFF80, data);
     } else if (address == 0xFFFF) {
         interruptHandler.write8(address, data);
     } else {
@@ -467,7 +462,11 @@ void MMU::writeIO(uint16_t address, uint8_t data, bool isDma) {
     } else if(address == 0xFF70) {
         if(Cartridge::mode != Color) return;
         
-        wramBank = (data & 0x7) == 0 ? 1 : static_cast<uint8_t>(data & 0x7);
+        wramBank = data & 0x7;
+
+        // Only banks 1-7 matters
+        if(wramBank == 0)
+            wramBank = 1;
     }
     
     // TODO; Addresses that don't exist
