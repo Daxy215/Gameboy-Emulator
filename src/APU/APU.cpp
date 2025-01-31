@@ -104,13 +104,10 @@ uint8_t APU::fetch8(uint16_t address) {
         result |= (ch2.enabled << 1);  // Bit 1 - Channel 2 status
         result |= (ch1.enabled << 0);  // Bit 0 - Channel 1 status
 		
-		printf("Fetching channcels; %x %d %d %d %d %d\n", result, enabled, ch4.enabled, ch3.enabled, ch2.enabled, ch1.enabled);
+		//printf("Fetching channcels; %x %d %d %d %d %d\n", result, enabled, ch4.enabled, ch3.enabled, ch2.enabled, ch1.enabled);
 
 		if(ch1.enabled) {
-			printf("CH1 Length %x = %x ; %d\n", ch1.initalLength, ch1.lengthTimer, ch1.lengthEnable);
-
-			if(ch1.lengthTimer == 2)
-				ch1.updateCounter();
+			//printf("CH1 Length %x = %x ; %d\n", ch1.initalLength, ch1.lengthTimer, ch1.lengthEnable);
 		}
     	
         return result;
@@ -287,10 +284,10 @@ void APU::write8(uint16_t address, uint8_t data) {
 	 * Turning the APU off drains less power (around 16%),
 	 * but clears all APU registers and makes them read-only until turned back on, except NR521.
 	 */
-	if (!enabled && address != 0xFF26 && (address < 0xFF30) &&
-		(/*Cartridge::mode == Color &&*/ (address != 0xFF11 && address != 0xFF21 && 
+	if (!enabled && address != 0xFF26 && (address < 0xFF30) ||
+		(Cartridge::mode == Color && (address != 0xFF11 && address != 0xFF21 && 
 					address != 0xFF31 && address != 0xFF41))) {
-		printf("Ignoring %x\n", address);
+		//printf("Ignoring %x\n", address);
 		return;
 	}
 	
@@ -317,9 +314,14 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 0 - CH1 on?
 		//ch1.enabled = check_bit(data, 0);
+
+		if(!enabled)
+			printf("its off?\n");
 		
 		// APU is powering off
 		if(wasEnabled && !enabled) {
+			printf("Powering off\n");
+
 			ch1.reset();
 			ch2.reset();
 			ch3.reset();
@@ -411,7 +413,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * This is a write only!
 		 * https://gbdev.io/pandocs/Audio.html#length-timer
 		*/
-		ch1.initalLength = data & 0b00111111;
+		ch1.initialTimer = data & 0b00111111;
 	} else if(address == 0xFF12) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff12--nr12-channel-1-volume--envelope
 		
@@ -489,7 +491,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * This is a write only!
 		 * https://gbdev.io/pandocs/Audio.html#length-timer
 		*/
-		ch2.initalLength = data & 0b00111111;
+		ch2.initialTimer = data & 0b00111111;
 	} else if(address == 0xFF17) {
 		// NR22, exact same behaviour as NR12 but for CH2.
 		
@@ -559,7 +561,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff1b--nr31-channel-3-length-timer-write-only
 		
 		// Bit 7 through 0 - Initial length timer
-		ch3.initalLength = data;
+		ch3.initialTimer = data;
 	} else if(address == 0xFF1C) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff1b--nr31-channel-3-length-timer-write-only
 		

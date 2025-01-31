@@ -50,7 +50,7 @@ struct NoiseChanel {
 	 * TODO; Check this?
 	 */
 	void updateCounter() {
-		if (lengthEnable && enabled) {
+		if (lengthEnable) {
 			lengthTimer--;
 			
 			if(lengthTimer <= 0) {
@@ -61,7 +61,7 @@ struct NoiseChanel {
 	
 	void reset() {
 		// NR41
-		//lengthTimer = 0;
+		//initialTimer = lengthTimer = 0;
 		
 		// NR42
 		initialVolume = 0;

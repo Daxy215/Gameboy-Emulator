@@ -33,7 +33,7 @@ MMU::MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC
           ppu(ppu),
           apu(apu),
           bootRom(bootRom) {
-    bootRomActive = (Cartridge::mode == DMG);
+    //bootRomActive = (Cartridge::mode == DMG);
 }
 
 // TODO; Remove

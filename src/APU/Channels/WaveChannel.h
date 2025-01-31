@@ -79,7 +79,7 @@ struct WaveChannel {
 		}*/
 
         if (lengthTimer == 0) {
-			lengthTimer = 256 - initalLength;
+			lengthTimer = 256 - initialTimer;
 		}
 		
 		sweepFrequency = (periodHigh << 8) | periodLow;
@@ -94,7 +94,7 @@ struct WaveChannel {
 	 * TODO; Double check this
 	 */
 	void updateCounter() {
-		if (lengthEnable && enabled) {
+		if (lengthEnable) {
 			lengthTimer--;
 			
 			if(lengthTimer <= 0) {
@@ -108,7 +108,7 @@ struct WaveChannel {
 		DAC = false;
 		
 		// NR31
-		//lengthTimer = 0;
+		//initialTimer = lengthTimer = 0;
 		
 		// NR32
 		outputLevel = 0;
@@ -136,7 +136,7 @@ struct WaveChannel {
 	bool DAC = false;
 	
 	// NR31
-	uint8_t initalLength = 0;
+	uint8_t initialTimer = 0;
 	int16_t lengthTimer = 0;
 	
 	// NR 32

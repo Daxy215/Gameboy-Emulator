@@ -47,7 +47,7 @@ struct PulseChannel {
 		// When the length timer reaches 64 (CH1, CH2, and CH4) the channel is turned off.
 		// If length timer expired it is reset.
         if (lengthTimer == 0) {
-            lengthTimer = 64 - initalLength;
+            lengthTimer = 64 - initialTimer;
         }
 		
 		sweepFrequency = (periodHigh << 8) | periodLow;
@@ -55,7 +55,7 @@ struct PulseChannel {
 		
         currentVolume = initialVolume;
         envelopeCounter = envelopePace;
-
+		
 		if(sweepPace > 0) {
 			sweepCounter = sweepPace;
 		} else {
@@ -74,26 +74,6 @@ struct PulseChannel {
     }
 	
     void updateSweep() {
-	    // if(sweepCounter <= 0) {
-		//     sweepCounter = sweepPace;
-			
-		//     if(direction) {
-		// 	    sweepFrequency += individualStep;
-				
-		// 	    if(sweepFrequency >= 2047) {
-		// 		    enabled = false;
-		// 	    }
-		//     } else {
-		// 	    sweepFrequency -= individualStep;
-				
-		// 	    if(sweepFrequency <= 0) {
-		// 		    enabled = false;
-		// 	    }
-		//     }
-	    // } else {
-		//     sweepCounter--;
-	    // }
-
 		if(sweepCounter > 0) {
 			if(sweepPace > 0) {
 				sweepCounter = sweepPace;
@@ -150,18 +130,6 @@ struct PulseChannel {
 		} else {
 			envelopeCounter--;
 		}
-		
-        // if (envelopeCounter == 0) {
-        //     if (envDir && currentVolume < 15) {
-        //         currentVolume++;
-        //     } else if (!envDir && currentVolume > 0) {
-        //         currentVolume--;
-        //     }
-        	
-        //     envelopeCounter = sweepPace;
-        // } else if (sweepPace > 0) {
-        //     envelopeCounter--;
-        // }
     }
 	
 	/**
@@ -170,7 +138,7 @@ struct PulseChannel {
 	 * TODO; Check this?
 	 */
 	void updateCounter() {
-        if (lengthEnable && enabled) {
+        if (lengthEnable) {
             lengthTimer--;
 			
         	if(lengthTimer <= 0) {
@@ -187,12 +155,12 @@ struct PulseChannel {
 		
 		// NR11
 		waveDuty = 0;
-		lengthTimer = 0;
+		//initialTimer = lengthTimer = 0;
 		
 		// NR12
-		//initialVolume = 0;
-		//envDir = false;
-		//envelopePace = 0;
+		initialVolume = 0;
+		envDir = false;
+		envelopePace = 0;
 		
 		// NR13
 		periodLow = 0;
@@ -202,7 +170,7 @@ struct PulseChannel {
 		lengthEnable = false;
 		periodHigh = 0;
 		
-		enabled = false;
+		//enabled = false;
 		left = false;
 		right = false;
 		
@@ -221,7 +189,7 @@ struct PulseChannel {
 	
 	// NR11
 	uint8_t waveDuty = 0;
-	uint8_t initalLength = 0;
+	uint8_t initialTimer = 0;
 	int8_t lengthTimer = 0;
 	
 	// NR12

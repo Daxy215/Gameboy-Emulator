@@ -442,7 +442,7 @@ int main(int argc, char* argv[]) {
 	/**
 	 * Those games finally works after I fixed MBC3(still not fully fixed).
 	 * 
-	 * However, all of the color versions contain this bug:
+	 * TODO; However, all of the color versions contain this bug:
 	 * all of the chracters are very dark, expect when,
 	 * they get into a cutscene, they're colors become normal
 	 */
@@ -459,7 +459,7 @@ int main(int argc, char* argv[]) {
     
     //std::string filename = "Roms/testRom1.gb"; // Idk? Ig passed
     
-    //std::string filename = "Roms/tests/age-test-roms/vram/vram-read-cgbBCE.gb"; // TODO: Not sure what this tests?
+    //std::string filename = "Roms/tests/age-test-roms/vram/vram-read-cgbBCE.gb"; // TODO; Not sure what this tests?
     
     // CPU INSTRUCTIONS
     //std::string filename = "Roms/cpu_instrs/cpu_instrs.gb"; // Passed
@@ -480,7 +480,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/01-registers.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/02-len ctr.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/03-trigger.gb"; // TODO;
-    std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
+    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/05-sweep details.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/06-overflow on trigger.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/07-len sweep period sync.gb"; // TODO;
@@ -545,7 +545,7 @@ int main(int argc, char* argv[]) {
     
     // Timer
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/div_write.gb"; // Passed
-    //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/rapid_toggle.gb"; // TODO;
+    std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/rapid_toggle.gb"; // TODO;
     
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim00.gb"; // Passed
     //std::string filename = "Roms/tests/mooneye-test-suite/acceptance/timer/tim00_div_trigger.gb"; // TODO; E is 5 and not 4 :)
