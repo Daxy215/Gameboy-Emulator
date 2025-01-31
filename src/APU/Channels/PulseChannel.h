@@ -7,24 +7,20 @@
 
 struct PulseChannel {
 	uint8_t sample(float cycles) {
-		// TODO; Does it update instantly?
-		if(trigger)
-			updateTrigger();
-		
 		// TODO; Not sure if it should still,
 		// update the channel?
-		if (!enabled) {
-			return 0;
-		}
+		//if (!enabled) {
+		//	return 0;
+		//}
 		
 		ticks += cycles;
 		
 		while(ticks >= period) {
-			ticks = 0;
+			ticks -= period;
 			
 			//sweepFrequency = (periodHigh << 8) | periodLow;
-			
-			period          = (2048 - sweepFrequency) * 4;
+			//period         = (2048 - sweepFrequency) * 4;
+
 			sequencePointer = (sequencePointer + 1) % 8;
 		}
 		
@@ -41,7 +37,7 @@ struct PulseChannel {
 		
 		// TODO; Convert to a value between [-1.0, 1.0]
 		uint8_t output = (isHigh * (currentVolume));
-		return output;
+		return (output) * enabled;
     }
 	
     void updateTrigger() {
@@ -50,7 +46,7 @@ struct PulseChannel {
 		
 		// When the length timer reaches 64 (CH1, CH2, and CH4) the channel is turned off.
 		// If length timer expired it is reset.
-        if (lengthEnable) {
+        if (lengthTimer == 0) {
             lengthTimer = 64 - initalLength;
         }
 		
@@ -58,47 +54,114 @@ struct PulseChannel {
 		period = (2048 - sweepFrequency) * 4;
 		
         currentVolume = initialVolume;
-        envelopeCounter = sweepPace;
-		
+        envelopeCounter = envelopePace;
+
+		if(sweepPace > 0) {
+			sweepCounter = sweepPace;
+		} else {
+			sweepCounter = 8;
+		}
+
+		if(sweepPace != 0 || individualStep != 0)
+			sweepEnabled = true;
+
 		// If the individual step is non-zero,
 		// frequency calculation and overflow check are performed immediately.
-		updateSweep();
+		if(individualStep != 0) {
+			sweepFrequency = calculateFrequency();
+			period = (2048 - sweepFrequency) * 4;
+		}
     }
 	
     void updateSweep() {
-	    if(sweepCounter <= 0) {
-		    sweepCounter = sweepPace;
+	    // if(sweepCounter <= 0) {
+		//     sweepCounter = sweepPace;
 			
-		    if(direction) {
-			    sweepFrequency += individualStep;
+		//     if(direction) {
+		// 	    sweepFrequency += individualStep;
 				
-			    if(sweepFrequency >= 2047) {
-				    enabled = false;
-			    }
-		    } else {
-			    sweepFrequency -= individualStep;
+		// 	    if(sweepFrequency >= 2047) {
+		// 		    enabled = false;
+		// 	    }
+		//     } else {
+		// 	    sweepFrequency -= individualStep;
 				
-			    if(sweepFrequency <= 0) {
-				    enabled = false;
-			    }
-		    }
-	    } else {
-		    sweepCounter--;
-	    }
+		// 	    if(sweepFrequency <= 0) {
+		// 		    enabled = false;
+		// 	    }
+		//     }
+	    // } else {
+		//     sweepCounter--;
+	    // }
+
+		if(sweepCounter > 0) {
+			if(sweepPace > 0) {
+				sweepCounter = sweepPace;
+			} else {
+				sweepCounter = 8;
+			}
+
+			if(sweepEnabled && sweepPace > 0) {
+				auto frequency = calculateFrequency();
+
+				if(frequency <= 2047 && individualStep > 0) {
+					sweepFrequency = frequency;
+
+					// Overflow check again
+					calculateFrequency();
+				}
+			}
+		} else {
+			sweepCounter--;
+		}
     }
+
+	uint16_t calculateFrequency() {
+		uint16_t frequency = sweepFrequency >> individualStep;
+		
+		// Subreaction
+		if(swpDirection) {
+			frequency = sweepFrequency - frequency;
+		} else {
+			// Increase
+			frequency = sweepFrequency + frequency;
+		}
+
+		// Check for overflow
+		if(frequency > 2047) {
+			enabled = false;
+		}
+
+		return frequency;
+	}
 	
     void updateEnvelope() {
-        if (envelopeCounter == 0) {
-            if (envDir && currentVolume < 15) {
+		if(envelopePace == 0)
+			return;
+		
+		if(envelopeCounter > 0) {
+			envelopeCounter = envelopePace;
+
+			if (envDir && currentVolume < 15) {
                 currentVolume++;
-            } else if (!envDir && currentVolume > 0) {
+        	} else if (!envDir && currentVolume > 0) {
                 currentVolume--;
             }
+		} else {
+			envelopeCounter--;
+		}
+		
+        // if (envelopeCounter == 0) {
+        //     if (envDir && currentVolume < 15) {
+        //         currentVolume++;
+        //     } else if (!envDir && currentVolume > 0) {
+        //         currentVolume--;
+        //     }
         	
-            envelopeCounter = sweepPace;
-        } else if (sweepPace > 0) {
-            envelopeCounter--;
-        }
+        //     envelopeCounter = sweepPace;
+        // } else if (sweepPace > 0) {
+        //     envelopeCounter--;
+        // }
     }
 	
 	/**
@@ -107,7 +170,7 @@ struct PulseChannel {
 	 * TODO; Check this?
 	 */
 	void updateCounter() {
-        if (lengthEnable) {
+        if (lengthEnable && enabled) {
             lengthTimer--;
 			
         	if(lengthTimer <= 0) {
@@ -118,8 +181,8 @@ struct PulseChannel {
 	
 	void reset() {
 		// NR10
-		pace = 0;
-		direction = false;
+		sweepPace = 0;
+		swpDirection = false;
 		individualStep = 0;
 		
 		// NR11
@@ -129,7 +192,7 @@ struct PulseChannel {
 		// NR12
 		//initialVolume = 0;
 		//envDir = false;
-		//sweepPace = 0;
+		//envelopePace = 0;
 		
 		// NR13
 		periodLow = 0;
@@ -152,8 +215,8 @@ struct PulseChannel {
 	}
 	
 	// NR10
-	uint8_t pace = 0;
-	bool direction = false;
+	uint8_t sweepPace = 0;
+	bool swpDirection = false;
 	uint8_t individualStep = 0;
 	
 	// NR11
@@ -164,7 +227,7 @@ struct PulseChannel {
 	// NR12
 	uint8_t initialVolume = 0;
 	bool envDir = false;
-	uint8_t sweepPace = 0;
+	uint8_t envelopePace = 0;
 	
 	uint8_t currentVolume = 0;
 	uint8_t envelopeCounter = 0;
@@ -182,6 +245,8 @@ struct PulseChannel {
 	uint32_t period = 0;
 	
 	int8_t sweepCounter = 0;
+	bool sweepEnabled = false;
+
 	uint16_t sweepFrequency = 0;
 	
 	bool enabled = false;

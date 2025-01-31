@@ -361,7 +361,9 @@ uint16_t CPU::decodeInstruction(uint16_t opcode) {
         	 */
         	stop = true;
         	stopTimer = 8200;
-			
+
+			std::cerr << "STOPPING!\n";
+
         	// https://gbdev.io/pandocs/CGB_Registers.html#ff4d--key1-cgb-mode-only-prepare-speed-switch
         	mmu.switchSpeed();
         	

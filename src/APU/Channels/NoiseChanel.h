@@ -3,9 +3,6 @@
 
 struct NoiseChanel {
 	uint8_t sample(uint32_t cycles) {
-		if(trigger)
-			updateTrigger();
-		
 		/*if(!enabled)
 			return 0;
 		
@@ -30,7 +27,8 @@ struct NoiseChanel {
 		/*if (lengthTimer >= 64) {
 			lengthTimer = 0;
 		}*/
-		if (lengthEnable) {
+		
+        if (lengthTimer == 0) {
 			lengthTimer = 64 - initialTimer;
 		}
 		
@@ -52,7 +50,7 @@ struct NoiseChanel {
 	 * TODO; Check this?
 	 */
 	void updateCounter() {
-		if (lengthEnable) {
+		if (lengthEnable && enabled) {
 			lengthTimer--;
 			
 			if(lengthTimer <= 0) {

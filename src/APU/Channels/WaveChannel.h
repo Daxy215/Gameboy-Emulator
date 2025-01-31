@@ -10,9 +10,6 @@ struct WaveChannel {
 	}
 	
 	uint8_t sample(uint32_t cycles) {
-		if(trigger)
-			updateTrigger();
-		
 		// TODO; What is DAC?
 		
 		if(!enabled/* || !DAC*/)
@@ -24,6 +21,7 @@ struct WaveChannel {
 			ticks = 0;
 			
 			period          = (2048 - sweepFrequency) * 4;
+
 			sequencePointer = (sequencePointer + 1) % 32;
 		}
 		
@@ -79,7 +77,8 @@ struct WaveChannel {
 		/*if (lengthTimer >= 256) {
 			lengthTimer = 0;
 		}*/
-		if (lengthEnable) {
+
+        if (lengthTimer == 0) {
 			lengthTimer = 256 - initalLength;
 		}
 		
@@ -95,7 +94,7 @@ struct WaveChannel {
 	 * TODO; Double check this
 	 */
 	void updateCounter() {
-		if (lengthEnable) {
+		if (lengthEnable && enabled) {
 			lengthTimer--;
 			
 			if(lengthTimer <= 0) {
@@ -137,8 +136,8 @@ struct WaveChannel {
 	bool DAC = false;
 	
 	// NR31
-	uint16_t initalLength = 0;
-	uint16_t lengthTimer = 0;
+	uint8_t initalLength = 0;
+	int16_t lengthTimer = 0;
 	
 	// NR 32
 	/**

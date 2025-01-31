@@ -24,8 +24,6 @@ void Timer::tick(uint16_t cycles, bool tickDiv) {
 		}
 	}
 	
-	
-	
 	counterTimer += cycles;
 	
 	while(counterTimer >= clockSpeed) {
@@ -101,7 +99,7 @@ void Timer::write8(uint16_t address, uint8_t data) {
 		
 		// I wrote '0x011' instead of '0b0011' :)
 		clockSelected = data & 0b0011; // 1st & 2nd bit
-		const int CLOCK_RATE = 4194304;
+		//const int CLOCK_RATE = 4194304;
 		
 		// 1 M = 4 T
 		switch (clockSelected) {

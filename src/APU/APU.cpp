@@ -45,9 +45,9 @@ void APU::init() {
 
 void APU::tick(uint32_t cycles) {
 	// APU Disabled
-	/*if (!enabled || (!ch1.enabled && !ch2.enabled && !ch3.enabled && !ch4.enabled)) {
-		return;
-	}*/
+	//if (!enabled) {
+	//	return;
+	//}
 	
 	// https://www.reddit.com/r/EmuDev/comments/5gkwi5/comment/dat3zni/
 	
@@ -62,8 +62,8 @@ void APU::tick(uint32_t cycles) {
 	
 	// 512hz -> 8192 T-Cycles
 	// 4194304/512 = 8192
-	if(ticks >= 8192) {
-		ticks = 0;
+	while(ticks >= 8192) {
+		ticks -= 8192;
 		
 		counter = (counter + 1) % 8;
 		
@@ -103,6 +103,15 @@ uint8_t APU::fetch8(uint16_t address) {
         result |= (ch3.enabled << 2);  // Bit 2 - Channel 3 status
         result |= (ch2.enabled << 1);  // Bit 1 - Channel 2 status
         result |= (ch1.enabled << 0);  // Bit 0 - Channel 1 status
+		
+		printf("Fetching channcels; %x %d %d %d %d %d\n", result, enabled, ch4.enabled, ch3.enabled, ch2.enabled, ch1.enabled);
+
+		if(ch1.enabled) {
+			printf("CH1 Length %x = %x ; %d\n", ch1.initalLength, ch1.lengthTimer, ch1.lengthEnable);
+
+			if(ch1.lengthTimer == 2)
+				ch1.updateCounter();
+		}
     	
         return result;
     } else if (address == 0xFF25) {
@@ -133,10 +142,10 @@ uint8_t APU::fetch8(uint16_t address) {
         // NR10 - Channel 1 Sweep
         uint8_t result = 0;
     	
-        result |= (1 << 7);              // Bits 7   - Always set
-        result |= (ch1.pace << 4);       // Bits 6-4 - Sweep pace
-        result |= (ch1.direction << 3);  // Bit  3   - Sweep direction
-        result |= (ch1.individualStep);  // Bits 2-0 - Individual step
+        result |= (1 << 7);                // Bits 7   - Always set
+        result |= (ch1.sweepPace << 4);    // Bits 6-4 - Sweep pace
+        result |= (ch1.swpDirection << 3); // Bit  3   - Sweep direction
+        result |= (ch1.individualStep);    // Bits 2-0 - Individual step
     	
         return result;
     } else if (address == 0xFF11) {
@@ -153,7 +162,7 @@ uint8_t APU::fetch8(uint16_t address) {
     	
         result |= (ch1.initialVolume << 4);      // Bits 7-4 - Initial volume
         result |= (ch1.envDir << 3);             // Bit 3 - Envelope direction
-        result |= (ch1.sweepPace & 0b00000111);  // Bits 2-0 - Sweep pace
+        result |= (ch1.envelopePace & 0b00000111);  // Bits 2-0 - Sweep pace
     	
         return result;
     } else if (address == 0xFF13) {
@@ -186,7 +195,7 @@ uint8_t APU::fetch8(uint16_t address) {
     	
     	result |= (ch2.initialVolume << 4);      // Bits 7-4 - Initial volume
     	result |= (ch2.envDir << 3);             // Bit 3    - Envelope direction
-    	result |= (ch2.sweepPace & 0b00000111);  // Bits 2-0 - Sweep pace
+    	result |= (ch2.envelopePace & 0b00000111);  // Bits 2-0 - Sweep pace
     	
     	return result;
     } else if(address == 0xFF18) {
@@ -237,6 +246,9 @@ uint8_t APU::fetch8(uint16_t address) {
         return result;
     } else if (address >= 0xFF30 && address <= 0xFF3F) {
         // Wave Pattern RAM
+		if(ch3.DAC)
+			return 0xFF;
+		
         return ch3.waveform[address - 0xFF30];
     } else if (address == 0xFF20) {
         // NR41 - Channel 4 Length Timer (Write-only)
@@ -276,8 +288,9 @@ void APU::write8(uint16_t address, uint8_t data) {
 	 * but clears all APU registers and makes them read-only until turned back on, except NR521.
 	 */
 	if (!enabled && address != 0xFF26 && (address < 0xFF30) &&
-		(Cartridge::mode != Color || (address != 0xFF11 && address != 0xFF21 && 
+		(/*Cartridge::mode == Color &&*/ (address != 0xFF11 && address != 0xFF21 && 
 					address != 0xFF31 && address != 0xFF41))) {
+		printf("Ignoring %x\n", address);
 		return;
 	}
 	
@@ -316,6 +329,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 			vinRight = false;
 			leftVolume = 0;
 			rightVolume = 0;
+			counter = 0;
 		}
 	} else if(address == 0xFF25) {
 		// 	https://gbdev.io/pandocs/Audio_Registers.html#ff25--nr51-sound-panning
@@ -370,7 +384,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * then iterations are instantly disabled (but see below),
 		 * and it will be reloaded as soon as it’s set to something else.
 		 */
-		ch1.pace = (data & 0b01110000) >> 4;
+		ch1.sweepPace = (data & 0b01110000) >> 4;
 		
 		/**
 		 * Bit 3 - Direction
@@ -378,12 +392,15 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * 0 - Addition (period increases)
 		 * 1 - Subreaction (period decreases)
 		 */
-		ch1.direction = check_bit(data, 3);
+		ch1.swpDirection = check_bit(data, 3);
 		
 		// Bit 2, 1 and 0 - Individual step
 		ch1.individualStep = (data & 0b00000111);
 	} else if(address == 0xFF11) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff11--nr11-channel-1-length-timer--duty-cycle
+
+		if(!enabled)
+			data &= 0x3F;
 		
 		// Bit 7 and 6 - Wave duty
 		ch1.waveDuty = (data & 0b11000000) >> 6;
@@ -415,7 +432,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		ch1.envDir = check_bit(data, 3);
 		
 		// Bit 2, 1 and 0 - Sweep pace
-		ch1.sweepPace = data & 0b00000111;
+		ch1.envelopePace = data & 0b00000111;
 		
 		/**
 		 * TODO; Setting bits 3-7 to 0,
@@ -436,6 +453,9 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 */
 		ch1.trigger = check_bit(data, 7);
 		
+		if(ch1.trigger)
+			ch1.updateTrigger();
+
 		// Bit 6 - Length enable - R/W
 		ch1.lengthEnable = check_bit(data, 6);
 		
@@ -451,14 +471,14 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		/*
 		 * Channel 2 doesn't have sweep.
-		 * So I suppose ignore this?
-		 *
-		 * TODO; Check this
 		 */
 	} else if(address == 0xFF16) {
 		// NR21, exact same behaviour as NR11 but for CH2.
 		
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff11--nr11-channel-1-length-timer--duty-cycle
+
+		if(!enabled)
+			data &= 0x3F;
 		
 		// Bit 7 and 6 - Wave duty
 		ch2.waveDuty = (data & 0b11000000) >> 6;
@@ -492,7 +512,7 @@ void APU::write8(uint16_t address, uint8_t data) {
 		ch2.envDir = check_bit(data, 3);
 		
 		// Bit 2, 1 and 0 - Sweep pace
-		ch2.sweepPace = data & 0b00000111;
+		ch2.envelopePace = data & 0b00000111;
 		
 		/**
 		 * TODO; Setting bits 3-7 to 0,
@@ -516,6 +536,9 @@ void APU::write8(uint16_t address, uint8_t data) {
 		 * with this bet being set, it triggers the channel.
 		 */
 		ch2.trigger = check_bit(data, 7);
+
+		if(ch2.trigger)
+			ch2.updateTrigger();
 		
 		// Bit 6 - Length enable - R/W
 		ch2.lengthEnable = check_bit(data, 6);
@@ -552,6 +575,9 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 7 - Trigger
 		ch3.trigger = check_bit(data, 7);
+
+		if(ch3.trigger)
+			ch3.updateTrigger();
 		
 		// Bit 6 - Length enable
 		ch3.lengthEnable = check_bit(data, 6);
@@ -560,6 +586,9 @@ void APU::write8(uint16_t address, uint8_t data) {
 		ch3.periodHigh = data & 0b00000111;
 	} else if(address >= 0xFF30 && address <= 0xFF3F) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff30ff3f--wave-pattern-ram
+		if(ch3.DAC)
+			return;
+		
 		ch3.waveform[address - 0xFF30] = data;
 	} else if(address == 0xFF20) {
 		// https://gbdev.io/pandocs/Audio_Registers.html#ff20--nr41-channel-4-length-timer-write-only
@@ -608,6 +637,9 @@ void APU::write8(uint16_t address, uint8_t data) {
 		
 		// Bit 7 - Trigger W/R
 		ch4.trigger = check_bit(data, 7);
+
+		if(ch4.trigger)
+			ch4.updateTrigger();
 		
 		// Bit 6 - Length enable - W/R
 		ch4.lengthEnable = check_bit(data, 6);
@@ -642,7 +674,7 @@ void APU::fill_audio(void* udata, Uint8* stream, int len) {
 		uint8_t ch4 = 0;
 		
 		for(int j = 0; j <= sampleRate; j++) {
-			apu->tick(4);
+			//apu->tick(4);
 			
 			// TODO; Ensure those are mapped to [0, 1.0] instead
 			ch1 = apu->ch1.sample(1);

@@ -441,7 +441,7 @@ int main(int argc, char* argv[]) {
 	
 	/**
 	 * Those games finally works after I fixed MBC3(still not fully fixed).
-	 *  
+	 * 
 	 * However, all of the color versions contain this bug:
 	 * all of the chracters are very dark, expect when,
 	 * they get into a cutscene, they're colors become normal
@@ -480,7 +480,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/01-registers.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/02-len ctr.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/03-trigger.gb"; // TODO;
-    //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
+    std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/04-sweep.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/05-sweep details.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/06-overflow on trigger.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/07-len sweep period sync.gb"; // TODO;
@@ -490,7 +490,7 @@ int main(int argc, char* argv[]) {
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/11-regs after power.gb"; // TODO;
     //std::string filename = "Roms/tests/blargg/dmg_sound/rom_singles/12-wave write while on.gb"; // TODO;
     
-    std::string filename = "Roms/halt_bug.gb"; // Passed
+    //std::string filename = "Roms/halt_bug.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/instr_timing/instr_timing.gb"; // Passed
     //std::string filename = "Roms/tests/blargg/interrupt_time/interrupt_time.gb"; // TODO;
     

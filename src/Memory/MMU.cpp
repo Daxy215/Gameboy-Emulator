@@ -40,7 +40,7 @@ MMU::MMU(InterruptHandler& interruptHandler, Serial& serial, Joypad& joypad, MBC
 int16_t ticks = 0;
 
 void MMU::tick(uint32_t cycles) {
-    //apu.tick(cycles);
+    apu.tick(cycles);
     
     for(int i = 0; i < dmas.size(); i++) {
         dmas[i].process(*this, cycles * (doubleSpeed ? 2 : 1));

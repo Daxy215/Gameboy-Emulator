@@ -79,7 +79,7 @@ public:
         
         void activate(uint8_t source) {
             //this->source = source;
-
+            
             // Unsure but I think this only applies,
             // to DMG? TODO; Double check this.
 
@@ -88,9 +88,6 @@ public:
             else
                 this->source = source * 0x100;
 
-            printf("Starting DMA at %x\n", this->source);
-            std::cerr << "";
-            
             // Transfers 4 bytes every 4 T-cycles
             remainingCycles = 640;
             
