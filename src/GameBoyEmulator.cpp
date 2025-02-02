@@ -374,7 +374,14 @@ int main(int argc, char* argv[]) {
     // Idk what I did but now it's completely fucked
     // Ok nvm just when a pop up shows up or a text, everything becomes blue?
     // Ok issue was caused by the window rendering bug. I commented some code.. and forgot about it
-    //std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
+    
+    /**
+     * This game does con contain rendering issues,
+     * fixing a DMA bug, seems to help it quite a bit,
+     * however, it still contains some weird rendering,
+     * glitches.
+     */
+    std::string filename = "Roms/SpongeBob SquarePants - Legend of the Lost Spatula (U) [C][!].gbc"; // Uses MBC5
     
     /**
      * Fixing the issue with,
@@ -407,7 +414,7 @@ int main(int argc, char* argv[]) {
     /**
      * Seems to work but has some rendering issues
      */
-    std::string filename = "Roms/Super Mario Bros. Deluxe (U) (V1.1) [C][!].gbc";
+    //std::string filename = "Roms/Super Mario Bros. Deluxe (U) (V1.1) [C][!].gbc";
     
     /*
      * TODO; I believe they require speed switch IRQ
@@ -588,7 +595,13 @@ int main(int argc, char* argv[]) {
     // An MBC3 Test for the real time clock
     //std::string filename = "Roms/tests/rtc3test/rtc3test.gb"; // Uses MBC3
     
+    //std::string filename = "Roms/tests/same-suite/apu/channel_1/channel_1_freq_change_timing-A.gb";
     //std::string filename = "Roms/tests/same-suite/apu/div_trigger_volume_10.gb";
+
+    //std::string filename = "Roms/tests/same-suite/dma/gbc_dma_cont.gb"; // TODO;
+    //std::string filename = "Roms/tests/same-suite/dma/gdma_addr_mask.gb"; // TODO;
+    //std::string filename = "Roms/tests/same-suite/dma/hdma_lcd_off.gb"; // TODO
+    //std::string filename = "Roms/tests/same-suite/dma/hdma_mode0.gb"; // TODO
     
     //std::string filename = "Roms/tests/scribbltests/lycscx/lycscx.gb"; // Passed
     //std::string filename = "Roms/tests/scribbltests/lycscy/lycscy.gb"; // Passed

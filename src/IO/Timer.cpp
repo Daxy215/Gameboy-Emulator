@@ -8,9 +8,6 @@ void Timer::tick(uint16_t cycles, bool tickDiv) {
 	 * TODO; Not sure if timers should still,
 	 * tick whilst "Timer" is disabled?
 	 */
-	if(!enabled)
-		return;
-	
 	if(true) {
 		divTimer += cycles;
 		
@@ -23,6 +20,9 @@ void Timer::tick(uint16_t cycles, bool tickDiv) {
 			divTimer -= 256;
 		}
 	}
+	
+	if(!enabled)
+		return;
 	
 	counterTimer += cycles;
 	

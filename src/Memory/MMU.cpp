@@ -378,9 +378,26 @@ void MMU::writeIO(uint16_t address, uint8_t data, bool isDma) {
             // rather than the more "accurate" way
 
             if(Cartridge::mode == Mode::DMG) {
+                // TODO; Not sure if this is correct?
+                // but I feel like if another DMA is being,
+                // transfered and another DMA is at the same address,
+                // it should just restart it?
+                // After doing this some of the tests that used to crash,
+                // doesn't crash anymore so I suppose is correct in some way?
+
+                // TODO; Ik this is funky
                 DMA dma;
+                dma.setSource(data);
+
+                dma = isWithinRange(dma.source, dma.source, dmas);
+                bool exists = dma.active;
+
+                // Whether it exists or not, active it again
                 dma.activate(data/*static_cast<uint16_t>(data << 8)*/);
-                dmas.push_back(dma);
+
+                // Only add it again if it's active
+                if(!exists)
+                    dmas.push_back(dma);
 
                 return;
             }

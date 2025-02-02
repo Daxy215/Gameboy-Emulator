@@ -79,16 +79,8 @@ public:
         }
         
         void activate(uint8_t source) {
-            //this->source = source;
+            setSource(source);
             
-            // Unsure but I think this only applies,
-            // to DMG? TODO; Double check this.
-
-            if(Cartridge::mode == Mode::DMG)
-                this->source = source >= 0xFE ? (0xDE00 + ((source - 0xFE) * 0x100)) : (source * 0x100);
-            else
-                this->source = source * 0x100;
-
             // Transfers 4 bytes every 4 T-cycles
             remainingCycles = 640;
             
@@ -98,6 +90,16 @@ public:
             index = 0;
             
             active = true;
+        }
+
+        void setSource(uint8_t source) {
+            // Unsure but I think this only applies,
+            // to DMG? TODO; Double check this.
+            
+            if(Cartridge::mode == Mode::DMG)
+                this->source = source >= 0xFE ? (0xDE00 + ((source - 0xFE) * 0x100)) : (source * 0x100);
+            else
+                this->source = source * 0x100;
         }
         
         /*static inline DMA isWithinRange(uint16_t start, uint16_t end, std::vector<DMA> dmas) {
@@ -149,7 +151,7 @@ public:
                 return dma;
             }
         }
-            
+        
         return { false };
     }
     

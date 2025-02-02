@@ -10,16 +10,9 @@ uint8_t InterruptHandler::handleInterrupt(CPU& cpu) {
 		if(interrupt == 0)
 			return 0;
 		
-		//if(IME && cpu.haltBug) {
-			//cpu.hatlBug = false;
-		//}
-		
 		if(cpu.halted) {
-			// TODO; Halt bug
 			if(!IME && interrupt) {
-				//cpu.PC--;
 				cpu.halted = false;
-				//cpu.hatlBug = true;
 				
 				return 0;
 			}
